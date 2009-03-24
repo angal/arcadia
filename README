@@ -1,0 +1,133 @@
+= Arcadia Ruby Ide
+version 0.6.0
+
+by Antonio Galeone
+on Feb 21, 2009
+
+
+== About
+
+Arcadia is a Light Integrated Development Environment (IDE) for Ruby language 
+written in Ruby using the classic tcl/tk GUI toolkit.
+
+Some of Arcadia ruby ide project features include:
+* Editor with source browsing, syntax highlighting, code completion
+* Debugging support
+* Working on any platform where ruby and tcl-tk work.
+* Highly extensibility architecture.
+
+== In this release
+* [new] - Dynamic layout capability added: now you can change at run-time the frames's position and create new frames.
+	      
+
+
+== How to install
+There are two way:
+1. exec as root on command line "gem install arcadia"
+   or as user "sudo gem install arcadia"
+2. using archive distribution
+   a. untar (on unix) (tar -xzf) arcadia-<version>.tar.gz
+   b. unzip (on windows) arcadia-<version>.zip
+
+
+== How to run
+* exec on command line "ruby <path/>arcadia"
+
+
+== Short User guide
+Application layout is splitted in vertical 
+and horizontal resizing frames. Clicking on vertical splitter 
+appear two button for left or right one shot frame close. 
+The horizontal splitter has two little button for the same reason.
+Every frame has a title, a button to expand or resizing it and a menu-button 
+for the dynamic layout functions.
+There are very essential feature:
+
+==== Main Toolbar
+The toolbar button are in order:
+- new, open, save
+  (relatively to edit operation)
+- run current, run last 
+  (for execute the raised file in the editor or the last runned file)  
+- debug current, debug last, quit debug panel
+  (for debug need)
+- show rad palette
+  (for tk rad need)  
+- quit (to exit from arcadia)
+
+==== Editor
+Editor use the notebook metaphor. Same command are on the popup menu 
+that is raised on "Button-3" click event fundamentalally for closing the tab 
+under the mouse pointer.
+These are same editor short-cut:
+- Ctrl-c  => copy selected text
+- Ctrl-v  => paste copied text
+- Ctrl-x  => cut selected text
+- Ctrl-z  => undo
+- Ctrl-f  => copy the selected text on input combobox of find dialog and moves focus
+- Ctrl-s  => save
+- Ctrl-space => completion code
+- Ctrl-shift-i => indent the selected block
+- Ctrl-shift-u => unindent the selected block
+- Ctrl-shift-c => comment/uncomment the selected code block
+- F5 => execute the file 
+- F3 => find/ find next
+
+- Double-Click on line number set or unset a debug breakpoint
+
+==== File history
+The last used files are organizing in tree so you can reopen them or there  
+directory by clicking on the tree node.
+
+==== Rad Palette
+It contain the wrapper components for the tk gui building. 
+It is in very unstabled and incomplete state. 
+The first component is a TkTopLevel wrapper, when you click on it a new form is created and a 
+Object inspector appears.
+The other components must be first selected and then created by clicking on container widget.
+The so created widgets has a popup menu for deleting them or in the toplevel case to switch
+to a code view.
+On the palette there are also two button, one for deselect and other for copy from the selected 
+created widget. The copy action copy also the code into the clipboard, so you can copy the
+code rapresenting the gui into the embedded editor or into external editor.
+
+==== Rad Object Inspector
+It is for modify the widget property at runtime
+
+==== Debug
+Require ruby-debug gem.
+It is created when a debug session init. 
+The debug button are: Step Next, Step Into, Step Over, Resume and quit.
+The debug frame show the local, instance and global variables for each
+step. 
+
+==== Configuration
+Same Arcadia properties are locally configurabled by editing the file arcadia.conf
+under ~/.arcadia  directory. The format of property definition are:
+<OPERATING SYSTEM IDENTIFY::>PROPERTY_NAME=PROPERTY_VALUE
+
+
+== Requirement
+I include into distribution also the BWidget lib (under tcl directory) so
+are require realy only the standard tcl tk lib (tested on tcl tk 8.4 & tcl tk 8.5).
+I have tested arcadia with ruby 1.8.4, 1.8.5, 1.8.6, 1.8.7 on 
+* Archlinux
+* FreeBsd6.x, FreeBsd7.x, 
+* Vector linux 5.*,
+* Windows 2000/XP, 
+* Cygwin (note: same page fault error on dll under cygwin may be solved in this way:
+  by ash.exe exec "/bin/rebaseall"). 
+If you will test arcadia on other operating system sends me an e-mail.
+
+==Developers information
+Released on arcadia web site (http://arcadia.rubyforge.org) a first drawing of "How to extend arcadia". 
+
+
+ 
+== License
+Arcadia is released under the Ruby License
+
+== Contacts
+For questions:
+antonio-galeone@rubyforge.org
+For bugs, support request, features request http://rubyforge.org/projects/arcadia

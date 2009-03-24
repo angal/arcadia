@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+#
+#   arcadia - Arcadia Ruby ide
+#   by Antonio Galeone <antonio-galeone@rubyforge.org>
+#
+
+$pwd = Dir.pwd
+Dir.chdir("#{File.dirname(__FILE__)}/..")
+if FileTest.exist?('conf/arcadia.init.rb')
+  require 'conf/arcadia.init'
+end
+require "lib/a-core"
+Arcadia.new.run
