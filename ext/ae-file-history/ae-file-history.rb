@@ -162,14 +162,21 @@ class FilesHistrory < ArcadiaExt
         #EditorContract.instance.open_file(self,'file'=>_file)
       end
     }
-#    _background = conf('color.background')
-#    _foreground = conf('color.foreground')
+    
+    do_open_folder = proc{|_node|
+      children = @htree.nodes(_node)
+      if children.length == 1 
+        @htree.open_tree(children[0],false)
+      end
+    }    
+
     @font =  Arcadia.conf('treeitem.font')
     @font_b = "#{Arcadia.conf('treeitem.font')} bold"
 
 	  @htree = Tk::BWidget::Tree.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
       showlines false
       deltay 18
+      opencmd proc{|node| do_open_folder.call(node)} 
       selectcommand proc{ do_select_item.call(self) } 
 #      place('relwidth' => 1,'relheight' => '1', 'x' => '0','y' => '22', 'height' => -22)
     }
