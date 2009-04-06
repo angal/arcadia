@@ -170,6 +170,7 @@ class SearchOutput
     Tk.update
     @results[_r_node]={}
     @count = 0
+    @tree.set_focus
     return _r_node
   end
   
