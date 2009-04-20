@@ -69,7 +69,6 @@ class Arcadia < TkApplication
     @splash.set_progress(50) if @splash
     @splash.deiconify if @splash
     Tk.update
-    #sleep(1)
     @splash.next_step('..prepare')  if @splash
     prepare
     @splash.last_step('..load finish')  if @splash
@@ -816,6 +815,21 @@ class ArcadiaMainMenu < ArcadiaUserControl
     @menu.add_menu(menu_spec_view)
     @menu.add_menu(menu_spec_tools)
     @menu.add_menu(menu_spec_help)
+  
+    #@menu.bind_append("1", proc{
+#      chs = TkWinfo.children(@menu)
+#      hh = 25
+#      @last_post = nil
+#      chs.each{|ch|
+#        ch.bind_append("Enter", proc{|x,y,rx,ry| 
+#          @last_post.unpost if @last_post
+#          ch.menu.post(x-rx,y-ry+hh)
+#          @last_post=ch.menu}, "%X %Y %x %y")
+#        ch.bind_append("Leave", proc{
+#          @last_post.unpost if @last_post
+#        })
+#      }
+    #})
   end
   
 end

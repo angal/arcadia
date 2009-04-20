@@ -216,27 +216,12 @@ class SafeCompleteCode
     @col = _col.to_i
     @ss = SourceStructure.new(_source)
     @filter=''
-    #@candidates = Array.new
+    @words = Array.new
     process_source
   end
   
-#  def dot_trip(_var_name)
-#    ret = "_candidates << #{_var_name}.class.to_s.sub('#{self.class.to_s}::','')\n"
-#    ret = ret + "#{_var_name}.class.instance_methods.each{|m|\n"
-#    ret = ret + "meth = #{_var_name}.method(m)\n"
-#    ret = ret + "_candidates << meth.owner.to_s.sub('#{self.class.to_s}::','')+'#'+m+'#'+meth.arity.to_s\n"
-#    ret = ret + "}\n"
-#    #ret = ret + "exit\n"
-#    ret
-#  end
-
   def dot_trip(_var_name)
     ret = "_class=#{_var_name}.class.name\n"
-#    ret = ret +"if _class=='Class'\n"
-#    ret = ret +" _methods=#{_var_name}.singleton_methods\n"
-#    ret = ret +"else\n"
-#    ret = ret +" _methods=#{_var_name}.class.instance_methods\n"
-#    ret = ret +"end\n"
     ret = ret +" _methods=#{_var_name}.methods\n"
     ret = ret +"owner_on = Method.instance_methods.include?('owner')\n"
     ret = ret + "_methods.each{|m|\n"
@@ -306,6 +291,17 @@ class SafeCompleteCode
     @is_dot
   end
 
+  def refresh_words
+    @words.clear
+    _re = /[\s\t\n]#{@filter}[a-zA-Z0-9\-_]*/
+    m = _re.match(@source)
+    while m && (_txt=m.post_match)
+      can = m[0].strip
+      @words << can if can != @filter
+      m = _re.match(_txt)
+    end
+  end
+
   def process_source
     @modified_source = ""
     @modified_row = @row
@@ -329,7 +325,7 @@ class SafeCompleteCode
           end
           focus_segment = focus_segment+seg
         }
-        @filter = focus_segment_array[-1].strip
+        @filter = focus_word(focus_segment_array[-1].strip)
       else
         focus_segment = ''
         @filter = focus_word(focus_line[0..@col-1].strip)
@@ -446,6 +442,10 @@ class SafeCompleteCode
           @modified_row = @modified_row+1+ss_len
         end
     end
+    if @filter.strip.length > 0
+#        refresh_words(source_array)
+        refresh_words
+    end
 
 #    Arcadia.console(self, 'msg'=>@modified_source)
 #    Arcadia.console(self, 'msg'=>"@modified_row=#{@modified_row}")
@@ -458,26 +458,22 @@ class SafeCompleteCode
 
   def focus_word(focus_segment)
       focus_world = ''
+      char = focus_segment[-1..-1]
+      while [")","]","}"].include?(char) 
+        char=focus_segment[-2..-2]
+        focus_segment = focus_segment[0..-2]
+      end
       j = focus_segment.length - 1
-      char = focus_segment[j..j]
-      if char != ')'
-        while !["\s","\t",";",",","(","[","{",">"].include?(char) && j >= 0
-          focus_world = "#{char}#{focus_world}"
-          j=j-1
-          char = focus_segment[j..j]
-        end
-      else
-        while !["\s","\t",";"].include?(char) && j >= 0
-          focus_world = "#{char}#{focus_world}"
-          j=j-1
-          char = focus_segment[j..j]
-        end
+      while !["\s","\t",";",",","(","[","{",">"].include?(char) && j >= 0
+        focus_world = "#{char}#{focus_world}"
+        j=j-1
+        char = focus_segment[j..j]
       end
       focus_world
   end
   
   def candidates(_show_error = false)
-    temp_file = create_temp_file(@file)
+    temp_file = create_modified_temp_file(@file)
 		begin
       _cmp_s = "|ruby '#{temp_file}'"
       _ret = nil
@@ -488,27 +484,22 @@ class SafeCompleteCode
           line
         } 
       end
-#      if _ret.length == 0 && _show_error
-#        _cmp_s_d = _cmp_s+" 2>&1"
-#	      _error = nil
-#	      open(_cmp_s_d,"r") do
-# 		       |f|
-# 		       _error = f.readlines.collect!{| line | line.chomp}
-#     		 end
-#     		 if _error != nil && _error.length > 0
-#          Arcadia.console(self, 'msg'=>_error.to_s, 'level'=>'error')
-#        end
-#      end
+      if @filter.strip.length > 0
+        @words.each{|w| 
+          if !_ret.include?(w) # && w[0..@filter.length-1] == @filter 
+            _ret << w
+          end
+        }
+      end
       _ret.sort
   		rescue Exception => e
-#      Arcadia.console(self, 'msg'=>e.to_s, 'level'=>'error')
+      #Arcadia.console(self, 'msg'=>e.to_s, 'level'=>'error')
  	  ensure
  	    File.delete(temp_file) if File.exist?(temp_file)
  	  end
   end
-  
 
-  def create_temp_file(_base_file=nil)
+  def create_modified_temp_file(_base_file=nil)
     if _base_file
       _file = _base_file+'~~'
     else
@@ -727,38 +718,18 @@ class AgEditor
 
 
   def initialize_text(_frame)
-#    @v_scroll = TkScrollbar.new(_frame,{
-#      'orient'=>'vertical'}.update(Arcadia.style('scrollbar'))
-#    ).pack('side' => 'right', 'fill' => 'y')
-    @text = TkScrollText.new(_frame, Arcadia.style('edit')){|j|
+    @text = TkScrollText.new(_frame, Arcadia.style('text')){|j|
       wrap  'none'
       undo true
-      insertofftime 200
-      insertontime 200
-      highlightthickness 0
-      insertwidth 3
+#      insertofftime 200
+#      insertontime 200
+#      highlightthickness 0
+#      insertwidth 3
       exportselection true
       autoseparators true
       padx 0
       tabs $arcadia['conf']['editor.tabs']
-#      place(
-#        'x'=>0,
-#        'y'=>0,
-#        'width' => -15,
-#        'relheight'=>1,
-#        'relwidth'=>1,
-#        'bordermode'=>'outside'
-#      )
     }
-    
-#    class << @text
-#        def do_yscrollcommand(first,last)
-#          super
-#          do_line_update()
-#        end
-#    end
-
-  # @text.configure('font', @font);
 
     #do_tag_configure_global('debug')
     @text.tag_configure('eval','foreground' => 'yellow', 'background' =>'red','borderwidth'=>1, 'relief'=>'raised')
@@ -770,7 +741,6 @@ class AgEditor
     @text.show_v_scroll
     @text.show_h_scroll
     @text_cursor = @text.cget('cursor')
-
   end
 
   def create_temp_file
@@ -874,7 +844,6 @@ class AgEditor
 
   def raise_complete_code(_candidates, _row, _col, _filter='')
     @raised_listbox_frame.destroy if @raised_listbox_frame != nil
-    #@raised_listbox.destroy if @raised_listbox != nil
     _index_call = _row+'.'+_col
     _index_now = @text.index('insert')
     if _index_call == _index_now 
@@ -882,227 +851,233 @@ class AgEditor
       if _target.strip == '('
         _target = @text.get('insert - 2 chars wordstart','insert')
       end
-        if _target.strip.length > 0 && _target != '.'
-          extra_len = _target.length.+@
-          _begin_index = _index_now<<' - '<<extra_len.to_s<<' chars'
-          @text.tag_add('sel', _begin_index, _index_now)
-        else
-          _begin_index = _index_now
-          extra_len = 0
-        end
-        if _candidates.length >= 1 
-            _rx, _ry, _widht, heigth = @text.bbox(_begin_index);
-            _x = _rx + TkWinfo.rootx(@text)  
-            _y = _ry + TkWinfo.rooty(@text)  + @font_metrics[2][1]
-            _xroot = _x - TkWinfo.rootx(Arcadia.instance.layout.root)  
-            _yroot = _y - TkWinfo.rooty(Arcadia.instance.layout.root)  
-            
-            _max_height = TkWinfo.screenheight(Arcadia.instance.layout.root) - _y - 5
-            self.complete_code_begin
-            
-        #    @raised_listbox_frame = TkResizingTitledFrame.new(Arcadia.instance.layout.root)
-            @raised_listbox_frame = TkFrame.new(Arcadia.instance.layout.root, {
-              :padx=>"1",
-              :pady=>"1",
-              :background=> Arcadia.conf("foreground")
-            })
-            
-            @raised_listbox = TkTextListBox.new(@raised_listbox_frame, {
-              :takefocus=>true, 
-              :selectbackground=>Arcadia.conf('hightlight.1.background'),
-              :selectforeground=>Arcadia.conf('hightlight.1.foreground')}.update(Arcadia.style('listbox'))
-            )
-            _char_height = @font_metrics[2][1]
-            _width = 0
-            _docs_entries = Hash.new
-            _item_num = 0
-            _update_list = proc{|_in|
-                _in.strip!
-                @raised_listbox.clear
-                _length = 0
-                _candidates.each{|value|
-                  _doc = value.strip
-                  _class, _key, _arity = _doc.split('#')
-                  if _key && _arity
-                    args = arity_to_str(_arity.to_i)
-                    if args.length > 0
-                      _key = "#{_key}(#{args})"
-                    end
+      if _target.strip.length > 0 && _target != '.'
+        extra_len = _target.length.+@
+        _begin_index = _index_now<<' - '<<extra_len.to_s<<' chars'
+        @text.tag_add('sel', _begin_index, _index_now)
+      else
+        _begin_index = _index_now
+        extra_len = 0
+      end
+      if _candidates.length >= 1 
+          _rx, _ry, _widht, heigth = @text.bbox(_begin_index);
+          _x = _rx + TkWinfo.rootx(@text)  
+          _y = _ry + TkWinfo.rooty(@text)  + @font_metrics[2][1]
+          _xroot = _x - TkWinfo.rootx(Arcadia.instance.layout.root)  
+          _yroot = _y - TkWinfo.rooty(Arcadia.instance.layout.root)  
+          
+          _max_height = TkWinfo.screenheight(Arcadia.instance.layout.root) - _y - 5
+          self.complete_code_begin
+          
+      #    @raised_listbox_frame = TkResizingTitledFrame.new(Arcadia.instance.layout.root)
+          @raised_listbox_frame = TkFrame.new(Arcadia.instance.layout.root, {
+            :padx=>"1",
+            :pady=>"1",
+            :background=> Arcadia.conf("foreground")
+          })
+          
+          @raised_listbox = TkTextListBox.new(@raised_listbox_frame, {
+            :takefocus=>true, 
+            :selectbackground=>Arcadia.conf('hightlight.1.background'),
+            :selectforeground=>Arcadia.conf('hightlight.1.foreground')}.update(Arcadia.style('listbox'))
+          )
+          _char_height = @font_metrics[2][1]
+          _width = 0
+          _docs_entries = Hash.new
+          _item_num = 0
+          _update_list = proc{|_in|
+              _in.strip!
+              @raised_listbox.clear
+              _length = 0
+              _candidates.each{|value|
+                _doc = value.strip
+                _class, _key, _arity = _doc.split('#')
+                if _key && _arity
+                  args = arity_to_str(_arity.to_i)
+                  if args.length > 0
+                    _key = "#{_key}(#{args})"
                   end
-                  
-                  if _key && _class && _key.strip.length > 0 && _class.strip.length > 0 
-                    _item = "#{_key.strip} - #{_class.strip}"
-                  elsif _key && _key.strip.length > 0
-                    _item = "#{_key.strip}"
-                  else
-                    _key = "#{_doc.strip}"
-                    _item = "#{_doc.strip}"
-                  end
-                  if _in.nil? || _in.strip.length == 0 || _item[0.._in.length-1] == _in 
-                  #|| _item[0.._in.length-1].downcase == _in
-                    _docs_entries[_item]= _doc
-           #         @raised_listbox.insert('end', _item)
-                    @raised_listbox.add(_item)
-                    _temp_length = _item.length
-                    _length = _temp_length if _temp_length > _length 
-                    _item_num = _item_num+1 
-                    _last_valid_key = _key
-                  end
-                }
-                _width = _length*8
-                @raised_listbox.select(1)
-   #             p "_update_list end-->#{Time.new}"
-
-                Tk.event_generate(@raised_listbox, "1") if TkWinfo.mapped?(@raised_listbox)
-            }
-
-            _insert_selected_value = proc{
-              #_value = @raised_listbox.get('active').split('-')[0].strip
-              if @raised_listbox.selected_line && @raised_listbox.selected_line.strip.length>0
-                _value = @raised_listbox.selected_line.split('-')[0].strip
-                @raised_listbox_frame.grab("release")
-                @raised_listbox_frame.destroy
-                #_menu.destroy
-                @text.focus
-                @text.delete(_begin_index,'insert')
-                @text.insert('insert',_value.strip)
-                complete_code_end
+                end
                 
-                _to_search = 'arg1'
-                _argindex = @text.search(_to_search,_begin_index)
-                if !(_argindex && _argindex.length>0)
-                  _to_search = '*'
-                  _argindex = @text.search(_to_search,_begin_index)
-                end
-                if _argindex && _argindex.length>0
-                  _argrow, _argcol = _argindex.split('.')
-                  if _argrow.to_i == _row.to_i
-                    _argindex_sel_end = _argrow.to_i.to_s+'.'+(_argcol.to_i+_to_search.length).to_i.to_s
-                    @text.tag_add('sel', _argindex,_argindex_sel_end)
-                    @text.set_insert(_argindex)
-                  end
-                end
-              end
-              
-              Tk.callback_break
-            }
-            _update_list.call(_filter)
-            if _item_num == 0
-              @raised_listbox_frame.destroy
-              self.complete_code_end
-              return
-            elsif _item_num == 1 
-              _insert_selected_value.call
-              return
-            end
-            _width = _width + 10
-            #_height = (candidates.length+1)*_char_height
-            _height = 15*_char_height
-            _height = _max_height if _height > _max_height
-            
-            _buffer = @text.get(_begin_index, 'insert')
-            _buffer_ini_length = _buffer.length
-            @raised_listbox_frame.place('x'=>_xroot,'y'=>_yroot, 'width'=>_width, 'height'=>_height)
-            @raised_listbox.show(0,0,'inside')
-            @raised_listbox.show_v_scroll
-            @raised_listbox.focus
-            #@raised_listbox.activate(0)
-            @raised_listbox.select(1)
-            @raised_listbox_frame.grab("set")
-         #   Tk.event_generate(@raised_listbox, "1")
-         
-         
-            @raised_listbox.bind_append("Double-ButtonPress-1", 
-              proc{|x,y| 
-                _index = @raised_listbox.index("@#{x},#{y}")
-                _line = _index.split('.')[0].to_i
-                @raised_listbox.select(_line)
-                _insert_selected_value.call
-                  }, "%x %y")
-            @raised_listbox.bind_append('Shift-KeyPress'){|e|
-              # todo
-              case e.keysym
-                when 'parenleft'
-                  @text.insert('insert','(')
-                  _buffer = _buffer + '('
-                  _item_num = 0
-                  _update_list.call(_buffer)
-                  if _item_num == 1
-                    _insert_selected_value.call
-                  end
-                  Tk.callback_break
-                when 'A'..'Z','equal','greater'
-                  if e.keysym == 'equal'
-                    ch = '='
-                  elsif e.keysym == 'greater'
-                    ch = '>'
-                  else
-                    ch = e.keysym
-                  end
-                  @text.insert('insert',ch)
-                  _buffer = _buffer + ch
-                  _update_list.call(_buffer)
-                  Tk.callback_break
+                if _key && _class && _key.strip.length > 0 && _class.strip.length > 0 
+                  _item = "#{_key.strip} - #{_class.strip}"
+                elsif _key && _key.strip.length > 0
+                  _item = "#{_key.strip}"
                 else
-                  if e.keysym.length > 1 
-                    p ">#{e.keysym}<"
-                    Tk.callback_break
-                  end
+                  _key = "#{_doc.strip}"
+                  _item = "#{_doc.strip}"
+                end
+                if _in.nil? || _in.strip.length == 0 || _item[0.._in.length-1] == _in 
+                #|| _item[0.._in.length-1].downcase == _in
+                  _docs_entries[_item]= _doc
+         #         @raised_listbox.insert('end', _item)
+                  @raised_listbox.add(_item)
+                  _temp_length = _item.length
+                  _length = _temp_length if _temp_length > _length 
+                  _item_num = _item_num+1 
+                  _last_valid_key = _key
+                end
+              }
+              _width = _length*8
+              @raised_listbox.select(1)
+ #             p "_update_list end-->#{Time.new}"
+
+              Tk.event_generate(@raised_listbox, "1") if TkWinfo.mapped?(@raised_listbox)
+          }
+
+          _insert_selected_value = proc{
+            #_value = @raised_listbox.get('active').split('-')[0].strip
+            if @raised_listbox.selected_line && @raised_listbox.selected_line.strip.length>0
+              _value = @raised_listbox.selected_line.split('-')[0].strip
+              @raised_listbox_frame.grab("release")
+              @raised_listbox_frame.destroy
+              #_menu.destroy
+              @text.focus
+              @text.delete(_begin_index,'insert')
+
+              # workaround for @ char
+              _value = _value.strip
+              if _value[0..0] !=_target[0..0] && _value[1..1] == _target[0..0]
+                _value = _value[1..-1]
               end
-            }
-            @raised_listbox.bind_append('KeyPress'){|e|
-              case e.keysym
-                when 'Escape'
-                  @raised_listbox.grab("release")
-                  @raised_listbox_frame.destroy
-                  complete_code_end
-                  @text.focus
-                  #_menu.destroy
+              @text.insert('insert',_value)
+              complete_code_end
+              
+              _to_search = 'arg1'
+              _argindex = @text.search(_to_search,_begin_index)
+              if !(_argindex && _argindex.length>0)
+                _to_search = '*'
+                _argindex = @text.search(_to_search,_begin_index)
+              end
+              if _argindex && _argindex.length>0
+                _argrow, _argcol = _argindex.split('.')
+                if _argrow.to_i == _row.to_i
+                  _argindex_sel_end = _argrow.to_i.to_s+'.'+(_argcol.to_i+_to_search.length).to_i.to_s
+                  @text.tag_add('sel', _argindex,_argindex_sel_end)
+                  @text.set_insert(_argindex)
+                end
+              end
+            end
+            
+            Tk.callback_break
+          }
+          _update_list.call(_filter)
+          if _item_num == 0
+            @raised_listbox_frame.destroy
+            self.complete_code_end
+            return
+          elsif _item_num == 1 
+            _insert_selected_value.call
+            return
+          end
+          _width = _width + 30
+          #_height = (candidates.length+1)*_char_height
+          _height = 15*_char_height
+          _height = _max_height if _height > _max_height
+          
+          _buffer = @text.get(_begin_index, 'insert')
+          _buffer_ini_length = _buffer.length
+          @raised_listbox_frame.place('x'=>_xroot,'y'=>_yroot, 'width'=>_width, 'height'=>_height)
+          @raised_listbox.show(0,0,'inside')
+          @raised_listbox.show_v_scroll
+          @raised_listbox.focus
+          #@raised_listbox.activate(0)
+          @raised_listbox.select(1)
+          @raised_listbox_frame.grab("set")
+       #   Tk.event_generate(@raised_listbox, "1")
+       
+       
+          @raised_listbox.bind_append("Double-ButtonPress-1", 
+            proc{|x,y| 
+              _index = @raised_listbox.index("@#{x},#{y}")
+              _line = _index.split('.')[0].to_i
+              @raised_listbox.select(_line)
+              _insert_selected_value.call
+                }, "%x %y")
+          @raised_listbox.bind_append('Shift-KeyPress'){|e|
+            # todo
+            case e.keysym
+              when 'parenleft'
+                @text.insert('insert','(')
+                _buffer = _buffer + '('
+                _item_num = 0
+                _update_list.call(_buffer)
+                if _item_num == 1
+                  _insert_selected_value.call
+                end
+                Tk.callback_break
+              when 'A'..'Z','equal','greater'
+                if e.keysym == 'equal'
+                  ch = '='
+                elsif e.keysym == 'greater'
+                  ch = '>'
+                else
+                  ch = e.keysym
+                end
+                @text.insert('insert',ch)
+                _buffer = _buffer + ch
+                _update_list.call(_buffer)
+                Tk.callback_break
+              else
+                if e.keysym.length > 1 
+                  p ">#{e.keysym}<"
                   Tk.callback_break
+                end
+            end
+          }
+          @raised_listbox.bind_append('KeyPress'){|e|
+            case e.keysym
+              when 'Escape'
+                @raised_listbox.grab("release")
+                @raised_listbox_frame.destroy
+                complete_code_end
+                @text.focus
+                #_menu.destroy
+                Tk.callback_break
 #                when 'Return'
 #                  _insert_selected_value.call
-                when 'F1'
-                  _key = @raised_listbox.selected_line.split('-')[0].strip
-                  _x, _y = xy_insert
-                  Arcadia.process_event(DocCodeEvent.new(self, 'doc_entry'=>_docs_entries[_key], 'xdoc'=>_x, 'ydoc'=>_y))
-                  #EditorContract.instance.doc_code(self, 'doc_entry'=>_docs_entries[_key], 'xdoc'=>_x, 'ydoc'=>_y)
-                when 'a'..'z','less','space'
-                  if e.keysym == 'less'
-                    ch = '<'
-                  elsif e.keysym == 'space'
-                    ch = ''
-                  else
-                    ch = e.keysym
-                  end
-                  @text.insert('insert',ch)
-                  _buffer = _buffer + ch
+              when 'F1'
+                _key = @raised_listbox.selected_line.split('-')[0].strip
+                _x, _y = xy_insert
+                Arcadia.process_event(DocCodeEvent.new(self, 'doc_entry'=>_docs_entries[_key], 'xdoc'=>_x, 'ydoc'=>_y))
+                #EditorContract.instance.doc_code(self, 'doc_entry'=>_docs_entries[_key], 'xdoc'=>_x, 'ydoc'=>_y)
+              when 'a'..'z','less','space'
+                if e.keysym == 'less'
+                  ch = '<'
+                elsif e.keysym == 'space'
+                  ch = ''
+                else
+                  ch = e.keysym
+                end
+                @text.insert('insert',ch)
+                _buffer = _buffer + ch
+                _update_list.call(_buffer)
+                Tk.callback_break
+              when 'BackSpace'
+                if _buffer.length > _buffer_ini_length
+                  @text.delete("#{_begin_index} + #{_buffer.length-1} chars" ,'insert')
+                  _buffer = _buffer[0..-2]
+                  Tk.update
                   _update_list.call(_buffer)
                   Tk.callback_break
-                when 'BackSpace'
-                  if _buffer.length > _buffer_ini_length
-                    @text.delete("#{_begin_index} + #{_buffer.length-1} chars" ,'insert')
-                    _buffer = _buffer[0..-2]
-                    Tk.update
-                    _update_list.call(_buffer)
-                    Tk.callback_break
-                  end
-                when 'Next', 'Prior'
-                else
-                  Tk.callback_break
-              end
-            }
-            @raised_listbox.bind_append('KeyRelease'){|e|
-              case e.keysym
-                when 'Return'
-                  _insert_selected_value.call
-              end
-            }
-          elsif _candidates.length == 1 && _candidates[0].length>0
-            @text.delete(_begin_index,'insert');
-            @text.insert('insert',_candidates[0].split[0])
-            complete_code_end
-          end
-      end
+                end
+              when 'Next', 'Prior'
+              else
+                Tk.callback_break
+            end
+          }
+          @raised_listbox.bind_append('KeyRelease'){|e|
+            case e.keysym
+              when 'Return'
+                _insert_selected_value.call
+            end
+          }
+        elsif _candidates.length == 1 && _candidates[0].length>0
+          @text.delete(_begin_index,'insert');
+          @text.insert('insert',_candidates[0].split[0])
+          complete_code_end
+        end
+    end
   end
    
   
@@ -1120,7 +1095,14 @@ class AgEditor
     }
     
     @text.bind_append("KeyPress"){|e|
-      @do_complete = false
+      if e.keysym == "Escape"
+        if @n_complete_task == 0
+          @do_complete = true
+          complete_code
+        end
+      else
+        @do_complete = false
+      end
     }    
 
     @text.bind_append("KeyRelease"){|e|
@@ -1157,6 +1139,14 @@ class AgEditor
             rehighlightline(j)
           end
         end
+        break
+      when 'o'  
+        if @file
+          _dir = File.dirname(@file)
+        else
+          _dir = Dir.pwd
+        end
+        Arcadia.process_event(OpenBufferEvent.new(self,'file'=>Tk.getOpenFile('initialdir'=>_dir)))
         break
       when 'c'
         @text.text_copy
