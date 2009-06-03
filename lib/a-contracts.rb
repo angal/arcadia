@@ -68,6 +68,11 @@ class SaveAsBufferEvent < SaveBufferEvent
   attr_accessor :new_file	
 end
 
+class MoveBufferEvent < BufferEvent
+  attr_accessor :old_file	
+  attr_accessor :new_file	
+end
+
 class GoToLineBufferEvent < BufferEvent
   attr_accessor :line
 end

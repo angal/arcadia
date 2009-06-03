@@ -614,7 +614,7 @@ end
 
 class AgEditor
   include Configurable
-  attr_reader :file
+  attr_accessor :file
   attr_reader :read_only 
   attr_reader :page_frame
   attr_reader :text, :root
@@ -2624,7 +2624,7 @@ class AgEditor
             'title' => '(Arcadia) Libs', 'parent' => @text,
             'message' => msg) == 'yes'
             @text.delete('1.0','end')
-            reset_highlight
+            reset_highlight if @highlighting
             load_file(@file)
           else
             @file_last_access_time = ftime
@@ -2836,7 +2836,7 @@ class AgMultiEditor < ArcadiaExt
       :command=> proc{
         if @selected_tab_name_from_popup != nil
           _e = @tabs_editor[@selected_tab_name_from_popup]
-          self.close_editor(_e)
+          self.close_editor(_e) if _e
         end
       }
     )
@@ -3012,6 +3012,11 @@ class AgMultiEditor < ArcadiaExt
         if _event.line == nil
           @find.show_go_to_line_dialog
         end
+      when MoveBufferEvent
+        if _event.old_file && _event.new_file && editor_exist?(_event.old_file)
+          #close_file(_event.old_file)
+          change_file(_event.old_file, _event.new_file)          
+        end
     end
   end
 
@@ -3039,6 +3044,7 @@ class AgMultiEditor < ArcadiaExt
         _files=_files+'|' if _files.strip.length > 0
         _files=_files + editor.file
       end
+      #p editor.text.dump_tag('0.1',editor.text.index('end'))
       close_editor(editor)
     }
     Arcadia.persistent('editor.files.open', _files)
@@ -3059,7 +3065,8 @@ class AgMultiEditor < ArcadiaExt
   end
 
   def close_raised
-    close_editor(@tabs_editor[@main_frame.enb.raise])
+    _e = @tabs_editor[@main_frame.enb.raise]
+    close_editor(_e) if _e
   
     #_page = @main_frame.enb.raise
     #_editor = @tabs_editor[_page]
@@ -3218,6 +3225,14 @@ class AgMultiEditor < ArcadiaExt
 
   def change_tab_title(_tab, _new_text)
     @main_frame.enb.itemconfigure(page_name(_tab), 'text'=> _new_text)
+  end
+
+  def change_file(_old_file, _new_file)
+    _tab_name=tab_file_name(_old_file)
+    _tab = @main_frame.enb.get_frame(_tab_name)
+    e =  @tabs_editor[_tab_name]
+    e.file =_new_file if e
+    change_file_name(_tab, _new_file)
   end
 
   def change_file_name(_tab, _new_file)
@@ -3382,6 +3397,7 @@ class AgMultiEditor < ArcadiaExt
       ext = _e.file_extension(_title)
       ext='rb' if ext.nil?
       _e.init_editing(ext, w1)
+      _e.text.set_focus
       #@tabs_file[_buffer_name]= nil
       @tabs_editor[_buffer_name]=_e
     end
@@ -3437,7 +3453,8 @@ class AgMultiEditor < ArcadiaExt
   end
 
   def close_file(_filename)
-    close_editor(@tabs_editor[tab_name(_filename)])
+    _e = @tabs_editor[tab_name(_filename)]
+    close_editor(_e) if _e
   end
 
   def save_file(_filename)

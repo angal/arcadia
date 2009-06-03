@@ -6,6 +6,41 @@
 require "lib/a-commons"
 require "tk/menu"
 
+class MyBwTree < Tk::BWidget::Tree
+  def areabind(context, *args)
+    if TkComm._callback_entry?(args[0]) || !block_given?
+      cmd = args.shift
+    else
+      cmd = Proc.new
+    end
+    _bind_for_event_class(Event_for_Items, [path, 'bindArea'], 
+                          context, cmd, *args)
+    self
+  end
+
+  def areabind_append(context, *args)
+    if TkComm._callback_entry?(args[0]) || !block_given?
+      cmd = args.shift
+    else
+      cmd = Proc.new
+    end
+    _bind_append_for_event_class(Event_for_Items, [path, 'bindArea'], 
+                                 context, cmd, *args)
+    self
+  end
+
+  def areabind_remove(*args)
+    _bind_remove_for_event_class(Event_for_Items, [path, 'bindArea'], *args)
+    self
+  end
+
+  def areabindinfo(*args)
+    _bindinfo_for_event_class(Event_for_Items, [path, 'bindArea'], *args)
+  end
+
+end
+
+
 class TkApplication < Application
   attr_reader :tcltk_info
   def initialize(_application_params)
@@ -275,11 +310,7 @@ class AGTkVSplittedFrames < AGTkSplittedFrames
   attr_reader :left_frame, :right_frame, :splitter_frame
   def initialize(parent=nil, frame=nil, width=10, slen=5, perc=false, keys=nil)
     super(parent, frame, width, slen, keys)
-    #self.place('relheight'=>1, 'relwidth'=>1, 'bordermode'=>'outside' )    
-    #self.pack(:expand=>true, :fill=>:both)
-    @left_frame = TkFrame.new(self, Arcadia.style('panel')){
-      #relief 'flat'
-    }
+    @left_frame = TkFrame.new(self, Arcadia.style('panel'))
     @frame1 = @left_frame
     if perc
       p_width = TkWinfo.screenwidth(self)
@@ -303,10 +334,7 @@ class AGTkVSplittedFrames < AGTkSplittedFrames
     @left_frame_obj.relwidth = 0
     @left_frame_obj.relheight = 1
 
-    @splitter_frame = TkFrame.new(self, Arcadia.style('splitter')){
-      #relief  'raised'
-      #border 1
-    }
+    @splitter_frame = TkFrame.new(self, Arcadia.style('splitter'))
 
     @splitter_frame.place(
       'relx' => 0,
@@ -321,81 +349,99 @@ class AGTkVSplittedFrames < AGTkSplittedFrames
       "ButtonRelease-1",
       proc{do_resize}
     )
-    _self = self
-    @b_left = TkButton.new(nil, Arcadia.style('button')){
-      image TkPhotoImage.new('dat'=>LEFT_SIDE_GIF)
-    }
-
-    @b_right = TkButton.new(nil, Arcadia.style('button')){
-      image TkPhotoImage.new('dat'=>RIGHT_SIDE_GIF)
-    }
-    @proc_unplace = proc{
-      @b_left.unplace
-      @b_right.unplace
-    }
-    @splitter_frame.bind_append(
-      "B1-Motion",
-      proc{@splitter_frame.raise;@proc_unplace.call}
-    )
-    @@last_b_left = nil
-    @@last_b_right = nil
-    @b_left.bind_append('ButtonPress-1',proc{_self.hide_left;@proc_unplace.call})
-    @b_right.bind_append('ButtonPress-1',proc{_self.hide_right;@proc_unplace.call})
-    @proc_place = proc{|x,y|
-      if !TkWinfo.mapped?(@b_left)
-        _x = TkWinfo.pointerx(self) - 10
-        _y = TkWinfo.pointery(self) - 20
-        if @@last_b_left != nil
-          @@last_b_left.unplace
-          @@last_b_right.unplace
-        end
-        @b_left.place('x'=>_x,'y'=>_y,'border'=>'outside')
-        @b_right.place('x'=>_x,'y'=>_y+25,'border'=>'outside')
-        @b_left.raise
-        @b_right.raise
-        @@last_b_left = @b_left
-        @@last_b_right = @b_right
-        if @thread_unplace
-          @thread_unplace.kill
-        end
-        @thread_unplace= Thread.new {
-          sleep(5)
-          @proc_unplace.call
-          kill
-        }
-      end
-    }
-
-    @splitter_frame.bind_append(
-    'ButtonPress-1',
-    proc{|x,y|
-      @thread_place= Thread.new {
-        @proc_place.call(x,y)
-      }
-    }, "%x %y")
-
+    #-----
+    #-----
+#    _self = self
+#    @b_left = TkButton.new(nil, Arcadia.style('button')){
+#      image TkPhotoImage.new('dat'=>LEFT_SIDE_GIF)
+#    }
+#
+#    @b_right = TkButton.new(nil, Arcadia.style('button')){
+#      image TkPhotoImage.new('dat'=>RIGHT_SIDE_GIF)
+#    }
+#    @proc_unplace = proc{
+#      @b_left.unplace
+#      @b_right.unplace
+#    }
 #    @splitter_frame.bind_append(
-#    "Enter",
-#    proc{
-#      @color_save = @splitter_frame.background
-#      @splitter_frame.background(Arcadia.conf('splitter.highlightbackground'))}
-#      #@splitter_frame.background('#9aa6a7')}
+#      "B1-Motion",
+#      proc{@splitter_frame.raise;@proc_unplace.call}
 #    )
+#    @@last_b_left = nil
+#    @@last_b_right = nil
+#    @b_left.bind_append('ButtonPress-1',proc{_self.hide_left;@proc_unplace.call})
+#    @b_right.bind_append('ButtonPress-1',proc{_self.hide_right;@proc_unplace.call})
+#    @proc_place = proc{|x,y|
+#      if !TkWinfo.mapped?(@b_left)
+#        _x = TkWinfo.pointerx(self) - 10
+#        _y = TkWinfo.pointery(self) - 20
+#        if @@last_b_left != nil
+#          @@last_b_left.unplace
+#          @@last_b_right.unplace
+#        end
+#        @b_left.place('x'=>_x,'y'=>_y,'border'=>'outside')
+#        @b_right.place('x'=>_x,'y'=>_y+25,'border'=>'outside')
+#        @b_left.raise
+#        @b_right.raise
+#        @@last_b_left = @b_left
+#        @@last_b_right = @b_right
+#        if @thread_unplace
+#          @thread_unplace.kill
+#        end
+#        @thread_unplace= Thread.new {
+#          sleep(5)
+#          @proc_unplace.call
+#          kill
+#        }
+#      end
+#    }
+#
 #    @splitter_frame.bind_append(
-#      "Leave",
-#      proc{
-#        @splitter_frame.background(@color_save)
+#    'ButtonPress-1',
+#    proc{|x,y|
+#      @thread_place= Thread.new {
+#        @proc_place.call(x,y)
 #      }
-#    )
+#    }, "%x %y")
+    #-----
+    #-----
+    _xbutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
+      background '#4966d7'
+    }
+    _xbutton.place(
+      'x' => 0,
+      'y' => 0,
+      'relwidth' => 1,
+      'bordermode' => 'outside',
+      'height' => 20
+    )
+    _xbutton.bind_append(
+      "ButtonPress-1",
+      proc{hide_left}
+    )
+    _ybutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
+      background '#118124'
+    }
+    _ybutton.place(
+      'x' => 0,
+      'y' => 21,
+      'bordermode' => 'outside',
+      'height' => 20,
+      'relwidth' => 1
+    )
+    _ybutton.bind_append(
+      "ButtonPress-1",
+      proc{hide_right}
+    )
+    #-----
+    #-----
     @splitter_frame_obj = AGTkObjPlace.new(@splitter_frame, 'x')
     @splitter_frame_obj.width = @slen
     @splitter_frame_obj.height = 0
     @splitter_frame_obj.relwidth = 0
     @splitter_frame_obj.relheight = 1
     x = x + @slen
-    @right_frame = TkFrame.new(self, Arcadia.style('panel')){
-      #relief 'flat'
-    }
+    @right_frame = TkFrame.new(self, Arcadia.style('panel'))
     @frame2 = @right_frame
     @right_frame.place(
       'relwidth' => 1,
@@ -506,15 +552,6 @@ class AGTkOSplittedFrames < AGTkSplittedFrames
   attr_reader :top_frame, :bottom_frame, :splitter_frame
   def initialize(parent=nil, frame=nil, height=10, slen=5, perc=false, keys=nil)
     super(parent, frame, height, slen, keys)
-#    self.place(
-#      'relwidth' => 1,
-#      'relx' => 0,
-#      'x' => 0,
-#      'y' => 0,
-#      'relheight' => 1,
-#      'rely' => 0,
-#      'bordermode' => 'inside'
-#    )
     @top_frame = TkFrame.new(self, Arcadia.style('panel')){
      # relief 'flat'
     }
@@ -584,8 +621,6 @@ class AGTkOSplittedFrames < AGTkSplittedFrames
     @bottom_frame_obj.relheight = 1
     _xbutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
       background '#4966d7'
-      #overrelief  'raised'
-      #relief  'flat'
     }
     _xbutton.place(
       'x' => 0,
@@ -600,8 +635,6 @@ class AGTkOSplittedFrames < AGTkSplittedFrames
     )
     _ybutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
       background '#118124'
-      #overrelief  'raised'
-      #relief  'flat'
     }
     _ybutton.place(
       'x' => 21,

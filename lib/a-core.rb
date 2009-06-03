@@ -23,7 +23,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.6.0',
+        '0.7.0',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -883,6 +883,14 @@ class ArcadiaAboutSplash < TkToplevel
       justify  'left'
       place('width' => '120','x' => 150,'y' => 65,'height' => 19)
     }
+    @tkLabel21 = TkLabel.new(self){
+      text  'by Antonio Galeone - 2004/2009'
+      background  _bgcolor
+      foreground  '#ffffff'
+      font Arcadia.instance['conf']['splash.credits.font']
+      justify  'left'
+      place('width' => '210','x' => 100,'y' => 95,'height' => 19)
+    }
     @tkLabelStep = TkLabel.new(self){
       text  ''
       background  _bgcolor
@@ -890,20 +898,12 @@ class ArcadiaAboutSplash < TkToplevel
       font Arcadia.instance['conf']['splash.banner.font']
       justify  'left'
       anchor  'w'
-      place('width'=>-5,'relwidth' => 1,'x' => 5,'y' => 175,'height' => 19)
-    }
-    @tkLabel21 = TkLabel.new(self){
-      text  'by Antonio Galeone - 2004/2009'
-      background  _bgcolor
-      foreground  '#ffffff'
-      font Arcadia.instance['conf']['splash.credits.font']
-      justify  'left'
-      place('width' => '210','x' => 100,'y' => 146,'height' => 19)
+      place('width'=>-5,'relwidth' => 1,'x' => 5,'y' => 160,'height' => 19)
     }
     @progress  = TkVariable.new
     reset
     _width = 340
-    _height = 210
+    _height = 200
     #_width = 0;_height = 0
     _x = TkWinfo.screenwidth(self)/2 -  _width / 2
     _y = TkWinfo.screenheight(self)/2 -  _height / 2
@@ -922,11 +922,12 @@ class ArcadiaAboutSplash < TkToplevel
     @max = _max
     Tk::BWidget::ProgressBar.new(self, :width=>150, :height=>10,
     :background=>'black',
-    :foreground=>'yellow',
+    :troughcolor=>'black',
+    :foreground=>'#a11934',
     :variable=>@progress,
     :borderwidth=>0,
     :relief=>'flat',
-    :maximum=>_max).place('width' => '150','x' => 145,'y' => 95,'height' => 15)
+    :maximum=>_max).place('relwidth' => '1','y' => 146,'height' => 2)
   end
 
   def reset
