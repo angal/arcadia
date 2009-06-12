@@ -43,7 +43,9 @@ class Arcadia < TkApplication
       title _title
       withdraw
       protocol( "WM_DELETE_WINDOW", $arcadia['action.on_exit'])
+      iconphoto(TkPhotoImage.new('dat'=>ARCADIA_RING_GIF))
     }
+    
     @on_event = Hash.new
 
     @main_menu_bar = TkMenubar.new(
