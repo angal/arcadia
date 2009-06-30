@@ -51,7 +51,7 @@ class DirProjects < ArcadiaExt
       variable 1
       indicatoron 0
       offrelief 'flat'
-      image TkPhotoImage.new('dat' => GARROW_GIF)
+      image TkPhotoImage.new('dat' => ICON_SYNC_GIF)
       #command do_check
       place('x' => 0,'y' => 0,'height' => 22)
     }
@@ -74,6 +74,10 @@ class DirProjects < ArcadiaExt
     do_select_item = proc{|_tree, _selected|
       if File.ftype(node2file(_selected)) == 'file'
 	      Arcadia.process_event(OpenBufferEvent.new(self,'file'=>node2file(_selected)))
+      elsif !_selected.nil? && @htree.open?(_selected)
+        @htree.close_tree(_selected)
+      elsif !_selected.nil?
+        @htree.open_tree(_selected,false) 
       end
     }
     
@@ -89,7 +93,12 @@ class DirProjects < ArcadiaExt
       closecmd do_close_folder_cmd
       selectcommand do_select_item
     }
+    
     class << @htree
+      def open?(node)
+        bool(self.itemcget(tagid(node), 'open'))
+      end
+    
       def areabind(context, *args)
         if TkComm._callback_entry?(args[0]) || !block_given?
           cmd = args.shift
