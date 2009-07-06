@@ -1,11 +1,11 @@
-# v0.6 gemspec for Arcadia
+# gemspec for Arcadia
 # Antonio Galeone (antonio-galeone@rubyforge.org)
  	
 require 'rubygems'
   SPEC = Gem::Specification.new do |s|
   s.name = "arcadia"
-  s.version = "0.6.0"
-  s.date = "2009-02-21"
+  s.version = "0.7.0"
+  s.date = "2009-07-21"
   s.author = "Antonio Galeone"
   s.email = "antonio-galeone@rubyforge.org"
   s.homepage = "http://arcadia.rubyforge.org"

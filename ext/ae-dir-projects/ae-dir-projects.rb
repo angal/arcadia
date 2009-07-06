@@ -73,7 +73,7 @@ class DirProjects < ArcadiaExt
     
     do_select_item = proc{|_tree, _selected|
       if File.ftype(node2file(_selected)) == 'file'
-	      Arcadia.process_event(OpenBufferEvent.new(self,'file'=>node2file(_selected)))
+	      Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>node2file(_selected)))
       elsif !_selected.nil? && @htree.open?(_selected)
         @htree.close_tree(_selected)
       elsif !_selected.nil?
@@ -153,7 +153,6 @@ class DirProjects < ArcadiaExt
 	end
 
 	def on_after_build(_event)
-    Arcadia.attach_listener(self, OpenBufferEvent)
     self.frame.show
 	end
 

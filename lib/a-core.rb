@@ -407,7 +407,7 @@ class Arcadia < TkApplication
 
 
   def do_exit
-    q1 = (Arcadia.dialog(self,
+    q1 = conf('confirm-on-exit')!='yes' || (Arcadia.dialog(self,
                         'type'=>'yes_no',
                         'msg'=>"Do you want exit?",
                         'title' => '(Arcadia) Exit',

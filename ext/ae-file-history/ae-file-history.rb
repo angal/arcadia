@@ -30,36 +30,6 @@ class TreeNode
     self.label.strip <=> other.label.strip
   end
 	
-#	def path
-#	  _path = @label
-#	  if @parent != nil
-#	    _path = @parent.path+_path
-#	  end
-#	  return _path
-#	end
-
-	def dir_old(_path)
-	  node = nil
-	  parent = self
-	  sons.each{|_tree|
-	     if _path[0.._tree.label.length-1] == _tree.label 
-				 res = _path[_tree.label.length.._path.length-1]
-				 if ["\\","/"].include?(res[0,1])
-              parent = _tree
-              node= _tree.dir(res)
-				 end
-			 end
-			 break if node != nil
-	  }
-	  if node == nil
-	    node = TreeNode.new(parent,'KDir') do |_node|
-      		_node.label=_path
-      		_node.rif= parent.path+_path
-	    end
-	  end
-	  return node
-	end
-
 	def dir(_path)
 	  node = nil
 	  parent = self
@@ -108,13 +78,10 @@ class FilesHistrory < ArcadiaExt
   def sync_on
     @sync = true
     select_file_without_event(@last_file) if @last_file
-
-    #Arcadia.attach_listener(self, BufferRaisedEvent)
   end
 
   def sync_off
     @sync = false
-    #Arcadia.detach_listener(self, BufferRaisedEvent)
   end
 
   def on_before_build(_event)

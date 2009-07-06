@@ -614,6 +614,10 @@ class Application
   def Application.conf(_property)
 	  @@instance['conf'][_property] if @@instance
   end
+
+  def conf(_property)
+	  self['conf'][_property]
+  end
   
   def sys_info
     "[Platform = #{RUBY_PLATFORM}] [Ruby version = #{RUBY_VERSION}]"

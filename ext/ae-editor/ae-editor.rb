@@ -622,6 +622,7 @@ class AgEditor
     @controller = _controller
     @page_frame = _page_frame
     @set_mod = false
+    @modified_from_opening=false
 #    @font = @controller.conf('font')
 #    @font_bold = @controller.conf('font.bold')
     @font = Arcadia.conf('edit.font')
@@ -646,6 +647,10 @@ class AgEditor
 #      @fm.is_left_hide?
 #    end
 #  end
+
+  def modified_from_opening?
+    @modified_from_opening
+  end
   
   def xy_insert
     _index_now = @text.index('insert')
@@ -2284,6 +2289,7 @@ class AgEditor
   def set_modify
     if !@set_mod
       @set_mod = true
+      @modified_from_opening = true
       @controller.change_tab_set_modify(@page_frame)
     end
   end
@@ -2607,6 +2613,7 @@ class AgEditor
   end
 
   def check_modify
+    return  if @loading
     if modified? 
       set_modify if !@set_mod
     else
@@ -2970,6 +2977,19 @@ class AgMultiEditor < ArcadiaExt
         if _event.file 
           if _event.row
             _index = _event.row.to_s+'.0' 
+          end
+          if _event.kind_of?(OpenBufferTransientEvent) && conf('close-last-if-not-modified')=="yes"
+            if defined?(@last_transient_file) && !@last_transient_file.nil?
+              _e = @tabs_editor[tab_name(@last_transient_file)]
+              if _e && !_e.modified_from_opening?
+                close_editor(_e)
+              end
+            end
+            if !editor_exist?(_event.file)
+              @last_transient_file = _event.file
+            else
+              @last_transient_file = nil
+            end
           end
           self.open_file(_event.file, _index)
         elsif _event.text

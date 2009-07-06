@@ -58,6 +58,9 @@ end
 class OpenBufferEvent < BufferEvent
 end
 
+class OpenBufferTransientEvent < OpenBufferEvent
+end
+
 class CloseBufferEvent < BufferEvent
 end
 
