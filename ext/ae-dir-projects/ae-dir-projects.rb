@@ -48,7 +48,6 @@ class DirProjects < ArcadiaExt
     @cb_sync = TkCheckButton.new(self.frame.hinner_frame, Arcadia.style('checkbox')){
       text  'Sync'
       justify  'left'
-      variable 1
       indicatoron 0
       offrelief 'flat'
       image TkPhotoImage.new('dat' => ICON_SYNC_GIF)

@@ -93,8 +93,6 @@ class FilesHistrory < ArcadiaExt
     @cb_sync = TkCheckButton.new(self.frame.hinner_frame, Arcadia.style('checkbox')){
       text  'Sync'
       justify  'left'
-      variable 1
-      #command do_check
       place('x' => 0,'y' => 0,'height' => 22)
     }
 

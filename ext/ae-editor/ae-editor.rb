@@ -2979,7 +2979,7 @@ class AgMultiEditor < ArcadiaExt
             _index = _event.row.to_s+'.0' 
           end
           if _event.kind_of?(OpenBufferTransientEvent) && conf('close-last-if-not-modified')=="yes"
-            if defined?(@last_transient_file) && !@last_transient_file.nil?
+            if defined?(@last_transient_file) && !@last_transient_file.nil? && @last_transient_file != _event.file
               _e = @tabs_editor[tab_name(@last_transient_file)]
               if _e && !_e.modified_from_opening?
                 close_editor(_e)
