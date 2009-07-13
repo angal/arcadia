@@ -68,6 +68,11 @@ class SourceStructure
           end
           if (m[0].strip[0..4] == "class" && m.pre_match.strip.length==0)
             _kind = 'KClass'
+            if m.post_match.strip[0..1]=='<<'
+              hinner_class = true
+            else
+              hinner_class = false
+            end
           elsif (m[0].strip[0..4] == "class" && m.pre_match.strip.length>0)
             _row = _row +1
             _liv = _liv - 1
@@ -96,21 +101,13 @@ class SourceStructure
 #            _row = _row +1
           end
           
-          if  _livs[_liv-1] && _livs[_liv-1].kind != 'KDef'
+          if  _livs[_liv-1] && (_livs[_liv-1].kind != 'KDef' || (_livs[_liv-1].kind == 'KDef' && _kind == 'KClass' && hinner_class))
             TreeNode.new(_parent, _kind){|_node|
               _node.label = _label
               _node.helptext = _helptext
               _node.rif = _row.to_s
               _livs[_pliv + 1]=_node
             }
-#          elsif _kind == 'KDef' && _parent == @root
-#            TreeNode.new(_livs[_liv+1], _kind){|_node|
-#              _node.label = _label
-#              _node.helptext = _helptext
-#              _node.rif = _row.to_s
-#              _livs[_pliv+2]=_node
-#            }
-#            _liv = _liv + 2
           else
             TreeNode.new(_livs[_liv-3], _kind){|_node|
               _node.label = _label
@@ -1764,7 +1761,7 @@ class AgEditor
     
     @pop_up.insert('end',
       :command,
-      :label=>'Data image',
+      :label=>'Data image from file',
       :hidemargin => false,
       :command=> proc{
         file = Tk.getOpenFile
@@ -1790,12 +1787,38 @@ class AgEditor
         if _r.length>0
           _data=@text.get(_r[0][0],_r[0][1])
           if _data.length > 0
-
             _b = TkButton.new(@text, 
               'command'=>proc{_b.destroy},
               'image'=> TkPhotoImage.new('data' => _data),
               'relief'=>'groove')
             TkTextWindow.new(@text, _r[0][1], 'window'=> _b)
+          end
+        end
+      }
+    )
+
+    @pop_up.insert('end',
+      :command,
+      :label=>'Data image to file',
+      :hidemargin => false,
+      :command=> proc{
+        _r = @text.tag_ranges('sel')
+        if _r.length>0
+          _data=@text.get(_r[0][0],_r[0][1])
+          if _data.length > 0
+            file = Tk.getSaveFile("filetypes"=>[["Image", [".gif"]],["All Files", [".*"]]])
+            if file
+              require 'base64'
+              decoded = Base64.decode64(_data)
+              f = File.new(file, "w")
+              begin
+                if f
+                  f.syswrite(decoded)
+                end
+              ensure
+                f.close unless f.nil?
+              end
+            end
           end
         end
       }
@@ -1854,6 +1877,40 @@ class AgEditor
       :hidemargin => false,
       :command=> proc{@text.configure('wrap'=>'none');@text.show_h_scroll}
     )
+
+    _sub_code.insert('end',
+      :command,
+      :label=>'Selection to uppercase',
+      :hidemargin => false,
+      :command=> proc{
+        _r = @text.tag_ranges('sel')
+        if _r.length>0
+          _text=@text.get(_r[0][0],_r[0][1])
+          if _text.length > 0
+            @text.delete(_r[0][0],_r[0][1])
+            @text.insert(_r[0][0],_text.upcase)
+          end
+        end
+      }
+    )
+
+    _sub_code.insert('end',
+      :command,
+      :label=>'Selection to downcase',
+      :hidemargin => false,
+      :command=> proc{
+        _r = @text.tag_ranges('sel')
+        if _r.length>0
+          _text=@text.get(_r[0][0],_r[0][1])
+          if _text.length > 0
+            @text.delete(_r[0][0],_r[0][1])
+            @text.insert(_r[0][0],_text.downcase)
+          end
+        end
+      }
+    )
+
+
 
     _sub_code.insert('end',
       :command,

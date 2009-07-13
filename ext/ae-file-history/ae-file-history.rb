@@ -93,8 +93,17 @@ class FilesHistrory < ArcadiaExt
     @cb_sync = TkCheckButton.new(self.frame.hinner_frame, Arcadia.style('checkbox')){
       text  'Sync'
       justify  'left'
-      place('x' => 0,'y' => 0,'height' => 22)
+      indicatoron 0
+      offrelief 'raised'
+      image TkPhotoImage.new('dat' => SYNCICON20_GIF)
+      place('x' => 0,'y' => 0,'height' => 26)
     }
+
+    Tk::BWidget::DynamicHelp::add(@cb_sync, 
+      'text'=>'Link open editors with content in the Navigator')
+
+
+
 
     do_check = proc {
       if @cb_sync.cget('onvalue')==@cb_sync.cget('variable').value.to_i
@@ -146,7 +155,7 @@ class FilesHistrory < ArcadiaExt
 #      place('relwidth' => 1,'relheight' => '1', 'x' => '0','y' => '22', 'height' => -22)
     }
     _wrapper = TkScrollWidget.new(@htree)  
-    _wrapper.show(0,22)
+    _wrapper.show(0,26)
     _wrapper.show_v_scroll
     _wrapper.show_h_scroll
 #    _scrollcommand = proc{|*args| @htree.yview(*args)}

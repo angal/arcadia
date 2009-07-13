@@ -45,15 +45,44 @@ class DirProjects < ArcadiaExt
     @num_childrens_of = Hash.new
     @h_stack = Array.new
     @opened_folder = Array.new
+    #--- button_box 
+    @button_box = Tk::BWidget::ButtonBox.new(self.frame.hinner_frame){
+      homogeneous true
+      spacing 0
+      padx 0
+      pady 0
+      background Arcadia.conf('panel.background')
+    }.place('x'=>32,'height'=> 28)
+
+    @button_box.add(Arcadia.style('toolbarbutton').update({
+      'name'=>'new_proj',
+      'anchor' => 'nw',
+      'command'=>proc{self.do_new_project},
+      'helptext'=>'New dir Project',
+      'image'=> TkPhotoImage.new('dat' => NEW_GIF)})
+    )
+
+    @button_box.add(Arcadia.style('toolbarbutton').update({
+      'name'=>'open_proj',
+      'anchor' => 'nw',
+      'command'=>proc{self.do_open_project},
+      'helptext'=>'Open dir as Project',
+      'image'=> TkPhotoImage.new('dat' => OPEN_GIF)})
+    )
+    #--- button_box
+    
     @cb_sync = TkCheckButton.new(self.frame.hinner_frame, Arcadia.style('checkbox')){
       text  'Sync'
       justify  'left'
       indicatoron 0
-      offrelief 'flat'
-      image TkPhotoImage.new('dat' => ICON_SYNC_GIF)
-      #command do_check
-      place('x' => 0,'y' => 0,'height' => 22)
+      offrelief 'raised'
+      image TkPhotoImage.new('dat' => SYNCICON20_GIF)
+      #pack('anchor'=>'n')
+      place('x' => 0,'y' => 0,'height' => 26)
     }
+
+    Tk::BWidget::DynamicHelp::add(@cb_sync, 
+      'text'=>'Link open editors with content in the Navigator')
 
     do_check = proc {
       if @cb_sync.cget('onvalue')==@cb_sync.cget('variable').value.to_i
@@ -64,19 +93,26 @@ class DirProjects < ArcadiaExt
     }
     @sync = false
     @cb_sync.command(do_check)
-    
-    
-
     @font =  Arcadia.conf('treeitem.font')
     @font_b = "#{Arcadia.conf('treeitem.font')} bold"
-    
+    @selecting_node = false    
     do_select_item = proc{|_tree, _selected|
-      if File.ftype(node2file(_selected)) == 'file'
-	      Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>node2file(_selected)))
-      elsif !_selected.nil? && @htree.open?(_selected)
-        @htree.close_tree(_selected)
-      elsif !_selected.nil?
-        @htree.open_tree(_selected,false) 
+      if File.exist?(node2file(_selected))
+        if File.ftype(node2file(_selected)) == 'file'
+          _sync_val = @sync
+          @sync = false
+          begin
+  	        Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>node2file(_selected)))
+  	      ensure
+            @sync = _sync_val
+  	      end
+        elsif !_selected.nil? && @htree.open?(_selected)
+          @htree.close_tree(_selected)
+        elsif !_selected.nil?
+          @htree.open_tree(_selected,false) 
+        end
+      else
+        shure_delete_node(_selected)
       end
     }
     
@@ -130,7 +166,7 @@ class DirProjects < ArcadiaExt
       end
     end
     _wrapper = TkScrollWidget.new(@htree)  
-    _wrapper.show(0,22)
+    _wrapper.show(0,26)
     _wrapper.show_v_scroll
     _wrapper.show_h_scroll
     self.pop_up_menu_tree
@@ -148,7 +184,6 @@ class DirProjects < ArcadiaExt
         _selected = self.selected
         do_refresh(_selected)
       end
-	  
 	end
 
 	def on_after_build(_event)
@@ -172,7 +207,6 @@ class DirProjects < ArcadiaExt
   end  
 
   def do_close_folder(_node, _close=false)
-    p "close #{_node}"
     @opened_folder.delete(_node)
     @htree.close_tree(_node) if _close
   end
@@ -211,18 +245,27 @@ class DirProjects < ArcadiaExt
     @htree.delete(@htree.nodes(_node)) if _reset
     if @htree.exist?(_node)
       childrens = Dir.entries(node2file(_node))
+      childrens_dir = Array.new
+      childrens_file = Array.new
       @num_childrens_of[_node] = childrens.length-2
       childrens.sort.each{|c|
         if c != '.' && c != '..'
           child = File.join(node2file(_node),c)
           fty = File.ftype(node2file(child))
           if fty == "file"
-            add_node(_node, child, fty)
+            childrens_file << child
+            #add_node(_node, child, fty)
           elsif fty == "directory"
-            add_node(_node, child, fty)
-            #load_tree_from_dir(child)
+            childrens_dir << child
+            #add_node(_node, child, fty)
           end
         end
+      }
+      childrens_dir.each{|child|
+        add_node(_node, child, "directory")
+      }
+      childrens_file.each{|child|
+        add_node(_node, child, "file")
       }
     end
   end
@@ -245,10 +288,7 @@ class DirProjects < ArcadiaExt
       :command,
       :label=>'New dir Project',
       :hidemargin => false,
-      :command=> proc{
-        _dir=Tk.chooseDirectory 
-        do_new_project(_dir) if _dir && File.exists?(_dir)
-      }
+      :command=> proc{do_new_project}
     )
 
     sub_new.insert('end',
@@ -328,10 +368,7 @@ class DirProjects < ArcadiaExt
       :command,
       :label=>'Open dir as Project',
       :hidemargin => false,
-      :command=> proc{
-        _dir=Tk.chooseDirectory 
-        do_open_project(_dir) if _dir && File.exists?(_dir)
-      }
+      :command=> proc{do_open_project}
     )
     @pop_up_tree.insert('end',
       :command,
@@ -387,9 +424,12 @@ class DirProjects < ArcadiaExt
     return _selected
   end
 
-  def do_new_project(_parent_folder_node)
-    if File.exists?(node2file(_parent_folder_node)) && File.ftype(node2file(_parent_folder_node)) == 'directory'
-      tmp_node_name = "#{node2file(_parent_folder_node)}#{File::SEPARATOR}_new_folder_"
+  def do_new_project(_parent_folder_node=nil)
+    if _parent_folder_node.nil?
+      _parent_folder_node=Tk.chooseDirectory 
+    end
+    if _parent_folder_node && File.exists?(node2file(_parent_folder_node)) && File.ftype(node2file(_parent_folder_node)) == 'directory'
+      tmp_node_name = "#{node2file(_parent_folder_node)}#{File::SEPARATOR}_new_project_"
       tree_parent = _parent_folder_node
       add_temp_node('root',tmp_node_name,'project')
       _verify_cmd = proc{|_text|
@@ -402,17 +442,22 @@ class DirProjects < ArcadiaExt
           end
           _ret = 1
         ensure
-          @htree.delete(tmp_node_name)
+          @htree.delete(file2node(tmp_node_name))
         end
         return _ret
       }
+#      @htree.textbind('KeyPress', proc{|e| 
+#      p 'pippo'})
       @htree.edit(tmp_node_name, tmp_node_name.split(File::SEPARATOR)[-1], _verify_cmd, 1)
     end
 
   end
   
-  def do_open_project(_proj_name)
-    add_project(_proj_name)
+  def do_open_project(_proj_name=nil)
+    if _proj_name.nil?
+      _proj_name=Tk.chooseDirectory 
+      add_project(_proj_name) if _proj_name && File.exists?(_proj_name)
+    end
   end
 
   def do_close_project(_proj_name)
@@ -546,8 +591,8 @@ class DirProjects < ArcadiaExt
         _ret = 0
         begin
           new_file_name = "#{source_dir}#{File::SEPARATOR}#{_text}"
-          p "new_file_name=#{new_file_name}"
-          p "old_file_name=#{old_file_name}"
+          #p "new_file_name=#{new_file_name}"
+          #p "old_file_name=#{old_file_name}"
           if !File.exists?(new_file_name)
             if File.rename(old_file_name, new_file_name)
               # evento
@@ -569,11 +614,11 @@ class DirProjects < ArcadiaExt
     if File.exists?(node2file(_node)) 
       type = File.ftype(node2file(_node))
       if type == 'directory'
-        _msg = "Delete #{_node} directory and all ... ?"
+        _msg = "Delete #{_node} directory ?"
       else
         _msg = "Delete #{_node} file ?"
       end
-      if !_interactive || Arcadia.dialog(self,'type'=>'yes_no', 'level'=>'warning','title' => 'Confirm deletion', 'msg'=>_msg)=='yes'
+      if !_interactive || Arcadia.dialog(self,'type'=>'yes_no', 'level'=>'warning','title' => 'Confirm delete', 'msg'=>_msg)=='yes'
         delete_node = true
         if type == 'directory'
           entries = Dir.entries(node2file(_node))
@@ -664,7 +709,6 @@ class DirProjects < ArcadiaExt
   end
 
   def shure_delete_node(_node)
-    p "shure_delete_node #{_node}"
     if _node.length>1 || @htree.exist?(_node)
       _sc = @htree.cget('selectcommand')
       begin
@@ -677,6 +721,8 @@ class DirProjects < ArcadiaExt
   end
 
   def shure_select_node(_node)
+    return if @selecting_node
+    @selecting_node = true
     _proc = @htree.selectcommand
     @htree.selectcommand(nil)
     begin
@@ -685,6 +731,7 @@ class DirProjects < ArcadiaExt
       @htree.see(_node)
     ensure
       @htree.selectcommand(_proc)
+      @selecting_node = false
     end
   end
 

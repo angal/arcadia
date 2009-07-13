@@ -97,7 +97,7 @@ class SearchOutput
     @results = {}
     _open_file = proc do |tree, sel|
       n_parent, n = sel.split('@@@')
-      Arcadia.process_event(OpenBufferEvent.new(self,'file'=>@results[n_parent][n][0], 'row'=>@results[n_parent][n][1]))  if n && @results[n_parent][n]
+      Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>@results[n_parent][n][0], 'row'=>@results[n_parent][n][1]))  if n && @results[n_parent][n]
       #EditorContract.instance.open_file(self, 'file'=>@results[n_parent][n][0], 'line'=>@results[n_parent][n][1]) if n && @results[n_parent][n]
     end
 

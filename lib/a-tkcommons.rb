@@ -7,6 +7,11 @@ require "lib/a-commons"
 require "tk/menu"
 
 class MyBwTree < Tk::BWidget::Tree
+
+  def open?(node)
+    bool(self.itemcget(tagid(node), 'open'))
+  end
+    
   def areabind(context, *args)
     if TkComm._callback_entry?(args[0]) || !block_given?
       cmd = args.shift

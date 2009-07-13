@@ -978,25 +978,36 @@ class ArcadiaDialogManager
     @arcadia = _arcadia
     Arcadia.attach_listener(self, DialogEvent)
   end
+
   def on_dialog(_event)
     type = _event.type
     if !DialogEvent::TYPE_PATTERNS.include?(_event.type)
       type = 'ok'
     end
+    res_array = type.split('_')
     icon = _event.level
-#    case _event
-#      when QuestionDialogEvent
-#        icon = 'question'
-#      when InfoDialogEvent
-#        icon = 'info'
-#      when WarningDialogEvent
-#        icon = 'warning'
-#      when ErrorDialogEvent
-#        icon = 'error'
-#      else
-#        icon = 'info'
-#    end
-     
+    tktype = type.gsub('_','').downcase
+    
+    tkdialog =  Tk::BWidget::MessageDlg.new(
+            'icon' => icon,
+            'bg' => Arcadia.conf('background'),
+            'fg' => Arcadia.conf('foreground'),
+            'type' => tktype,
+            'title' => _event.title, 
+            'message' => _event.msg)
+            
+    tkdialog.configure('font'=>'courier 6')        
+    res = tkdialog.create
+    _event.add_result(self, 'value'=>res_array[res.to_i])
+  end
+
+
+  def on_dialog_old(_event)
+    type = _event.type
+    if !DialogEvent::TYPE_PATTERNS.include?(_event.type)
+      type = 'ok'
+    end
+    icon = _event.level
     tktype = type.gsub('_','').downcase
     
     res =  Tk.messageBox(
