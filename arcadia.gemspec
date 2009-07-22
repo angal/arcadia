@@ -20,7 +20,7 @@ require 'rubygems'
     candidates << "conf/arcadia.init.rb"
     candidates << "conf/arcadia.res.rb"
   s.files =  candidates.delete_if do |item|
-      item.include?("CVS") || item.include?("rdoc")|| item.include?("cvs")
+      item.include?("CVS") || item.include?("rdoc")|| item.include?("cvs")|| item.include?(".git")
   end
   #s.require_path = "lib"
   s.bindir = "bin"

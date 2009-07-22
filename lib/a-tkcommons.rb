@@ -1210,7 +1210,8 @@ end
 class TclTkInfo
   attr_reader :level
   def initialize
-    @level = TclTkIp.new._eval "info patchlevel"
+    @level = Tk.tk_call( "eval", "info patchlevel")
+    # @level = TclTkIp.new._eval "info patchlevel"
   end
 end
 

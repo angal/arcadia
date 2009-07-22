@@ -2,7 +2,7 @@
 version 0.7.0
 
 by Antonio Galeone
-on Jul --, 2009
+on Jul 22, 2009
 
 
 == About
@@ -17,8 +17,28 @@ Some of Arcadia ruby ide project features include:
 * Highly extensibility architecture.
 
 == In this release
-* [new] - Dynamic layout capability added: now you can change at run-time the frames's position and create new frames.
-	      
+[New extensions]
+	- project drawer 
+
+[Improvements]
+	ae-file-history :
+       - tree "auto expand" if it only has one child
+       - describe better what "sync" means, somehow.
+
+	ae-search-in-files : 
+        - make it so that you don't have to click on one of the search 
+           entries to be able to use the mouse scrollwheel to scroll up and down.
+
+	ae-editor :
+       - auto completion of current word based on words within the current window also
+            like textmate's hitting escape.
+       - added "ctrl +o" shortcut that opens the filesystem dialog 
+         in the directory that file you’re on is.
+      
+  commons : 
+       - make "do you want to exit" optional
+
+
 
 
 == How to install
@@ -75,11 +95,16 @@ These are same editor short-cut:
 
 - Double-Click on line number set or unset a debug breakpoint
 
+==== Project drawer
+It is a navigational tree: 
+- open or create dir as project
+- make commons file system activity (by contextual menu)
+
 ==== File history
 The last used files are organizing in tree so you can reopen them or there  
 directory by clicking on the tree node.
 
-==== Rad Palette
+==== Rad Palette (instable)
 It contain the wrapper components for the tk gui building. 
 It is in very unstabled and incomplete state. 
 The first component is a TkTopLevel wrapper, when you click on it a new form is created and a 
@@ -91,7 +116,7 @@ On the palette there are also two button, one for deselect and other for copy fr
 created widget. The copy action copy also the code into the clipboard, so you can copy the
 code rapresenting the gui into the embedded editor or into external editor.
 
-==== Rad Object Inspector
+==== Rad Object Inspector  (instable)
 It is for modify the widget property at runtime
 
 ==== Debug
@@ -112,6 +137,7 @@ I include into distribution also the BWidget lib (under tcl directory) so
 are require realy only the standard tcl tk lib (tested on tcl tk 8.4 & tcl tk 8.5).
 I have tested arcadia with ruby 1.8.4, 1.8.5, 1.8.6, 1.8.7 on 
 * Archlinux
+* Ubuntu
 * FreeBsd6.x, FreeBsd7.x, 
 * Vector linux 5.*,
 * Windows 2000/XP, 
@@ -119,8 +145,8 @@ I have tested arcadia with ruby 1.8.4, 1.8.5, 1.8.6, 1.8.7 on
   by ash.exe exec "/bin/rebaseall"). 
 If you will test arcadia on other operating system sends me an e-mail.
 
-==Developers information
-Released on arcadia web site (http://arcadia.rubyforge.org) a first drawing of "How to extend arcadia". 
+==Developers e general information
+Released on arcadia web site (http://arcadia.rubyforge.org) 
 
 
  
@@ -128,6 +154,9 @@ Released on arcadia web site (http://arcadia.rubyforge.org) a first drawing of "
 Arcadia is released under the Ruby License
 
 == Contacts
-For questions:
+For all questions:
 antonio-galeone@rubyforge.org
-For bugs, support request, features request http://rubyforge.org/projects/arcadia
+
+For bugs, support request, features request:
+http://groups.google.it/group/arcadia-ruby-ide
+http://rubyforge.org/projects/arcadia
