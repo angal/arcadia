@@ -2898,7 +2898,7 @@ class AgMultiEditor < ArcadiaExt
 
     @c = @pop_up.insert('end',
       :command,
-      :label=>'Closey',
+      :label=>'Close',
       #:font => conf('font'),
       :hidemargin => false,
       :command=> proc{
