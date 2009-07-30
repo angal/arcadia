@@ -631,6 +631,8 @@ class AgEditor
     @find = @controller.get_find
     @read_only=false
     @loading=false
+    @tabs_show = false
+    @spaces_show = false
   end
   
 #  def hide_exp
