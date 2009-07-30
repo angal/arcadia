@@ -2883,18 +2883,20 @@ class AgMultiEditor < ArcadiaExt
     )
     @pop_up.configure(Arcadia.style('menu'))
     #Arcadia.instance.main_menu.update_style(@pop_up)
+=begin
     @pop_up.insert('end',
       :command,
       :label=>'...',
       :state=>'disabled',
       :background=>Arcadia.conf('titlelabel.background'),
       :font => "#{Arcadia.conf('menu.font')} bold",
-      :hidemargin => true
+      :hidemargin => false
     )
+=end
 
     @c = @pop_up.insert('end',
       :command,
-      :label=>'Close',
+      :label=>'Closey',
       #:font => conf('font'),
       :hidemargin => false,
       :command=> proc{
@@ -2941,7 +2943,7 @@ class AgMultiEditor < ArcadiaExt
         end
         if _index != -1 
           _file =  @main_frame.enb.itemcget(@selected_tab_name_from_popup, 'text')
-          @pop_up.entryconfigure(0, 'label'=>_file)
+          #@pop_up.entryconfigure(0, 'label'=>_file)
           @pop_up.popup(_x,_y)
         end
       })
