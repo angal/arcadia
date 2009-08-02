@@ -20,12 +20,17 @@ end
 # +------------------------------------------+
 #     Extention Event (raised only by Arcadia)
 #     do not raise! 
+#     Every extensions listen on these events
 # +------------------------------------------+
 
 class BuildEvent < ArcadiaEvent
   attr_accessor :name
 end 
 
+# ExitQueryEvent is processed by arcadia-core 
+# before process FinalizeEvent during quiet face.
+# If listener(Extension) set can_exit property to false then 
+# arcadia abort the quiet face. 
 class ExitQueryEvent < ArcadiaEvent
   attr_accessor :can_exit
 end

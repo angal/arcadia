@@ -2877,6 +2877,17 @@ class AgMultiEditor < ArcadiaExt
     self.open_last_files
   end
 
+  def on_exit_query(_event)
+    _event.can_exit=true
+    @tabs_editor.each_value{|editor|
+      _event.can_exit = can_close_editor?(editor)
+      if !_event.can_exit
+        _event.break
+        break 
+      end
+    }
+  end
+
   def pop_up_menu
     @pop_up = TkMenu.new(
       :parent=>@main_frame.enb,
@@ -3126,7 +3137,7 @@ class AgMultiEditor < ArcadiaExt
         _files=_files + editor.file
       end
       #p editor.text.dump_tag('0.1',editor.text.index('end'))
-      close_editor(editor)
+      close_editor(editor,true)
     }
     Arcadia.persistent('editor.files.open', _files)
 #    _breakpoints = '';
@@ -3503,23 +3514,52 @@ class AgMultiEditor < ArcadiaExt
   		end
     @batch_files = false
   end
-
-  def close_editor(_editor, _mod=true)
-    if ((_mod)&&(_editor.modified?))
-      _message = @main_frame.enb.itemcget(page_name(_editor.page_frame), 'text')+"\n modified. Save?"
-      _r = TkDialog2.new('message'=>_message, 'buttons'=>['Ok','No','Cancel']).show()
-      if _r == 0
+  
+  def can_close_editor?(_editor)
+    ret = true
+    if _editor.modified?
+      filename = page_name(_editor.page_frame)
+      message = @main_frame.enb.itemcget(filename, 'text')+"\n modified. Save?"
+      r=Arcadia.dialog(self,
+          'type'=>'yes_no_cancel', 
+          'level'=>'warning',
+          'title'=> 'Confirm saving', 
+          'msg'=>message)
+      if r=="yes"
         _editor.save
-      elsif _r == 1
-        close_tab(_editor.page_frame)
-      elsif _r == 2
-        return
+        ret = !_editor.modified?
+      elsif r=="cancel"
+        ret = false
       end
-    else
-      close_tab(_editor.page_frame)
     end
-    #EditorContract.instance.file_closed(self, 'file'=>_editor.file)
+    ret
   end
+
+  def close_editor(_editor, _force=false)
+    if _force || can_close_editor?(_editor)
+      close_tab(_editor.page_frame)
+    else
+      return
+    end
+  end
+
+
+#  def close_editor(_editor, _mod=true)
+#    if ((_mod)&&(_editor.modified?))
+#      _message = @main_frame.enb.itemcget(page_name(_editor.page_frame), 'text')+"\n modified. Save?"
+#      _r = TkDialog2.new('message'=>_message, 'buttons'=>['Ok','No','Cancel']).show()
+#      if _r == 0
+#        _editor.save
+#      elsif _r == 1
+#        close_tab(_editor.page_frame)
+#      elsif _r == 2
+#        return
+#      end
+#    else
+#      close_tab(_editor.page_frame)
+#    end
+#    #EditorContract.instance.file_closed(self, 'file'=>_editor.file)
+#  end
 
   def close_tab(_page_frame)
     _name = page_name(_page_frame)

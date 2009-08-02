@@ -357,14 +357,16 @@ module EventBus #(or SourceEvent)
       sub_method_name = _method_name(_event.class, suf)
       @@listeners[_class].each do|_listener|
          if _listener.respond_to?(sub_method_name)
-       _listener.send(sub_method_name, _event)
+           _listener.send(sub_method_name, _event)
          elsif _listener.respond_to?(method_name)
            _listener.send(method_name, _event)
          end
+         break if _event.is_breaked?
       end
     else
       @@listeners[_class].each do|_listener|
         _listener.send(method_name, _event) if _listener.respond_to?(method_name)
+        break if _event.is_breaked?
       end
     end
   end

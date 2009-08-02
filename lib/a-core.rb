@@ -420,7 +420,7 @@ class Arcadia < TkApplication
 
   def can_exit?
     _event = Arcadia.process_event(ExitQueryEvent.new(self, 'can_exit'=>true))
-    return _event.can_exit
+   return _event.can_exit
   end
 
   def do_finalize

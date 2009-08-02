@@ -50,7 +50,7 @@ class Shell < ArcadiaExt
     if _filename && File.exists?(_filename)
       begin
         @arcadia['pers']['run.file.last']=_filename if _event.persistent
-        _cmd_ = "|"+@arcadia['conf']['shell.ruby']+" "+_filename+" 2>&1"
+        _cmd_ = "|#{@arcadia['conf']['shell.ruby']} -C#{File.dirname(_filename)} #{_filename} 2>&1"
         open(_cmd_,"r"){|f|
            _readed = f.read
            Arcadia.console(self,'msg'=>_readed, 'level'=>'debug')

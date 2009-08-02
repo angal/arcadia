@@ -2386,7 +2386,7 @@ class AGTkToplevel < AGTkContainer
       _editor = meditor.raised
       code2form = proc{
         Revparsel.new(_editor.text_value)
-        meditor.close_editor(_editor, false)
+        meditor.close_editor(_editor, true)
         InspectorContract.instance.raise_last_widget(meditor)
       }
       _editor.insert_popup_menu_item('end',
