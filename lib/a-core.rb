@@ -23,7 +23,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.7.0',
+        '0.7.0.1',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
