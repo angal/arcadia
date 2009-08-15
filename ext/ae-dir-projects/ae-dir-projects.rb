@@ -106,10 +106,10 @@ class DirProjects < ArcadiaExt
   	      ensure
             @sync = _sync_val
   	      end
-        elsif !_selected.nil? && @htree.open?(_selected)
-          @htree.close_tree(_selected)
+        elsif !_selected.nil? && @htree.open?(node2file(_selected))
+          @htree.close_tree(node2file(_selected))
         elsif !_selected.nil?
-          @htree.open_tree(_selected,false) 
+          @htree.open_tree(node2file(_selected),false) 
         end
       else
         shure_delete_node(_selected)
@@ -199,7 +199,7 @@ class DirProjects < ArcadiaExt
   end
 
   def file2node(_file)
-    if _file.include?("\s")
+    if _file.include?("\s") && _file[0..0]!='{'
       return "{#{_file}}"
     else
       return _file
@@ -461,7 +461,7 @@ class DirProjects < ArcadiaExt
   end
 
   def do_close_project(_proj_name)
-    if _proj_name 
+    if _proj_name && is_project?(_proj_name)
       del_project(_proj_name)
     end
   end
@@ -610,6 +610,10 @@ class DirProjects < ArcadiaExt
     end
   end
 
+  def is_project?(_node)
+    @htree.exist?(_node) && @htree.parent(_node)=='root'
+  end
+
   def do_delete(_node, _interactive = true)
     if File.exists?(node2file(_node)) 
       type = File.ftype(node2file(_node))
@@ -624,7 +628,7 @@ class DirProjects < ArcadiaExt
           entries = Dir.entries(node2file(_node))
           entries.delete('.')
           entries.delete('..')
-          is_project = @htree.exist?(_node) && @htree.parent(_node)=='root'
+          #is_project = @htree.exist?(_node) && @htree.parent(_node)=='root'
           if entries.length > 0
             _msg2 = "#{_node} isn't empty. Shure to delete all sub entries ?"
             entries.each{|en|
@@ -641,7 +645,7 @@ class DirProjects < ArcadiaExt
           else
             Dir.delete(node2file(_node))
           end
-          if  is_project && delete_node
+          if  is_project?(_node) && delete_node
             delete_node = false
             del_project(_node)
           end
@@ -713,7 +717,7 @@ class DirProjects < ArcadiaExt
       _sc = @htree.cget('selectcommand')
       begin
         @htree.configure('selectcommand'=>nil)
-        @htree.delete(_node)
+        @htree.delete(file2node(_node))
       ensure
         @htree.configure('selectcommand'=>_sc)
       end
