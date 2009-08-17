@@ -199,6 +199,10 @@ class ArcadiaExt
     res
   end
   
+  def frame_visible?(_n=0)
+    @frames[_n] != nil && @frames[_n].hinner_frame && TkWinfo.mapped?(@frames[_n].hinner_frame)
+  end
+  
   def frame(_n=0)
 	  if @frames[_n] == nil && @frames_points[_n]
 	    (@frames_labels[_n].nil?)? _label = @name : _label = @frames_labels[_n]

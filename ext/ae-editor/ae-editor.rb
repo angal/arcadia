@@ -3468,7 +3468,7 @@ class AgMultiEditor < ArcadiaExt
     
     if _index != -1
       _tab = @main_frame.enb.get_frame(_buffer_name)
-      @main_frame.enb.raise(_buffer_name)
+      @main_frame.enb.raise(_buffer_name) if frame_visible?
     else
       _n = 1
       while @main_frame.enb.index(_buffer_name) != -1
@@ -3494,7 +3494,7 @@ class AgMultiEditor < ArcadiaExt
       @tabs_editor[_buffer_name]=_e
     end
     @main_frame.enb.move(_buffer_name, 1)
-    @main_frame.enb.raise(_buffer_name)
+    @main_frame.enb.raise(_buffer_name) if frame_visible?
     @main_frame.enb.see(_buffer_name)
     return _tab
   end
