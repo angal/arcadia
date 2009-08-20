@@ -2823,6 +2823,16 @@ class AgMultiEditorView
       font Arcadia.conf('editor.tabs.font')
       pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
     }
+    refresh_after_map = proc{
+      if !@enb.pages.empty?
+        if @enb.raise.nil? || @enb.raise.strip.length == 0
+          @enb.raise(@enb.pages[0]) 
+          @enb.see(@enb.pages[0])
+        end
+      end
+    }
+    @enb.bind_append("Map",refresh_after_map)
+
   end
   
 end
@@ -3212,7 +3222,7 @@ class AgMultiEditor < ArcadiaExt
     @batch_files = false
     _first_page = @main_frame.enb.pages(0) if @main_frame.enb.pages.length > 0
     if _first_page
-      @main_frame.enb.raise(_first_page)
+      @main_frame.enb.raise(_first_page) if frame_def_visible?
       @main_frame.enb.see(_first_page)
     end
     frame(1)

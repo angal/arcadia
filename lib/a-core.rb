@@ -101,6 +101,10 @@ class Arcadia < TkApplication
     self.do_exit
   end
   
+  def register(_ext)
+    @exts_i << _ext
+  end
+  
   def show_hide_toolbar
     if @is_toolbar_show
     		@mf_root.show_toolbar(0,false)
@@ -125,6 +129,7 @@ class Arcadia < TkApplication
 	
   def load_exts_conf
   		@exts = Array.new
+  		@exts_i = Array.new
   		dirs = Array.new
   		files = Dir['ext/*'].concat(Dir[ENV["HOME"]+'/.arcadia/ext/*']).sort
   		files.each{|f|
@@ -145,6 +150,7 @@ class Arcadia < TkApplication
        	 }
        @exts << name	 	
     		 self['conf'].update(conf_hash2)	
+    		 self['origin_conf'].update(conf_hash2)	
   		}
   end
 
@@ -213,48 +219,51 @@ class Arcadia < TkApplication
     suf = "layout.split"
     elems = self['conf'][suf]
     return if elems.nil?
-    groups = elems.split(',')
-    groups.each{|group|
-      if group
-        suf1 = suf+'.'+group
-        begin
-          property = self['conf'][suf1]
-          c = property.split('c')
-          if c && c.length == 2
-            pt = c[0].split('.')
-            perc = c[1].include?('%')
-            w = c[1].sub('%','')
-            if perc 
-              @layout.add_cols_perc(pt[0].to_i, pt[1].to_i, w.to_i)
-            else
-              @layout.add_cols(pt[0].to_i, pt[1].to_i, w.to_i)
-            end
-          else
-            r = property.split('r')
-            if r && r.length == 2
-              pt = r[0].split('.')
-              perc = r[1].include?('%')
-              w = r[1].sub('%','')
+    if elems.strip.length > 0
+      groups = elems.split(',')
+      groups.each{|group|
+        if group
+          suf1 = suf+'.'+group
+          begin
+            property = self['conf'][suf1]
+            c = property.split('c')
+            if c && c.length == 2
+              pt = c[0].split('.')
+              perc = c[1].include?('%')
+              w = c[1].sub('%','')
               if perc 
-                @layout.add_rows_perc(pt[0].to_i, pt[1].to_i, w.to_i)
+                @layout.add_cols_perc(pt[0].to_i, pt[1].to_i, w.to_i)
               else
-                @layout.add_rows_perc(pt[0].to_i, pt[1].to_i, w.to_i)
+                @layout.add_cols(pt[0].to_i, pt[1].to_i, w.to_i)
+              end
+            else
+              r = property.split('r')
+              if r && r.length == 2
+                pt = r[0].split('.')
+                perc = r[1].include?('%')
+                w = r[1].sub('%','')
+                if perc 
+                  @layout.add_rows_perc(pt[0].to_i, pt[1].to_i, w.to_i)
+                else
+                  @layout.add_rows(pt[0].to_i, pt[1].to_i, w.to_i)
+                end
               end
             end
-          end
-          
-        rescue Exception
-          msg = "Loading layout: (#{$!.class.to_s} : #{$!.to_s} at : #{$@.to_s})"
-          if Arcadia.dialog(self, 'type'=>'ok_cancel', 'level'=>'error','title' => '(Arcadia) Layout', 'msg'=>msg)=='cancel'
-            raise
-            exit
-          else
-            Tk.update
+            
+          rescue Exception
+            msg = "Loading layout: (#{$!.class.to_s} : #{$!.to_s} at : #{$@.to_s})"
+            if Arcadia.dialog(self, 'type'=>'ok_cancel', 'level'=>'error','title' => '(Arcadia) Layout', 'msg'=>msg)=='cancel'
+              raise
+              exit
+            else
+              Tk.update
+            end
           end
         end
-      end
-    }
-
+      }
+    else
+      @layout.add_mono_panel
+    end
     @layout.add_headers
   end
 
@@ -265,6 +274,7 @@ class Arcadia < TkApplication
     self.load_local_config
     self.load_theme(self['conf']['theme'])
     self.resolve_properties_link(self['conf'],self['conf'])
+    self.resolve_properties_link(self['origin_conf'],self['origin_conf'])
   end
 
   def set_sysdefaultproperty
@@ -423,8 +433,59 @@ class Arcadia < TkApplication
    return _event.can_exit
   end
 
+  def save_layout
+    splits,doms,r,c = @layout.dump_geometry
+    header = ""
+    splits.each_index{|i|
+      header << i.to_s
+      header << ',' if i < splits.length-1
+    }
+    Arcadia.del_conf_group('layout')
+    self['conf']['layout.split']= header
+    splits.each_with_index{|sp,i|
+      self['conf']["layout.split.#{i}"]=sp
+    }
+    # domains
+    @exts_i.each{|e|
+      if e.conf('frames')
+        frs = e.conf('frames').split(',') 
+      else 
+        frs = Array.new
+      end
+      str_frames=''
+      frs.each_index{|i|
+        f = e.frame(i,false)
+        if f
+          ff = f.hinner_frame
+          frame = ff.frame if ff
+          if frame && TkWinfo.parent(frame).instance_of?(Tk::BWidget::NoteBook)
+            frame=TkWinfo.parent(TkWinfo.parent(frame))
+          elsif frame.nil?
+            if str_frames.length > 0
+              str_frames << ','
+            end
+            str_frames << '-1.-1'
+          end
+          if doms[frame]
+            if str_frames.length > 0
+              str_frames << ','
+            end
+            str_frames << doms[frame]
+          end
+        else
+        end
+      }
+      if str_frames.length > 0
+        self['conf']["#{e.conf('name')}.frames"]=str_frames
+ #     p "#{e.conf('name')}.frames=#{str_frames}"
+      end
+    }
+  end
+  
   def do_finalize
     _event = Arcadia.process_event(FinalizeEvent.new(self))
+    self.save_layout
+    update_local_config
     self.override_persistent(self['applicationParams'].persistent_file, self['pers'])
   end
 
@@ -1034,9 +1095,9 @@ class ArcadiaLayout
     @frames = Array.new
     @frames[0] = Array.new
     @frames[0][0] = _frame
-    @domains = Array.new
-    @domains[0] = Array.new
-    @domains[0][0] = '_domain_root_'
+   # @domains = Array.new
+   # @domains[0] = Array.new
+   # @domains[0][0] = '_domain_root_'
     @panels = Hash.new
     @panels['_domain_root_']= Hash.new
     @panels['_domain_root_']['root']= _frame
@@ -1044,6 +1105,7 @@ class ArcadiaLayout
     @autotab = _autotab
     @headed = false
     @wrappers=Hash.new
+    @splitters=Array.new
     #ArcadiaContractListener.new(self, MainContract, :do_main_event)
   end
 	
@@ -1087,16 +1149,17 @@ class ArcadiaLayout
       ret = @panels[_domain]['sons'].values[0]
     end
     ret
-	end
-	
+  end
+  
   def _prepare_rows(_row,_col, _height, _perc=false, _top_name=nil, _bottom_name=nil)
     if (@frames[_row][_col] !=  nil)
       #source_domains = all_domains(@frames[_row][_col])
       #source_domains = others_domains(@frames[_row][_col], false)
       _h = AGTkOSplittedFrames.new(self.root,@frames[_row][_col],_height, @arcadia['conf']['layout.splitter.length'].to_i,_perc)
+      @splitters << _h
       if @frames[_row + 1] == nil
       		@frames[_row + 1] = Array.new
-      		@domains[_row + 1] = Array.new
+      	#	@domains[_row + 1] = Array.new
       end
       @frames[_row][_col] = _h.top_frame
       
@@ -1108,7 +1171,7 @@ class ArcadiaLayout
         @panels[_top_name]['root_splitted_frames'] = _h 
       end
       @panels[_top_name]['splitted_frames'] = _h
-      @domains[_row][_col] = _top_name
+     # @domains[_row][_col] = _top_name
 
       _bottom_name = (_row+1).to_s+'.'+_col.to_s if _bottom_name == nil
       
@@ -1124,10 +1187,20 @@ class ArcadiaLayout
         @panels[_bottom_name]['root_splitted_frames'] = _h 
       end
       @panels[_bottom_name]['splitted_frames'] = _h
-    		@domains[_row + 1][_col] = _bottom_name
+    	#	@domains[_row + 1][_col] = _bottom_name
     end
   end
- 	private :_prepare_rows
+  private :_prepare_rows
+
+  def add_mono_panel(_name=nil)
+    if (@frames[0][0] !=  nil)
+      _name = '0.0' if _name.nil?
+      @panels[_name] = Hash.new
+      @panels[_name]['root'] = @frames[0][0]
+      @panels[_name]['sons'] = 	Hash.new
+    end
+  end
+
 
   def add_rows(_row,_col, _height, _top_name=nil, _bottom_name=nil)
   		_prepare_rows(_row,_col, _height, false, _top_name, _bottom_name)
@@ -1191,6 +1264,7 @@ class ArcadiaLayout
       #source_domains = all_domains(@frames[_row][_col])
       #source_domains = others_domains(@frames[_row][_col])
       _w = AGTkVSplittedFrames.new(self.root,@frames[_row][_col],_width,@arcadia['conf']['layout.splitter.length'].to_i,_perc)
+      @splitters << _w
       @frames[_row][_col] = _w.left_frame
       #@frames[_row][_col + 1] = _w.right_frame
 
@@ -1202,7 +1276,7 @@ class ArcadiaLayout
         @panels[_left_name]['root_splitted_frames'] = _w 
       end
       @panels[_left_name]['splitted_frames'] = _w
-      @domains[_row][_col] = _left_name
+     # @domains[_row][_col] = _left_name
         
       _right_name = _row.to_s+'.'+(_col+1).to_s if _right_name == nil
       if !@panels[_right_name].nil?
@@ -1217,7 +1291,7 @@ class ArcadiaLayout
         @panels[_right_name]['root_splitted_frames'] = _w 
       end
       @panels[_right_name]['splitted_frames'] = _w
-      @domains[_row][_col + 1] = _right_name
+     # @domains[_row][_col + 1] = _right_name
     end
   end
  	private :_prepare_cols
@@ -1233,37 +1307,35 @@ class ArcadiaLayout
     if @panels[d] !=nil
       shift_right(_row,_col+1)
     end
-    Arcadia.console(self,'msg'=>"shifto a destra #{dj} (su #{d})")
     @panels[d] = @panels[dj]
     #-------------------------------
     #@panels[d]['root'].set_domain(d)
     #-------------------------------
     @panels[d]['sons'].each{|name,ffw| ffw.domain=d}
     @frames[_row][_col+1] = @frames[_row][_col]
-    @domains[_row][_col+1] = @domains[_row][_col]
+   # @domains[_row][_col+1] = @domains[_row][_col]
     
     @panels.delete(dj)
     #@panels[dj] = nil
     @frames[_row][_col] = nil
-    @domains[_row][_col] = nil
+   # @domains[_row][_col] = nil
   end
 
   def shift_left(_row,_col)
     d = domain_name(_row, _col)
     dj = domain_name(_row, _col+1)
     if @panels[dj] !=nil
-      Arcadia.console(self,'msg'=>"shifto a sinista #{dj} (su #{d})")
       @panels[d] = @panels[dj]
       #-------------------------------
       #@panels[d]['root'].set_domain(d)
       #-------------------------------
       @panels[d]['sons'].each{|name,ffw| ffw.domain=d}
       @frames[_row][_col] = @frames[_row][_col+1]
-      @domains[_row][_col] = @domains[_row][_col+1]
+     # @domains[_row][_col] = @domains[_row][_col+1]
       
       @panels.delete(dj) # = nil
       @frames[_row][_col+1] = nil
-      @domains[_row][_col+1] = nil
+     # @domains[_row][_col+1] = nil
       shift_left(_row,_col+1)
     end
   
@@ -1273,18 +1345,17 @@ class ArcadiaLayout
     d = domain_name(_row, _col)
     dj = domain_name(_row+1, _col)
     if @panels[dj] !=nil
-      Arcadia.console(self,'msg'=>"shifto su #{dj} (su #{d})")
       @panels[d] = @panels[dj]
       #-------------------------------
       #@panels[d]['root'].set_domain(d)
       #-------------------------------
       @panels[d]['sons'].each{|name,ffw| ffw.domain=d}
       @frames[_row][_col] = @frames[_row+1][_col]
-      @domains[_row][_col] = @domains[_row+1][_col]
+     # @domains[_row][_col] = @domains[_row+1][_col]
       
       @panels.delete(dj) # = nil
       @frames[_row+1][_col] = nil
-      @domains[_row+1][_col] = nil
+     # @domains[_row+1][_col] = nil
 
       shift_top(_row+1,_col)
     end
@@ -1298,7 +1369,6 @@ class ArcadiaLayout
     if @panels[d] !=nil
       shift_bottom(_row+1,_col)
     end
-    Arcadia.console(self,'msg'=>"shifto giu #{dj} (su #{d})")
     @panels[d] = @panels[dj]
     #-------------------------------
     #@panels[d]['root'].set_domain(d)
@@ -1306,15 +1376,15 @@ class ArcadiaLayout
     @panels[d]['sons'].each{|name,ffw| ffw.domain=d}
     if @frames[_row + 1] == nil
     		@frames[_row + 1] = Array.new
-    		@domains[_row + 1] = Array.new
+    	#	@domains[_row + 1] = Array.new
     end
     @frames[_row+1][_col] = @frames[_row][_col]
-    @domains[_row+1][_col] = @domains[_row][_col]
+   # @domains[_row+1][_col] = @domains[_row][_col]
     
     @panels.delete(dj)
     #@panels[dj] = nil
     @frames[_row][_col] = nil
-    @domains[_row][_col] = nil
+   # @domains[_row][_col] = nil
   end
   
   def add_cols(_row,_col, _width, _left_name=nil, _right_name=nil)
@@ -1584,7 +1654,7 @@ class ArcadiaLayout
         else
           @panels.delete(_domain)
           @frames[_row.to_i][_col.to_i] = nil
-          @domains[_row.to_i][_col.to_i] = nil
+         # @domains[_row.to_i][_col.to_i] = nil
 #          ref_r,ref_c = ref_source_domain.split('.')
 #          real_r,real_c=source_domain.split('.')
 #          gap_r = ref_r.to_i - real_r.to_i
@@ -1614,10 +1684,10 @@ class ArcadiaLayout
         @panels.delete(source_domain)
         if vertical
           @frames[_row.to_i][_col.to_i+1] = nil
-          @domains[_row.to_i][_col.to_i+1] = nil
+         # @domains[_row.to_i][_col.to_i+1] = nil
         else
           @frames[_row.to_i+1][_col.to_i] = nil
-          @domains[_row.to_i+1][_col.to_i] = nil
+         # @domains[_row.to_i+1][_col.to_i] = nil
         end
       else
         p "secondo quadrante"
@@ -1630,15 +1700,15 @@ class ArcadiaLayout
         splitted_adapter.destroy
         @panels[destination_domain]['root']=splitted_adapter_frame
         @frames[_row.to_i][_col.to_i] = splitted_adapter_frame
-        @domains[_row.to_i][_col.to_i] = destination_domain
+       # @domains[_row.to_i][_col.to_i] = destination_domain
         build_titled_frame(destination_domain)
         @panels.delete(source_domain)
         if vertical
           @frames[_row.to_i][_col.to_i+1] = nil
-          @domains[_row.to_i][_col.to_i+1] = nil
+         # @domains[_row.to_i][_col.to_i+1] = nil
         else
           @frames[_row.to_i+1][_col.to_i] = nil
-          @domains[_row.to_i+1][_col.to_i] = nil
+         # @domains[_row.to_i+1][_col.to_i] = nil
         end
         source_save.each{|name,ffw|
           ffw.domain = destination_domain
@@ -1688,7 +1758,7 @@ class ArcadiaLayout
         other_root_splitted_adapter.attach_frame(splitted_adapter_frame)
 
         @frames[_row.to_i][_col.to_i] = nil
-        @domains[_row.to_i][_col.to_i] = nil
+       # @domains[_row.to_i][_col.to_i] = nil
         @panels.delete(_domain)
       else
         p "quarto quadrante"
@@ -1702,7 +1772,7 @@ class ArcadiaLayout
         @panels[other_dom]['root']=splitted_adapter_frame 
 
         @frames[_row.to_i][_col.to_i] = nil
-        @domains[_row.to_i][_col.to_i] = nil
+       # @domains[_row.to_i][_col.to_i] = nil
         build_titled_frame(other_dom)
         @panels.delete(_domain)
   
@@ -1719,13 +1789,13 @@ class ArcadiaLayout
         end
         other_row,other_col = other_dom.split('.')
         @frames[other_row.to_i][other_col.to_i] = splitted_adapter_frame
-        @domains[other_row.to_i][other_col.to_i] = other_dom
+       # @domains[other_row.to_i][other_col.to_i] = other_dom
 #        if vertical
 #          @frames[_row.to_i][_col.to_i-1] = splitted_adapter_frame
-#          @domains[_row.to_i][_col.to_i-1] = other_dom
+#         # @domains[_row.to_i][_col.to_i-1] = other_dom
 #        else
 #          @frames[_row.to_i-1][_col.to_i] = splitted_adapter_frame
-#          @domains[_row.to_i-1][_col.to_i] = other_dom
+#         # @domains[_row.to_i-1][_col.to_i] = other_dom
 #        end
       end
 
@@ -1794,7 +1864,7 @@ class ArcadiaLayout
 
     @panels.delete(_domain)
     @frames[_row.to_i][_col.to_i] = nil
-    @domains[_row.to_i][_col.to_i] = nil
+   # @domains[_row.to_i][_col.to_i] = nil
 
     if other_root_splitted_adapter
       if other_root_splitted_adapter != @panels[other_domain]['splitted_frames']
@@ -1806,6 +1876,7 @@ class ArcadiaLayout
       end
       other_root_splitted_adapter.detach_frame
       splitted_adapter.detach_frame
+      @splitters.delete(splitted_adapter)
       splitted_adapter.destroy
       other_root_splitted_adapter.attach_frame(splitted_adapter_frame)
     else
@@ -1893,12 +1964,28 @@ class ArcadiaLayout
     end
   end
   
-  def add_headers
-    @domains.each{|row|
-      row.each{|domain|
-        build_titled_frame(domain)
-      }
+  def domains
+    ret = Array.new
+    @panels.keys.each{|dom|
+        if dom != '_domain_root_' && @panels[dom] && @panels[dom]['root']
+          ret << dom
+        end
     }
+    ret
+  end
+  
+  def add_headers
+    @panels.keys.each{|dom|
+        if dom != '_domain_root_' && @panels[dom] && @panels[dom]['root']
+          build_titled_frame(dom)
+        end
+    }
+
+#    @domains.each{|row|
+#      row.each{|domain|
+#        build_titled_frame(domain)
+#      }
+#    }
     @headed = true
   end
 
@@ -1919,7 +2006,7 @@ class ArcadiaLayout
     source_domain = @wrappers[_source_name].domain
     source_has_domain = !source_domain.nil?
     tt2= @panels[source_domain]['root'].top_text if source_has_domain
-    if source_has_domain && @panels[source_domain]['sons'].length ==1 && @panels[_target_domain]['sons'].length > 0
+    if @arcadia.conf('layout.exchange_panel_if_no_tabbed')=='true' && source_has_domain && @panels[source_domain]['sons'].length ==1 && @panels[_target_domain]['sons'].length > 0
       # change ------
       ffw1 = raised_fixed_frame(_target_domain)
       ffw2 = @panels[source_domain]['sons'].values[0]
@@ -1981,14 +2068,17 @@ class ArcadiaLayout
     #domain_root = @panels[_domain_name]['sons'][_frame_name]
     @panels.keys.each{|dom|
       if  dom != '_domain_root_' && dom != _ffw.domain && @panels[dom] && @panels[dom]['root']
-        menu = @panels[dom]['root'].menu_button('ext').cget('menu')
-        menu.insert('0',:command,
-              :label=>_ffw.title,
-              :image=>TkPhotoImage.new('dat'=>ARROW_LEFT_GIF),
-              :compound=>'left',
-              :command=>proc{change_domain(dom, _ffw.name)},
-              :hidemargin => true
-        )
+        titledFrame = @panels[dom]['root']
+        if titledFrame.instance_of?(TkTitledFrame)
+          menu = @panels[dom]['root'].menu_button('ext').cget('menu')
+          menu.insert('0',:command,
+                :label=>_ffw.title,
+                :image=>TkPhotoImage.new('dat'=>ARROW_LEFT_GIF),
+                :compound=>'left',
+                :command=>proc{change_domain(dom, _ffw.name)},
+                :hidemargin => true
+          )
+        end
       end
     }
   end
@@ -1997,19 +2087,22 @@ class ArcadiaLayout
   def build_invert_menu(refresh_commons_items=false)
     @panels.keys.each{|dom|
       if dom != '_domain_root_' && @panels[dom] && @panels[dom]['root']
-        menu = @panels[dom]['root'].menu_button('ext').cget('menu')
-        if refresh_commons_items
-           @panels[dom]['root'].menu_button('ext').cget('menu').delete('0','end')
-           add_commons_menu_items(dom, menu)
-        else
-          if @panels.keys.length > 2
-            i=menu.index('end').to_i-4
+        titledFrame = @panels[dom]['root']
+        if titledFrame.instance_of?(TkTitledFrame)
+          menu = titledFrame.menu_button('ext').cget('menu')
+          if refresh_commons_items
+             @panels[dom]['root'].menu_button('ext').cget('menu').delete('0','end')
+             add_commons_menu_items(dom, menu)
           else
-            i=menu.index('end').to_i-3
-          end
-          if i >= 0
-            end_index = i.to_s
-            @panels[dom]['root'].menu_button('ext').cget('menu').delete('0',end_index)
+            if @panels.keys.length > 2
+              i=menu.index('end').to_i-4
+            else
+              i=menu.index('end').to_i-3
+            end
+            if i >= 0
+              end_index = i.to_s
+              @panels[dom]['root'].menu_button('ext').cget('menu').delete('0',end_index)
+            end
           end
         end
       end
@@ -2261,6 +2354,121 @@ class ArcadiaLayout
     _frame.on_close=proc{_frame.hide}
     _frame.place(_args)
     return _frame
+  end
+  
+  def dump_splitter(_splitter)
+    ret = ''
+    if  _splitter.instance_of?(AGTkVSplittedFrames)
+      w = TkWinfo.width(_splitter.frame1) 
+      ret = "c#{w}"
+    elsif _splitter.instance_of?(AGTkOSplittedFrames)
+      h = TkWinfo.height(_splitter.frame1) 
+      ret = "r#{h}"
+    end
+    ret
+  end
+  
+  def splitter_frame_on_frame(_frame)
+    ret=nil
+    @splitters.each{|sp|
+       if sp.frame == _frame
+         ret = sp
+         break 
+       end
+    }
+    ret
+  end
+  
+  def get_hinner_frame(_frame)
+    ret = _frame
+#    child = TkWinfo.children(_frame)[0]
+    TkWinfo.children(_frame).each{|child|
+      if child.instance_of?(TkTitledFrame)
+        ret = child.frame
+        break
+      end
+    }
+#    if child.instance_of?(TkTitledFrame)
+#      ret = child.frame
+#    end
+    ret
+  end
+  
+  def shift_domain_column(_r,_c,_dom)
+    Hash.new.update(_dom).each{|k,d|
+      dr,dc=d.split('.')
+      if dc.to_i >= _c && dr.to_i == _r 
+        #shift_domain_column(_r,dc.to_i+1,_dom)
+        p "== #{d} --> #{domain_name(_r,dc.to_i+1)}"
+        _dom[k]= domain_name(_r,dc.to_i+1)
+      end
+    }
+  end
+
+  def shift_domain_row(_r,_c,_dom)
+    Hash.new.update(_dom).each{|k,d|
+      dr,dc=d.split('.')
+      if dr.to_i >= _r && dc.to_i == _c 
+         #shift_domain_row(dr.to_i+1,_c,_dom)
+        p "shift_domain_row == #{d} --> #{domain_name(dr.to_i+1,_c)}"
+        _dom[k]=domain_name(dr.to_i+1,_c)
+      end
+    }
+  end
+
+  def gap_domain_column(_r,_c,_dom)
+    ret = _c
+    Hash.new.update(_dom).each{|k,d|
+      dr,dc=d.split('.')
+      if dc.to_i == _c && dr.to_i == _r 
+        ret = gap_domain_column(_r,dc.to_i+1,_dom)
+      end
+    }
+    ret
+  end
+
+  def gap_domain_row(_r,_c,_dom)
+    ret = _r
+    Hash.new.update(_dom).each{|k,d|
+      dr,dc=d.split('.')
+      if dr.to_i == _r && dc.to_i == _c 
+         ret = gap_domain_row(dr.to_i+1,_c,_dom)
+      end
+    }
+    ret
+  end
+
+  
+  def dump_geometry(_r=0,_c=0,_frame=root)
+    spl = Array.new
+    dom = Hash.new
+    ret = [nil,nil,nil,nil]
+    sp = splitter_frame_on_frame(_frame)
+    if sp
+      spl << "#{domain_name(_r,_c)}#{dump_splitter(sp)}"
+      dom[get_hinner_frame(sp.frame1)]=domain_name(_r,_c)
+      sspl,ddom,rr,cc = dump_geometry(_r, _c, sp.frame1)
+      spl.concat(sspl)
+      dom.update(ddom)
+      if sp.instance_of?(AGTkVSplittedFrames)
+        _c=cc+1
+        _c=gap_domain_column(_r,_c,dom)
+      else
+        _r=rr+1
+        _r=gap_domain_row(_r,_c,dom)
+      end
+      dom[get_hinner_frame(sp.frame2)]=domain_name(_r,_c)
+      sspl,ddom,rr,cc = dump_geometry(_r, _c, sp.frame2)
+      spl.concat(sspl)
+      dom.update(ddom)
+    elsif _frame==root
+      dom[get_hinner_frame(root)]=domain_name(_r,_c) 
+    end
+    ret[0]=spl
+    ret[1]=dom
+    ret[2]=_r
+    ret[3]=_c
+    ret
   end
 end
 

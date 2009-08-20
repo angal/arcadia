@@ -178,6 +178,7 @@ class ArcadiaExt
   attr_reader :arcadia
   def initialize(_arcadia, _name=nil)
     @arcadia = _arcadia
+    @arcadia.register(self)
     Arcadia.attach_listener(self, BuildEvent)
     Arcadia.attach_listener(self, ExitQueryEvent)
     Arcadia.attach_listener(self, FinalizeEvent)
@@ -199,12 +200,17 @@ class ArcadiaExt
     res
   end
   
+  def frame_def_visible?(_n=0)
+    @arcadia.layout.domains.include?(@frames_points[_n])
+    #@frames_points[_n] != '-1.-1'
+  end
+  
   def frame_visible?(_n=0)
     @frames[_n] != nil && @frames[_n].hinner_frame && TkWinfo.mapped?(@frames[_n].hinner_frame)
   end
   
-  def frame(_n=0)
-	  if @frames[_n] == nil && @frames_points[_n]
+  def frame(_n=0,create_if_not_exist=true)
+	  if @frames[_n] == nil && @frames_points[_n] && create_if_not_exist
 	    (@frames_labels[_n].nil?)? _label = @name : _label = @frames_labels[_n]
 	    (@frames_names[_n].nil?)? _name = @name : _name = @frames_names[_n]
 	    @frames[_n] =  FixedFrameWrapper.new(@name, @frames_points[_n], _name, _label)
@@ -609,6 +615,7 @@ class Application
       File.new(self['applicationParams'].persistent_file, File::CREAT).close
     end
     publish('conf', properties_file2hash(self['applicationParams'].config_file)) if self['applicationParams'].config_file
+    publish('origin_conf', Hash.new.update(self['conf'])) if self['conf']
     publish('pers', properties_file2hash(self['applicationParams'].persistent_file)) if self['applicationParams'].persistent_file
     yield(self) if block_given?
   end
@@ -645,6 +652,14 @@ class Application
     @@conf_groups[_group]
   end
 
+  def Application.del_conf_group(_group)
+      glen=_group.length
+      @@instance['conf'].keys.sort.each{|k|
+        if k[0..glen] == "#{_group}."
+          @@instance['conf'].delete(k)
+        end
+      }
+  end
 
   def prepare
   end
@@ -658,6 +673,31 @@ class Application
     end
   end
 
+  def update_local_config
+      local_file_config = File.join(local_dir,File.basename(self['applicationParams'].config_file))
+      if FileTest.exist?(local_file_config)
+        if FileTest.writable?(local_dir)
+          f = File.new(local_file_config, "w")
+          begin
+            if f
+              p = self['conf']
+              if p
+                p.keys.sort.each{|key|
+                  if self['origin_conf'][key] == self['conf'][key]
+                    f.syswrite('#'+key+'='+self['conf'][key]+"\n")
+                  else
+                    f.syswrite(key+'='+self['conf'][key]+"\n")
+                  end
+                }
+              end
+            end
+          ensure
+            f.close unless f.nil?
+          end
+        end
+      end
+  end
+  
   # this method load config file from local directory for personalizations
   def load_local_config(_create_if_not_exist=true)
       local_file_config = File.join(local_dir,File.basename(self['applicationParams'].config_file))
