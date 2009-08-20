@@ -412,14 +412,16 @@ class DirProjects < ArcadiaExt
   end
 
   def selected
-    if @htree.selection_get[0].length >0
-     	_selected = ""
-      @htree.selection_get[0].each{|_block|
-        _selected = _selected + _block.to_s + "\s" 
-      }
-      _selected = _selected.strip
-    else
-      _selected = @htree.selection_get[0]
+    if @htree.selection_get[0]
+      if @htree.selection_get[0].length >0
+       	_selected = ""
+        @htree.selection_get[0].each{|_block|
+          _selected = _selected + _block.to_s + "\s" 
+        }
+        _selected = _selected.strip
+      else
+        _selected = @htree.selection_get[0]
+      end
     end
     return _selected
   end
