@@ -74,8 +74,13 @@ class Arcadia < TkApplication
     @splash.next_step('..prepare')  if @splash
     prepare
     @splash.last_step('..load finish')  if @splash
-    geometry = (TkWinfo.screenwidth(@root)-4).to_s+'x'+
-    (TkWinfo.screenheight(@root)-20).to_s+'+0+0'
+    start_width = (TkWinfo.screenwidth(@root)-4)
+    start_height = (TkWinfo.screenheight(@root)-20)
+    if RUBY_PLATFORM =~ /mswin|mingw/ # on doze don't go below the start gar
+      start_height -= 50
+      start_width -= 20
+    end
+    geometry = start_width.to_s+'x'+start_height.to_s+'+0+0'
     @root.deiconify
     @root.raise
     @root.focus(true)
