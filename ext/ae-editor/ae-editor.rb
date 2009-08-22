@@ -2906,16 +2906,7 @@ class AgMultiEditor < ArcadiaExt
     )
     @pop_up.configure(Arcadia.style('menu'))
     #Arcadia.instance.main_menu.update_style(@pop_up)
-=begin
-    @pop_up.insert('end',
-      :command,
-      :label=>'...',
-      :state=>'disabled',
-      :background=>Arcadia.conf('titlelabel.background'),
-      :font => "#{Arcadia.conf('menu.font')} bold",
-      :hidemargin => false
-    )
-=end
+
 
     @c = @pop_up.insert('end',
       :command,
@@ -2954,6 +2945,15 @@ class AgMultiEditor < ArcadiaExt
       }
     )
 
+    @pop_up.insert('end',
+      :command,
+      :label=>'...',
+      :state=>'disabled',
+      :background=>Arcadia.conf('titlelabel.background'),
+      :font => "#{Arcadia.conf('menu.font')} bold",
+      :hidemargin => false
+    )
+
     @main_frame.enb.tabbind("Button-3",
       proc{|*x|
         _x = TkWinfo.pointerx(@main_frame.enb)
@@ -2964,10 +2964,11 @@ class AgMultiEditor < ArcadiaExt
           @selected_tab_name_from_popup = 'ff'+@selected_tab_name_from_popup
           _index = @main_frame.enb.index(@selected_tab_name_from_popup)
         end
+
         if _index != -1 
-          _file =  @main_frame.enb.itemcget(@selected_tab_name_from_popup, 'text')
-          #@pop_up.entryconfigure(0, 'label'=>_file)
-          @pop_up.popup(_x,_y)
+          _file = @tabs_file[(@selected_tab_name_from_popup)] # full path of file
+          @pop_up.entryconfigure(3, 'label'=> _file)
+          @pop_up.popup(_x,_y+10)
         end
       })
   end
@@ -3456,7 +3457,7 @@ class AgMultiEditor < ArcadiaExt
       else
         open_buffer(_tab_name, _basefilename,0)
       end
-      #@tabs_file[_tab_name]= _filename
+
       @tabs_editor[_tab_name].load_file(_filename)
     end
     
