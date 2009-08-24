@@ -709,8 +709,8 @@ class DirProjects < ArcadiaExt
   end
 
   def add_project(_dir)
-    add_node('root', _dir, "project")
     @projects[_dir] = Project.new(_dir)
+    add_node('root', _dir, "project")
     add_project_to_file(_dir) 
   end
 
