@@ -13,7 +13,7 @@ require 'rubygems'
   s.platform = Gem::Platform::RUBY
   s.description = "Arcadia Ruby Ide"
   s.summary = "An light Ide for Ruby written in Ruby using the classic tcl/tk GUI toolkit."
-    candidates = Dir.glob("{lib,ext/ae-breakpoints,ext/ae-editor,ext/ae-file-history,ext/ae-output,ext/ae-rad,ext/ae-ruby-debug,ext/ae-search-in-files,ext/ae-dir-projects,ext/ae-shell,tcl}/**/*")
+    candidates = Dir.glob("{lib,ext/ae-breakpoints,ext/ae-editor,ext/ae-file-history,ext/ae-output,ext/ae-rad,ext/ae-ruby-debug,ext/ae-search-in-files,ext/ae-dir-projects,ext/ae-shell,ext/ack-in-files,tcl}/**/*")
     candidates << "README"
     candidates << "bin/arcadia"
     candidates << "bin/arcadia.bat"
@@ -27,7 +27,7 @@ require 'rubygems'
   s.executables << "arcadia"
   s.default_executable = 'arcadia'
   # disable rdoc generation until we've got more
-  s.rdoc_options << '--title' << 'Arcadia Documentation' <<  '--main'  << 'README' << '-q'   
+  s.rdoc_options << '--title' << 'Arcadia Documentation' <<  '--main'  << 'README' << '-q'
   s.has_rdoc = false
   s.extra_rdoc_files = ["README"]
   s.add_dependency("ruby-debug", ">= 0.9.3")

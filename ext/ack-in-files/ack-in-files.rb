@@ -43,9 +43,10 @@ class AckInFilesListener
         Tk.callback_break
       end
     }
-    @find.title("Search in files")
+    @find.title("Ack in files")
   end
   private :create_find
+
   @@ack_checked = false
   def do_find
     return if @find.e_what.text.strip.length == 0  || @find.e_filter.text.strip.length == 0  || @find.e_dir.text.strip.length == 0
@@ -76,7 +77,7 @@ class AckInFilesListener
 
       if !@@ack_checked
         ack_on_system = system("ack --help")
-        throw 'appears you dont have the ack command installed' unless ack_on_system
+        throw 'appears you dont yet have the ack command installed--please install it and try again' unless ack_on_system
         @@ack_checked = true
       end
 
