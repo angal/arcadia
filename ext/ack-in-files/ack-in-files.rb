@@ -4,13 +4,10 @@
 #
 
 class AckInFilesService < ArcadiaExt
-
   def on_before_build(_event)
     Arcadia.attach_listener(AckInFilesListener.new(self),AckInFilesEvent)
   end
-
 end
-
 
 class AckInFilesListener
   def initialize(_service)
@@ -47,8 +44,7 @@ class AckInFilesListener
   end
   private :create_find
 
-  @@ack_checked = false
-  def do_find
+   def do_find
     return if @find.e_what.text.strip.length == 0  || @find.e_filter.text.strip.length == 0  || @find.e_dir.text.strip.length == 0
     @find.hide
     if !defined?(@search_output)
@@ -69,36 +65,34 @@ class AckInFilesListener
       _filter = @find.e_dir.text+'/**/'+@find.e_filter.text
       _node = @search_output.new_result(_search_title, '')
       progress_stop=false
-      @progress_bar = TkProgressframe.new(@service.arcadia.layout.root, 2)		  
-      @progress_bar.title('Searching')
+      @progress_bar = TkProgressframe.new(@service.arcadia.layout.root, 2)
+      @progress_bar.title('Running')
+
+      answer = `#{command}`
+      answer_lines = answer.split("\n")
+      @progress_bar.destroy # destroy the old one
+      @progress_bar = TkProgressframe.new(@service.arcadia.layout.root, answer_lines.length)		  
+      @progress_bar.title('Parsing')
       @progress_bar.on_cancel=proc{progress_stop=true}
-      #@progress_bar.on_cancel=proc{cancel}
 
-
-      if !@@ack_checked
-        ack_on_system = system("ack --help")
-        throw 'appears you dont yet have the ack command installed--please install it and try again' unless ack_on_system
-        @@ack_checked = true
-      end
-
-      answer = `#{command}`      
-      @progress_bar.progress # done...could do this better
       # a now looks like
       # "C:/dev/ruby/arcadia/conf/arcadia.res.rb:184:mzWCUixPU0sEqgO/8AoIsQbpkAbCQWpVeLJUpzhXd6v9eWZV1G1DosCBogAO"
       # ...
-      answer.each_line{|line|
+      answer_lines.each{|line|
         # we'll assume no :number: in the path...if not it will mess us right up
         line =~ /(.*):(\d+):(.*)/
         _filename = $1
         _lineno = $2
         _text = $3
         @search_output.add_result(_node, _filename, _lineno, _text)
+        @progress_bar.progress
+        break if progress_stop
       }
     rescue Exception => e
       Arcadia.console(self, 'msg'=>e.message + e.backtrace.inspect, 'level'=>'error')
       #Arcadia.new_error_msg(self, e.message)
     ensure
-      @progress_bar.destroy
+      @progress_bar.destroy if @progress_bar
     end
 
   end
