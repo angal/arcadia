@@ -176,6 +176,13 @@ class SearchInFilesEvent < ArcadiaEvent
   attr_accessor :what, :files_filter, :dir
 end
 
+class AckInFilesEvent < ArcadiaEvent
+  class Result < SearchBufferEvent::Result
+    attr_accessor :file
+  end
+  attr_accessor :what, :files_filter, :dir
+end
+
 class SystemExecEvent < ArcadiaEvent
   class Result < Result
     attr_accessor :std_output, :std_error

@@ -870,6 +870,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
       menu_spec_search = [['Search', 0],
       ['Find ...', proc{Arcadia.process_event(SearchBufferEvent.new(self))}, 2],
       ['Find in files...', proc{Arcadia.process_event(SearchInFilesEvent.new(self))}, 2],
+      ['Ack in files...', proc{Arcadia.process_event(AckInFilesEvent.new(self))}, 2],
       ['Go to line ...', proc{Arcadia.process_event(GoToLineBufferEvent.new(self))}, 2]]
       menu_spec_view = [['View', 0],['Show/Hide Toolbar', proc{$arcadia.show_hide_toolbar}, 2]]
       menu_spec_tools = [['Tools', 0],
