@@ -101,7 +101,7 @@ class Arcadia < TkApplication
     Arcadia.attach_listener(self, QuitEvent)
     Arcadia.persistent("version", self['applicationParams'].version)
   end
-  
+
   def on_quit(_event)
     self.do_exit
   end
@@ -160,7 +160,6 @@ class Arcadia < TkApplication
   end
 
   def do_build
-  
     # create extensions
     @exts.each{|extension|
       if extension && ext_active?(extension)
@@ -169,6 +168,26 @@ class Arcadia < TkApplication
       end
     }
     _build_event = Arcadia.process_event(BuildEvent.new(self))
+  end
+  
+  def load_maximised
+    lm = self['conf']['layout.maximized']
+    if lm    
+      ext,index=lm.split(',')
+      maxed = false
+      if ext && index
+        ext = ext.strip
+        i=index.strip.to_i
+        @exts_i.each{|e|
+          if e.conf('name')==ext && !maxed
+            p "maximizzo #{ext}"
+            e.maximize(i)
+            maxed=true
+            break
+          end
+        }    
+      end
+    end
   end
 
   def ext_create(_extension)
@@ -439,13 +458,32 @@ class Arcadia < TkApplication
   end
 
   def save_layout
+    Arcadia.del_conf_group('layout')
+    # resizing
+    @exts_i.each{|e|
+      found = false
+      if e.conf('frames')
+        frs = e.conf('frames').split(',') 
+      else 
+        frs = Array.new
+      end
+      frs.each_index{|i|
+        if e.maximized?(i)
+          self['conf']['layout.maximized']="#{e.conf('name')},#{i}"
+          e.resize(i)
+          found=true
+          break
+        end
+      } 
+      break if found
+    }
+    # layouts
     splits,doms,r,c = @layout.dump_geometry
     header = ""
     splits.each_index{|i|
       header << i.to_s
       header << ',' if i < splits.length-1
     }
-    Arcadia.del_conf_group('layout')
     self['conf']['layout.split']= header
     splits.each_with_index{|sp,i|
       self['conf']["layout.split.#{i}"]=sp
@@ -488,8 +526,8 @@ class Arcadia < TkApplication
   end
   
   def do_finalize
-    _event = Arcadia.process_event(FinalizeEvent.new(self))
     self.save_layout
+    _event = Arcadia.process_event(FinalizeEvent.new(self))
     update_local_config
     self.override_persistent(self['applicationParams'].persistent_file, self['pers'])
   end
