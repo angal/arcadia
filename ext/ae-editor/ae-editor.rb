@@ -183,6 +183,19 @@ class SourceStructure
     return _found_node
   end
   
+  def deep_node_by_line(_from_node, _line, _found_node=nil)
+    _begin = _from_node.rif.to_i
+    _end = _from_node.rif_end.to_i
+    if _line.to_i <= _end && _line.to_i >= _begin
+      _found_node = _from_node
+    end
+    _sons = _from_node.sons
+    for inode in 0.._sons.length - 1
+      _son = _sons[inode]
+      _found_node = deep_node_by_line(_son, _line, _found_node)
+    end
+    return _found_node
+  end
   
   def class_node_by_line(_line)
     line_node = node_by_line(@root, _line)
@@ -608,82 +621,154 @@ class TkTextListBox < TkScrollText
 
 end
 
-
-class AgEditor
-  include Configurable
-  attr_accessor :file
-  attr_reader :read_only 
-  attr_reader :page_frame
-  attr_reader :text, :root
-  def initialize(_controller, _page_frame)
+class AgEditorOutlineToolbar
+  attr_accessor :sync
+  def initialize(_frame, _controller)
     @controller = _controller
-    @page_frame = _page_frame
-    @set_mod = false
-    @modified_from_opening=false
-#    @font = @controller.conf('font')
-#    @font_bold = @controller.conf('font.bold')
-    @font = Arcadia.conf('edit.font')
-    @font_bold = "#{Arcadia.conf('edit.font')} bold"
-    @font_metrics = TkFont.new(@font).metrics
-    @font_metrics_bold = TkFont.new(@font_bold).metrics
-    @highlighting = false
-    @classbrowsing = false
-    @find = @controller.get_find
-    @read_only=false
-    @loading=false
-    @tabs_show = false
-    @spaces_show = false
-  end
-  
-#  def hide_exp
-#    @fm.hide_left if @fm
-#  end
-  
-#  def is_exp_hide?
-#    if @fm.nil?
-#      return true
-#    else
-#      @fm.is_left_hide?
-#    end
-#  end
+    @cb_sync = TkCheckButton.new(_frame, Arcadia.style('checkbox')){
+      text  'Sync'
+      justify  'left'
+      indicatoron 0
+      offrelief 'raised'
+      image TkPhotoImage.new('dat' => SYNCICON20_GIF)
+      place('x' => 0,'y' => 0,'height' => 26)
+    }
+    Tk::BWidget::DynamicHelp::add(@cb_sync, 
+      'text'=>'Link open editors with content in the Navigator')
 
-  def modified_from_opening?
-    @modified_from_opening
+    do_check = proc {
+      if @cb_sync.cget('onvalue')==@cb_sync.cget('variable').value.to_i
+        sync_on
+      else
+        sync_off
+      end
+    }
+    @sync = false
+    @cb_sync.command(do_check)
+  end
+
+  def sync_on
+    @sync = true
+    e = @controller.raised
+    if e
+      e.outline.select_without_event(e.outline.last_row) if e.outline.last_row
+    end
+  end
+
+  def sync_off
+    @sync = false
+  end
+
+  def is_sync_on?
+    @sync
+  end
+
+end
+
+class AgEditorOutline
+  attr_reader :last_row
+  attr_reader :tree_exp
+  def initialize(_editor, _frame, _bar)
+    @editor = _editor
+    @frame = _frame
+    @bar = _bar
+    initialize_tree(_frame)
+  end
+
+  def update_row(_row=0)
+    @last_row=_row
+    if @bar.is_sync_on?
+      select_without_event(_row)
+    end
   end
   
-  def xy_insert
-    _index_now = @text.index('insert')
-    _rx, _ry, _widht, _heigth = @text.bbox(_index_now);
-    _x = _rx + TkWinfo.rootx(@text)  
-    _y = _ry + TkWinfo.rooty(@text)  + @font_metrics[2][1]
-    _xroot = _x - TkWinfo.rootx(Arcadia.instance.layout.root)  
-    _yroot = _y - TkWinfo.rooty(Arcadia.instance.layout.root)  
-    return _xroot, _yroot
+  def shure_select_node(_node)
+    return if @selecting_node
+    @selecting_node = true
+    _proc = @tree_exp.selectcommand
+    @tree_exp.selectcommand(nil)
+    begin
+      @tree_exp.selection_clear
+      @tree_exp.selection_add(_node.rif)
+      @opened = false
+      to_open = @last_open_node
+      parent = _node.parent
+      while !parent.nil? && parent.rif != 'root'
+        @tree_exp.open_tree(parent.rif, false)
+        @opened = to_open==parent.rif || @opened
+        @last_open_node=parent.rif
+        parent = parent.parent
+      end
+
+      @tree_exp.close_tree(to_open) if to_open && !@opened
+
+      @tree_exp.see(_node.rif)
+    ensure
+      @tree_exp.selectcommand(_proc)
+      @selecting_node = false
+    end
   end
-  
+
+  def select_without_event(_line)
+    if @ss
+      _node=@ss.deep_node_by_line(@ss.root, _line)
+      if _node && @tree_exp.exist?(_node.rif)
+        shure_select_node(_node)
+      end
+    end
+  end
+
+#  def initialize_sync(_frame)
+#    @cb_sync = TkCheckButton.new(_frame, Arcadia.style('checkbox')){
+#      text  'Sync'
+#      justify  'left'
+#      indicatoron 0
+#      offrelief 'raised'
+#      image TkPhotoImage.new('dat' => SYNCICON20_GIF)
+#      place('x' => 0,'y' => 0,'height' => 26)
+#    }
+#    Tk::BWidget::DynamicHelp::add(@cb_sync, 
+#      'text'=>'Link open editors with content in the Navigator')
+#
+#    do_check = proc {
+#      if @cb_sync.cget('onvalue')==@cb_sync.cget('variable').value.to_i
+#        sync_on
+#      else
+#        sync_off
+#      end
+#    }
+#    @sync = false
+#    @cb_sync.command(do_check)
+#  end
   
   def initialize_tree(_frame)
-    @classbrowsing = @is_ruby
     _tree_goto = proc{|_self|
-      _line = _self.selection_get[0]
-      _index =_line.to_s+'.0'
-      _hinner_text = @tree_exp.itemcget(_line,'text').strip
-      _editor_line = @text.get(_index, _index+ '  lineend')
-      if !_editor_line.include?(_hinner_text)
-        Arcadia.console(self, 'msg'=>"... rebuild tree \n")
-        if @tree_thread && @tree_thread.alive?
-          @tree_thread.exit
-        end
-        @tree_thread = Thread.new{
-          build_tree(_line)
-          Tk.update
-        }
+      sync_val = @bar.sync
+      @bar.sync=false
+      begin
         _line = _self.selection_get[0]
         _index =_line.to_s+'.0'
+        _hinner_text = @tree_exp.itemcget(_line,'text').strip
+        _editor_line = @editor.text.get(_index, _index+ '  lineend')
+        if !_editor_line.include?(_hinner_text)
+          Arcadia.console(self, 'msg'=>"... rebuild tree \n")
+          if @tree_thread && @tree_thread.alive?
+            @tree_thread.exit
+          end
+          @tree_thread = Thread.new{
+            build_tree(_line)
+            Tk.update
+          }
+          _line = _self.selection_get[0]
+          _index =_line.to_s+'.0'
+        end
+        @editor.text.set_focus
+        @editor.text.see(_index)
+        @editor.text.tag_remove('selected','1.0','end')
+        @editor.text.tag_add('selected',_line.to_s+'.0',(_line+1).to_s+'.0')
+      ensure
+        @bar.sync = sync_val
       end
-      @text.see(_index)
-      @text.tag_remove('selected','1.0','end')
-      @text.tag_add('selected',_line.to_s+'.0',(_line+1).to_s+'.0')
     }
     @tree_exp = Tk::BWidget::Tree.new(_frame, Arcadia.style('treepanel')){
       showlines false
@@ -692,12 +777,82 @@ class AgEditor
       selectcommand proc{ _tree_goto.call(self) } 
     }
     @tree_scroll_wrapper = TkScrollWidget.new(@tree_exp)
-    @tree_scroll_wrapper.show
+    self.show
     @tree_scroll_wrapper.show_v_scroll
     @tree_scroll_wrapper.show_h_scroll
     pop_up_menu_tree
   end
 
+  def show
+    @tree_scroll_wrapper.show(0,26)
+    Tk.update
+  end
+
+  def hide
+    @tree_scroll_wrapper.hide
+  end
+
+  def build_tree_from_node(_node, _label_match=nil)
+    @image_kclass = TkPhotoImage.new('dat' => TREE_NODE_CLASS_GIF)
+    @image_kmodule =  TkPhotoImage.new('dat' => TREE_NODE_MODULE_GIF)
+    @image_kdef =  TkPhotoImage.new('dat' => TREE_NODE_DEF_GIF)
+    @image_kdefclass =  TkPhotoImage.new('dat' => TREE_NODE_DEFCLASS_GIF)
+    
+    _sorted_sons = _node.sons.sort
+    for inode in 0.._sorted_sons.length - 1
+      _son = _sorted_sons[inode]
+      if _son.kind == 'KClass'
+          _image = @image_kclass
+      elsif _son.kind == 'KModule'
+          _image = @image_kmodule
+      elsif _son.kind == 'KDef'
+          _image = @image_kdef
+      elsif _son.kind == 'KDefClass'
+          _image = @image_kdefclass
+      end
+      @tree_exp.insert('end', _son.parent.rif ,_son.rif, {
+        'text' =>  _son.label ,
+        'helptext' => _son.helptext,
+        #'font'=>$arcadia['conf']['editor.explorer_panel.tree.font'],
+        'image'=> _image
+      }.update(Arcadia.style('treeitem'))
+      )
+      if (_label_match) && (_label_match.strip == _son.label.strip)
+        @selected = _son
+      end
+      build_tree_from_node(_son, _label_match)
+    end
+  end
+
+  def build_tree(_sel=nil)
+    #Arcadia.console(self,"msg"=>"build for #{@file}")
+    if _sel
+      _label_sel = @tree_exp.itemcget(_sel,'text')
+    end
+    
+    #clear tree
+    begin
+      @tree_exp.delete(@tree_exp.nodes('root'))
+    rescue Exception
+      # workaround on windows
+      @tree_exp.delete(@tree_exp.nodes('root'))
+    end
+    
+    
+    #(re)build tree
+    _txt = @editor.text.get('1.0','end')
+    #@root = build_tree_from_source(_txt)
+    @ss = SourceStructure.new(_txt)
+    #@root = @ss.root
+    @selected = nil
+    build_tree_from_node(@ss.root, _label_sel)
+    if @selected
+      @tree_exp.selection_add(@selected.rif)
+      @tree_exp.open_tree(@selected.parent.rif)
+      @tree_exp.see(@selected.rif)
+    end
+  end
+  
   def pop_up_menu_tree
     @pop_up_tree = TkMenu.new(
       :parent=>@tree_exp,
@@ -719,7 +874,48 @@ class AgEditor
       },
     "%x %y")
   end
+  
+end
 
+class AgEditor
+  include Configurable
+  attr_accessor :file
+  attr_reader :read_only 
+  attr_reader :page_frame
+  attr_reader :text, :root
+  attr_reader :outline
+  def initialize(_controller, _page_frame)
+    @controller = _controller
+    @page_frame = _page_frame
+    @set_mod = false
+    @modified_from_opening=false
+    @font = Arcadia.conf('edit.font')
+    @font_bold = "#{Arcadia.conf('edit.font')} bold"
+    @font_metrics = TkFont.new(@font).metrics
+    @font_metrics_bold = TkFont.new(@font_bold).metrics
+    @highlighting = false
+    @classbrowsing = false
+    @find = @controller.get_find
+    @read_only=false
+    @loading=false
+    @tabs_show = false
+    @spaces_show = false
+  end
+  
+  def modified_from_opening?
+    @modified_from_opening
+  end
+  
+  def xy_insert
+    _index_now = @text.index('insert')
+    _rx, _ry, _widht, _heigth = @text.bbox(_index_now);
+    _x = _rx + TkWinfo.rootx(@text)  
+    _y = _ry + TkWinfo.rooty(@text)  + @font_metrics[2][1]
+    _xroot = _x - TkWinfo.rootx(Arcadia.instance.layout.root)  
+    _yroot = _y - TkWinfo.rooty(Arcadia.instance.layout.root)  
+    return _xroot, _yroot
+  end
+  
 
   def initialize_text(_frame)
     @text = TkScrollText.new(_frame, Arcadia.style('text')){|j|
@@ -1287,6 +1483,8 @@ class AgEditor
 #          #end
         when 'Control_L','Return', 'Control_V', 'BackSpace', 'Delete'
           do_line_update
+        when 'Up','Down'
+          refresh_outline
       end
       case e.keysym
       when 'Return'
@@ -1364,18 +1562,31 @@ class AgEditor
 
   end
   
+  def do_enter
+    check_file_last_access_time
+  end
+  
   def initialize_text_binding
     @text.add_yscrollcommand(proc{|first,last| self.do_line_update()})
     
     @text.tag_bind('selected', 'Enter', proc{@text.tag_remove('selected','1.0','end')})
 
-    @text.bind("Enter", proc{check_file_last_access_time})
+    @text.bind("Enter", proc{do_enter})
 
     @text.bind("<Modified>"){|e|
       check_modify
     }
     activate_key_binding
-    @text.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@text))})
+    @text.bind_append("1"){
+      Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@text))
+      refresh_outline
+    }
+  end
+
+  def refresh_outline
+    if @outline
+      Tk.after(1,proc{ @outline.update_row(self.row)})
+    end
   end
 
   def run_buffer
@@ -1992,151 +2203,6 @@ class AgEditor
     @text.tag_add('selected',_index +' linestart', _index +' +1 lines linestart')
   end
 
-
-#  def build_tree_from_source(_source)
-#    _row = 1
-#    _liv = 0
-#    _livs = Array.new
-#    root = TreeNode.new(nil, 'KRoot'){|_node|
-#      _node.rif= 'root'
-#      _node.label=''
-#    }
-#    _livs[_liv]=root
-#    _source.each_line{|line|
-#      line = "\s"+line.split("#")[0]+"\s"
-#      m = /[\s\n\t\;]+(module|class|def|if|unless|begin|case|for|while|do)[\s\n\t\;]+/.match(line)
-#      if m
-#        index = m.post_match.strip.length - 1
-#        if m.post_match.strip[index,index]=='{'
-#          _row = _row +1
-#          next
-#        end
-#        _liv>=0? _liv = _liv + 1:_liv=1
-#        _pliv = _liv
-#        _parent = nil
-#        while (_parent == nil && _pliv>=0)
-#          _pliv = _pliv -1
-#          _parent = _livs[_pliv]
-#        end
-#        if _parent
-#          _helptext = m.post_match.strip
-#          _label = _helptext.split('<')[0]
-#          if _label == nil || _label.strip.length==0
-#            _label = _helptext
-#          end
-#          if (m[0].strip[0..4] == "class" && m.pre_match.strip.length==0)
-#            _kind = 'KClass'
-#          elsif (m[0].strip[0..4] == "class" && m.pre_match.strip.length>0)
-#            _row = _row +1
-#            _liv = _liv - 1
-#            next
-#          elsif (m[0].strip[0..5] == "module" && m.pre_match.strip.length==0)
-#            _kind = 'KModule'
-#          elsif (m[0].strip[0..5] == "module" && m.pre_match.strip.length>0)
-#            _row = _row +1
-#            _liv = _liv - 1
-#            next
-#          elsif ((m[0].strip[0..4] == "begin")||(m[0].strip[0..3] == "case") ||(m[0].strip[0..4] == "while") || (m[0].strip[0..2] == "for") || (m[0].strip[0..1] == "do") || ((m[0].strip[0..1] == "if" || m[0].strip[0..5] == "unless") && m.pre_match.strip.length==0))
-#            _row = _row +1
-#            next
-#          elsif ((m[0].strip[0..1] == "if" || m[0].strip[0..5] == "unless") && m.pre_match.strip.length>0)
-#            _row = _row +1
-#            _liv = _liv - 1
-#            next
-#          elsif (m[0].strip[0..2] == "def" && m.pre_match.strip.length==0)
-#            _kind = 'KDef'
-#            if _label.include?(_parent.label + '.')
-#              _kind = 'KDefClass'
-#            end
-# #          elsif (m[0].strip[0..10] == "attr_reader" && m.pre_match.strip.length==0)
-# #            _kind = 'KAttr_reader'
-# #            _liv = _liv - 1
-# #            _row = _row +1
-#          end
-#
-#          TreeNode.new(_parent, _kind){|_node|
-#            _node.label = _label
-#            _node.helptext = _helptext
-#            _node.rif = _row.to_s
-#            _livs[_pliv + 1]=_node
-#          }
-#        else
-#          _row = _row +1
-#          _liv = _liv - 1
-#          next
-#        end
-#      end
-#      m_end = /[\s\n\t\;]+end[\s\n\t\;]+/.match(line)
-#      if m_end
-#        _liv = _liv - 1
-#      end
-#      _row = _row +1
-#    }
-#    return root
-#  end
-
-  def build_tree_from_node(_node, _label_match=nil)
-    
-    @image_kclass = TkPhotoImage.new('dat' => TREE_NODE_CLASS_GIF)
-    @image_kmodule =  TkPhotoImage.new('dat' => TREE_NODE_MODULE_GIF)
-    @image_kdef =  TkPhotoImage.new('dat' => TREE_NODE_DEF_GIF)
-    @image_kdefclass =  TkPhotoImage.new('dat' => TREE_NODE_DEFCLASS_GIF)
-    
-    _sorted_sons = _node.sons.sort
-    for inode in 0.._sorted_sons.length - 1
-      _son = _sorted_sons[inode]
-      if _son.kind == 'KClass'
-          _image = @image_kclass
-      elsif _son.kind == 'KModule'
-          _image = @image_kmodule
-      elsif _son.kind == 'KDef'
-          _image = @image_kdef
-      elsif _son.kind == 'KDefClass'
-          _image = @image_kdefclass
-      end
-      @tree_exp.insert('end', _son.parent.rif ,_son.rif, {
-        'text' =>  _son.label ,
-        'helptext' => _son.helptext,
-        #'font'=>$arcadia['conf']['editor.explorer_panel.tree.font'],
-        'image'=> _image
-      }.update(Arcadia.style('treeitem'))
-      )
-      if (_label_match) && (_label_match.strip == _son.label.strip)
-        @selected = _son
-      end
-      build_tree_from_node(_son, _label_match)
-    end
-  end
-
-  def build_tree(_sel=nil)
-    #Arcadia.console(self,"msg"=>"build for #{@file}")
-    if _sel
-      _label_sel = @tree_exp.itemcget(_sel,'text')
-    end
-    
-    #clear tree
-    begin
-      @tree_exp.delete(@tree_exp.nodes('root'))
-    rescue Exception
-      # workaround on windows
-      @tree_exp.delete(@tree_exp.nodes('root'))
-    end
-    
-    
-    #(re)build tree
-    _txt = @text.get('1.0','end')
-    #@root = build_tree_from_source(_txt)
-    @root = SourceStructure.new(_txt).root
-    
-    @selected = nil
-    build_tree_from_node(@root, _label_sel)
-    if @selected
-      @tree_exp.selection_add(@selected.rif)
-      @tree_exp.open_tree(@selected.parent.rif)
-      @tree_exp.see(@selected.rif)
-    end
-  end
-
   def insert_popup_menu_item(_where, *args)
     @pop_up.insert(_where,*args)
   end
@@ -2465,7 +2531,6 @@ class AgEditor
 
   def row(_index='insert')
     _row = @text.index(_index).split('.')[0].to_i
-    #print "def row(_index='insert')",_row.to_s,"\n"
     return _row
   end
   
@@ -2475,9 +2540,7 @@ class AgEditor
   
   def do_line_update
     #re num in @text_line_num the portion of visibled screen  of @text
-      #Arcadia.console(self, 'msg'=>"do_line_update loading ..")
       return if @loading
-      #Arcadia.console(self, 'msg'=>"do_line_update")
       if @text_line_num
         line_begin_index = @text.index('@0,0')
         line_begin = line_begin_index.split('.')[0].to_i
@@ -2504,24 +2567,9 @@ class AgEditor
         @text_line_num.delete('1.0','end')
 
         _rx, _ry, _widht, _heigth = @text.bbox(line_begin_index);
-#          _rx2, _ry2, _widht2, _heigth2 = @text.bbox(line_begin_index+" +1 lines");
-#        if _rx2
-#          _coef = _ry2-_ry-_heigth       
-#        end
-#        if _ry < 0 
-#          nline = (line_begin + 1).to_s.rjust(line_end.to_s.length+2)
-#          @text_line_num.tag_configure('start_case', 'spacing1'=>(_heigth+_ry))
-#          @text_line_num.insert('end', "#{nline}\n",'normal_case','start_case')
-#          real_line_begin = line_begin + 2
-#        else
-#          real_line_begin = line_begin
-#        end
         
         if _ry && _ry < 0 
           real_line_end = line_end + 1
-#          x = (_heigth+_ry)/_heigth
-#          @text_line_num.yview_scroll(-(_heigth+_ry),"pixels")
-          
         else
           real_line_end = line_end
         end
@@ -2551,27 +2599,15 @@ class AgEditor
           end
 
           @text_line_num.insert(_index, "#{nline}\n",_tags)
-#          if @highlighting && @is_line_bold[j]
-#            @text_line_num.insert('end', "#{nline}\n",'bold_case')
-#          else
-#            @text_line_num.insert('end', "#{nline}\n",'normal_case')
-#          end
           if b.include?(j.to_s)
             add_tag_breakpoint(j)
-            #add_tag_breakpoint(_index)
-            #p "aggiungo tag break on line #{j} on index ->#{_index}"
-            #add_tag_breakpoint(_index+' -1 lines')
           end
         end
         if _ry && _ry < 0 
-          #Arcadia.console(self, 'msg'=>"scrollo -> #{-(_heigth+_ry)}")
-          #Arcadia.console(self, 'msg'=>"_coef -> #{_coef}")
-
-#          @text_line_num.yview_scroll((_heigth+_ry),"pixels")
-#          @text_line_num.yview_scroll((-_ry+3),"pixels")
           @text_line_num.yview_scroll(_ry.abs+3,"pixels")
         end
       end
+      refresh_outline if Tk.focus==@text
   end
 
   def highlight_zone_new(_zone)
@@ -2728,6 +2764,7 @@ class AgEditor
 
   def init_editing(_ext='rb', _w1=150, _w2=60)
     @is_ruby = _ext=='rb'||_ext=='rbw'
+    @classbrowsing = @is_ruby
     @lang_hash = languages_hash(_ext)
 #    if !_ext.nil? && @is_ruby
 #      @fm = AGTkVSplittedFrames.new(@page_frame,_w1)
@@ -2746,16 +2783,16 @@ class AgEditor
   end
   
   def show_outline
-    if @tree_scroll_wrapper
-      @tree_scroll_wrapper.show
+    if @outline
+      @outline.show
     else
-      initialize_tree(@controller.frame(1).hinner_frame)
-      build_tree
+      @outline=AgEditorOutline.new(self,@controller.frame(1).hinner_frame,@controller.outline_bar)
+      @outline.build_tree
     end
   end
 
   def hide_outline
-    @tree_scroll_wrapper.hide if @tree_scroll_wrapper
+    @outline.hide if @outline
   end
   
   def file_extension(_filename=nil)
@@ -2805,7 +2842,7 @@ class AgEditor
   end
   
   def refresh
-    build_tree if @classbrowsing #&& !is_exp_hide?
+    @outline.build_tree if @outline && @classbrowsing #&& !is_exp_hide?
   end
 end
 
@@ -2842,6 +2879,7 @@ class AgMultiEditor < ArcadiaExt
   include Autils
   attr_reader :breakpoints
   attr_reader :splitted_frame
+  attr_reader :outline_bar
   def on_before_build(_event)
     @breakpoints =Array.new
     @tabs_file =Hash.new
@@ -2878,6 +2916,7 @@ class AgMultiEditor < ArcadiaExt
 
   def on_build(_event)
     @main_frame = AgMultiEditorView.new(self.frame.hinner_frame)
+    @outline_bar = AgEditorOutlineToolbar.new(self.frame(1).hinner_frame, self)
     create_find
     pop_up_menu
     #self.open_last_files
@@ -3196,7 +3235,7 @@ class AgMultiEditor < ArcadiaExt
   end
   
   def on_layout_raising_frame(_event)
-    if _event.extension_name == "editor" && _event.frame_name=="editor_outline"
+    if _event.extension_name == "editor" && _event.frame_name=="outline"
       _e = raised
       change_outline(_e, true) if  _e
     end
