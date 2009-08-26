@@ -3874,9 +3874,11 @@ class Find < Findview
   def go_line
     if @goto_line_dialog.e_line.value.length > 0
       _row = @goto_line_dialog.e_line.value
-      _index = _row+'.1'
+      _index = _row.strip+'.1'
       self.editor.text.see(_index)
-      self.editor.text.tag_add('sel', _index,_index+' lineend')
+      self.editor.text.tag_remove('selected','1.0','end')
+      self.editor.text.tag_add('selected',_index,_index+' lineend')
+      #self.editor.text.tag_add('sel', _index,_index+' lineend')
       self.editor.text.set_insert(_index)
       @controller.bookmark_add(self.editor.file, _index)
     @goto_line_dialog.hide
