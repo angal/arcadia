@@ -684,6 +684,7 @@ class AgEditorOutline
   
   def shure_select_node(_node)
     return if @selecting_node
+    #return if @tree_exp.exist?(_node.rif)
     @selecting_node = true
     _proc = @tree_exp.selectcommand
     @tree_exp.selectcommand(nil)
@@ -712,7 +713,7 @@ class AgEditorOutline
   def select_without_event(_line)
     if @ss
       _node=@ss.deep_node_by_line(@ss.root, _line)
-      if _node && @tree_exp.exist?(_node.rif)
+      if _node && @tree_exp.exist?(_node.rif) && _node.rif!='root'
         shure_select_node(_node)
       end
     end

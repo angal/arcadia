@@ -105,7 +105,7 @@ class FixedFrameWrapper < AbstractFrameWrapper
   end
 
   def maximized?
-    Arcadia.layout.domain(@domain)['root'].maximized?
+    Arcadia.layout.domain(@domain) && Arcadia.layout.domain(@domain)['root'].maximized?
   end
 
   def maximize
