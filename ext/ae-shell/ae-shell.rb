@@ -54,12 +54,10 @@ class Shell < ArcadiaExt
         open(_cmd_,"r"){|f|
            _readed = f.read
            Arcadia.console(self,'msg'=>_readed, 'level'=>'debug')
-           #Arcadia.new_debug_msg(self, _readed)
            _event.add_result(self, 'output'=>_readed)
         }
       rescue Exception => e
         Arcadia.console(self,'msg'=>e, 'level'=>'debug')
-        #Arcadia.new_debug_msg(self, e)
       end
     end
   end

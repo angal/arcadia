@@ -900,6 +900,10 @@ class TkTitledFrame < TkBaseTitledFrame
     end
     self.raise
   end
+  
+  def maximized?
+    @state == 'maximize'
+  end
 
   def maximize
     if @state == 'normal'

@@ -103,6 +103,18 @@ class FixedFrameWrapper < AbstractFrameWrapper
   def raised?
     Arcadia.layout.raised?(@domain, @name)
   end
+
+  def maximized?
+    Arcadia.layout.domain(@domain) && Arcadia.layout.domain(@domain)['root'].maximized?
+  end
+
+  def maximize
+    Arcadia.layout.domain(@domain)['root'].maximize
+  end
+
+  def resize
+    Arcadia.layout.domain(@domain)['root'].resize
+  end
   
   def free
     Arcadia.layout.unregister_panel(self)
@@ -213,7 +225,7 @@ class ArcadiaExt
 	  if @frames[_n] == nil && @frames_points[_n] && create_if_not_exist
 	    (@frames_labels[_n].nil?)? _label = @name : _label = @frames_labels[_n]
 	    (@frames_names[_n].nil?)? _name = @name : _name = @frames_names[_n]
-	    @frames[_n] =  FixedFrameWrapper.new(@name, @frames_points[_n], _name, _label)
+	    @frames[_n] = FixedFrameWrapper.new(@name, @frames_points[_n], _name, _label)
 	  end
     return @frames[_n]
   end
@@ -240,6 +252,19 @@ class ArcadiaExt
     end
   end
   
+  def maximized?(_n=0)
+    ret= false
+    ret=@frames[_n].maximized? if @frames[_n]
+    ret
+  end
+
+  def maximize(_n=0)
+    @frames[_n].maximize if @frames[_n]
+  end
+  
+  def resize(_n=0)
+    @frames[_n].resize if @frames[_n]
+  end
 end
 
 
@@ -660,6 +685,11 @@ class Application
         end
       }
   end
+
+  def Application.del_conf(_k)
+    @@instance['conf'].delete(_k) if @@instance['conf'][_k]
+  end
+
 
   def prepare
   end
