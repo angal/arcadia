@@ -3730,7 +3730,16 @@ class Findview < TkFloatTitledFrame
       #pack('side'=>'left', 'anchor'=>'e')
       place('x' => 8,'y' => y0,'height' => 22)
     }
+    y0 = y0 + d
+    @cb_ignore_case = TkCheckButton.new(self.frame, Arcadia.style('checkbox')){|_cb_reg|
+      text  'Ignore case'
+      justify  'left'
+      #relief  'flat'
+      #pack('side'=>'left', 'anchor'=>'e')
+      place('x' => 8,'y' => y0,'height' => 22)
+    }
     
+    y0 = y0 + d
     y0 = y0 + d
     y0 = y0 + d
     @buttons_frame = TkFrame.new(self.frame, Arcadia.style('panel')).pack('fill'=>'x', 'side'=>'bottom')	
@@ -3932,20 +3941,20 @@ class Find < Findview
       else
         _istart = '1.0'
       end
-      if @forwards
-        if @cb_reg.cget('onvalue')==@cb_reg.cget('variable').value.to_i
-          _index = self.editor.text.tksearch(['regexp'],@e_what.text,_istart)
-        else
-          _index = self.editor.text.search(@e_what.text,_istart)
-        end
-      else
-
-        if @cb_reg.cget('onvalue')==@cb_reg.cget('variable').value.to_i
-          _index = self.editor.text.tksearch(['regexp','backwards'],@e_what.text,_istart)
-        else
-          _index = self.editor.text.tksearch(['backwards'],@e_what.text,_istart)
-        end
+      
+      # propagate some search options
+      options = []
+      if !@forwards
+        options << 'backwards'
       end
+      if @cb_reg.cget('onvalue')==@cb_reg.cget('variable').value.to_i
+        options << 'regexp'
+      end
+      if @cb_ignore_case.cget('onvalue')==@cb_reg.cget('variable').value.to_i
+        options << 'nocase'
+      end
+      _index = self.editor.text.tksearch(options,@e_what.text,_istart)
+      
       if _index && _index.length>0
         self.editor.text.see(_index)
         _row, _col = _index.split('.')
@@ -3958,7 +3967,7 @@ class Find < Findview
         self.editor.text.tag_add('sel', _index,_index_sel_end)
         self.editor.text.set_insert(_index)
         @idx1 =_index
-        @idx2 =_index_sel_end
+                @idx2 =_index_sel_end
         _found = true
         @controller.bookmark_add(self.editor.file, _index)
       else
