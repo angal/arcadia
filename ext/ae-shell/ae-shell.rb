@@ -16,34 +16,35 @@ class Shell < ArcadiaExt
   def on_build(_event)
     @run_threads = Array.new
   end
-  
+
   def on_system_exec(_event)
     begin
-#    _cmd_ = "|ruby #{File.dirname(__FILE__)}/sh.rb #{_event.command} 2>&1"
-#    p _cmd_
-#    Thread.new do
-#      open(_cmd_,"r"){|f|
-#          Arcadia.new_debug_msg(self, f.read)
-#      }
-#    end
-    _cmd_ = "#{_event.command}"
-    if is_windows?
-      io = IO.popen(_cmd_)
-    else
-      Process.fork{
-        open(_cmd_,"r"){|f|
-          Arcadia.console(self,'msg'=>f.read, 'level'=>'debug')
-          #Arcadia.new_debug_msg(self, f.read)
+      #    _cmd_ = "|ruby #{File.dirname(__FILE__)}/sh.rb #{_event.command} 2>&1"
+      #    p _cmd_
+      #    Thread.new do
+      #      open(_cmd_,"r"){|f|
+      #          Arcadia.new_debug_msg(self, f.read)
+      #      }
+      #    end
+      _cmd_ = "#{_event.command}"
+      if is_windows?
+        io = IO.popen(_cmd_)
+      else
+        Process.fork{
+          open(_cmd_,"r"){|f|
+            Arcadia.console(self,'msg'=>f.read, 'level'=>'debug')
+            #Arcadia.new_debug_msg(self, f.read)
+          }
         }
-      }
-    end
+      end
     rescue Exception => e
       Arcadia.console(self,'msg'=>e, 'level'=>'debug')
       #Arcadia.new_debug_msg(self, e)
     end
 
   end
-  
+
+  @@next_number = 0
   def on_run_ruby_file(_event)
     _filename = _event.file
     _filename = @arcadia['pers']['run.file.last'] if _filename == "*LAST"
@@ -51,16 +52,48 @@ class Shell < ArcadiaExt
       begin
         Arcadia.console(self,'msg'=>"Running #{_filename}", 'level'=>'debug') # info?
         @arcadia['pers']['run.file.last']=_filename if _event.persistent
-        _cmd_ = "|#{@arcadia['conf']['shell.ruby']} -C'#{File.dirname(_filename)}' '#{_filename}' 2>&1"
-        Thread.new {
-          open(_cmd_,"r"){|f|
-            _readed = f.read
-            Arcadia.console(self,'msg'=>_readed, 'level'=>'debug')
-            _event.add_result(self, 'output'=>_readed)
+        _cmd_ = "#{@arcadia['conf']['shell.ruby']} -C'#{File.dirname(_filename)}' '#{_filename}' 2>&1"
+        if is_windows?
+          require 'win32/process'
+          require 'sys/proctable'
+          output_file_name = "out_#{@@next_number}.txt"
+          @@next_number += 1
+          # windows needs to run it through another cmd for some reason or it doesn't redirect right
+          _cmd_ = "cmd /c \"#{_cmd_} > #{output_file_name}\""
+          child = Process.create :command_line => _cmd_
+          timer=nil
+          procy = proc {
+            still_alive = Sys::ProcTable.ps(child.process_id)
+            if(!still_alive)
+              timer.stop
+              File.open(output_file_name, 'r') do |f|
+                _readed = f.read
+                Arcadia.console(self,'msg'=>_readed, 'level'=>'debug')
+                _event.add_result(self, 'output'=>_readed)
+              end
+              File.delete
+
+            end
           }
-        }
+
+          timer=TkAfter.new(1000,-1,procy) # repeating...
+          timer.start
+        else
+          _cmd_ = "|#{_cmd_}"
+          Thread.new {
+            begin
+              open(_cmd_,"r"){|f|
+                _readed = f.read
+                Arcadia.console(self,'msg'=>_readed, 'level'=>'debug')
+                _event.add_result(self, 'output'=>_readed)
+              }
+            rescue Exception => e
+              Arcadia.console(self,'msg'=>e.to_s, 'level'=>'debug')
+            end
+          }
+        end
       rescue Exception => e
-        Arcadia.console(self,'msg'=>e, 'level'=>'debug')
+        Arcadia.console(self,'msg'=>e.to_s, 'level'=>'debug')
       end
     end
   end
@@ -70,17 +103,17 @@ class Shell < ArcadiaExt
     (RUBY_PLATFORM.include?('mswin32'))?_cmd="cmd":_cmd='sh'
     if is_windows?
       Thread.new{
-        Arcadia.console(self,'msg'=>'begin', 'level'=>'debug')      
+        Arcadia.console(self,'msg'=>'begin', 'level'=>'debug')
         #Arcadia.new_debug_msg(self, 'inizio')
         @io = IO.popen(_cmd,'r+')
         @io.puts(command)
         result = ''
         while line = @io.gets
-           result << line
-        end 
+          result << line
+        end
         #Arcadia.new_debug_msg(self, result)
         Arcadia.console(self,'msg'=>result, 'level'=>'debug')
-        
+
       }
     else
       Process.fork{
@@ -103,7 +136,7 @@ class Shell < ArcadiaExt
   def run_last
     run($arcadia['pers']['run.file.last'])
   end
-  
+
   def run_current
     current_editor = $arcadia['editor'].raised
     run(current_editor.file) if current_editor
@@ -126,12 +159,12 @@ class Shell < ArcadiaExt
           _cmd_ = "|"+$arcadia['conf']['shell.ruby']+" "+_filename+" 2>&1"
           #  Arcadia.new_debug_msg(self, _cmd_)
           @cmd = open(_cmd_,"r"){|f|
-              Arcadia.console(self, 'msg'=>f.read ,'level'=>'debug')          
-              #Arcadia.new_debug_msg(self, f.read)
+            Arcadia.console(self, 'msg'=>f.read ,'level'=>'debug')
+            #Arcadia.new_debug_msg(self, f.read)
           }
         end
       rescue Exception => e
-        Arcadia.console(self, 'msg'=>e ,'level'=>'debug')          
+        Arcadia.console(self, 'msg'=>e ,'level'=>'debug')
         #Arcadia.new_debug_msg(self, e)
       end
     end
