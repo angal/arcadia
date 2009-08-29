@@ -8,7 +8,7 @@
 require 'tk'
 require 'tktext'
 require 'lib/a-tkcommons'
-#require 'lib/a-commons'
+#require 'lib/a-commons' 
 require 'lib/a-core'
 
 class TreeNode
@@ -2673,7 +2673,6 @@ class AgEditor
       @text.edit_reset
     end
   end
-
   def save
     if !@file
       save_as
@@ -2684,10 +2683,16 @@ class AgEditor
         'msg' =>"The file : #{@file} is read-only!",
         'level' =>'warning')
     else
-      f = File.new(@file, "w")
+      f = File.new(@file, "wb")
       begin
         if f
-          f.syswrite(text_value)
+	  to_write = text_value
+	  if @dos_line_endings
+	    # we stripped these out, previously...
+	    # for now assume they want them all this way, no mixing and matching...
+	    to_write = to_write.gsub("\n", "\r\n")
+	  end
+          f.syswrite(to_write)
           @buffer = text_value
           reset_modify
         end
@@ -2806,14 +2811,19 @@ class AgEditor
   def load_file(_filename = nil)
     #if filename is nil then open a new tab
     @loading=true
+    @dos_line_endings=false
     begin
       @file = _filename
       if _filename
         #init_editing(file_extension(_filename))
-        File::open(_filename,'r'){ |file|
+        File::open(_filename,'rb'){ |file|
           @text.insert('end',file.readlines.collect!{| line | line.chomp+"\n" }.to_s)
           #@text.insert('end',file.read)
         }
+	File.open(_filename, 'rb') { |file|
+	  puts 'using dos line endings'
+	  @dos_line_endings=true if file.read.include?("\r\n") # pesky windows line endings
+	}
       end
       set_read_only(!File.stat(_filename).writable?)
       reset
