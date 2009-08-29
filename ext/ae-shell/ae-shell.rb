@@ -49,12 +49,15 @@ class Shell < ArcadiaExt
     _filename = @arcadia['pers']['run.file.last'] if _filename == "*LAST"
     if _filename && File.exists?(_filename)
       begin
+        Arcadia.console(self,'msg'=>"Running #{_filename}", 'level'=>'debug') # info?
         @arcadia['pers']['run.file.last']=_filename if _event.persistent
         _cmd_ = "|#{@arcadia['conf']['shell.ruby']} -C'#{File.dirname(_filename)}' '#{_filename}' 2>&1"
-        open(_cmd_,"r"){|f|
-           _readed = f.read
-           Arcadia.console(self,'msg'=>_readed, 'level'=>'debug')
-           _event.add_result(self, 'output'=>_readed)
+        Thread.new {
+          open(_cmd_,"r"){|f|
+            _readed = f.read
+            Arcadia.console(self,'msg'=>_readed, 'level'=>'debug')
+            _event.add_result(self, 'output'=>_readed)
+          }
         }
       rescue Exception => e
         Arcadia.console(self,'msg'=>e, 'level'=>'debug')
