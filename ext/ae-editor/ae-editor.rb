@@ -2820,10 +2820,9 @@ class AgEditor
           @text.insert('end',file.readlines.collect!{| line | line.chomp+"\n" }.to_s)
           #@text.insert('end',file.read)
         }
-	File.open(_filename, 'rb') { |file|
-	  puts 'using dos line endings'
-	  @dos_line_endings=true if file.read.include?("\r\n") # pesky windows line endings
-	}
+	      File.open(_filename, 'rb') { |file|
+	        @dos_line_endings=true if file.read.include?("\r\n") # pesky windows line endings
+	      }
       end
       set_read_only(!File.stat(_filename).writable?)
       reset
