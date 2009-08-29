@@ -50,12 +50,13 @@ class Shell < ArcadiaExt
     _filename = @arcadia['pers']['run.file.last'] if _filename == "*LAST"
     if _filename && File.exists?(_filename)
       begin
-        Arcadia.console(self,'msg'=>"Running #{_filename}", 'level'=>'debug') # info?
+        Arcadia.console(self,'msg'=>"Running #{_filename}...", 'level'=>'debug') # info?
+        start_time = Time.now
         @arcadia['pers']['run.file.last']=_filename if _event.persistent
         _cmd_ = "#{@arcadia['conf']['shell.ruby']} -C'#{File.dirname(_filename)}' '#{_filename}' 2>&1"
         if is_windows?
           require 'win32/process'
-          require 'sys/proctable'
+          require 'ruby-wmi'
           output_file_name = "out_#{@@next_number}.txt"
           @@next_number += 1
           # windows needs to run it through another cmd for some reason or it doesn't redirect right
@@ -63,16 +64,17 @@ class Shell < ArcadiaExt
           child = Process.create :command_line => _cmd_
           timer=nil
           procy = proc {
-            still_alive = Sys::ProcTable.ps(child.process_id)
+            still_alive = WMI::Win32_Process.find(:first, :conditions => {:ProcessId => child.process_id})
             if(!still_alive)
               timer.stop
               File.open(output_file_name, 'r') do |f|
                 _readed = f.read
+                _readed.strip!
+                _readed += "\n" + "Done with #{_filename} in #{Time.now - start_time}s"
                 Arcadia.console(self,'msg'=>_readed, 'level'=>'debug')
                 _event.add_result(self, 'output'=>_readed)
               end
-              File.delete
-
+              File.delete output_file_name
             end
           }
 
