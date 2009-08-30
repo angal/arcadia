@@ -1333,7 +1333,12 @@ class AgEditor
 #        complete_code.call
       when 'z'
         _b = @text.index('insert').split('.')[0].to_i
-        @text.edit_undo
+        begin
+          @text.edit_undo
+        rescue RuntimeError => e
+          throw e unless e.to_s.include? "nothing to undo" # this is ok
+          break
+        end
         _e = @text.index('insert').split('.')[0].to_i
         if @highlighting
           for j in _b..._e
