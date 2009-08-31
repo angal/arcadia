@@ -256,7 +256,7 @@ class FindFrame < TkFloatTitledFrame
       #pack('fill'=>'x')
       #place('relwidth' => 1, 'width'=>-16,'x' => 8,'y' => y0,'height' => 19)
     }
-    @e_dir.text(Dir.pwd)
+    @e_dir.text($pwd)
     @b_dir = TkButton.new(@e_dir, Arcadia.style('button') ){
       compound  'none'
       default  'disabled'

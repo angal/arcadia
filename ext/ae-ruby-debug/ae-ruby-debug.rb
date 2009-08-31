@@ -3,6 +3,7 @@
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
 
+require 'whichr'
 
 class RubyDebugView
   include TkUtil
@@ -1369,7 +1370,7 @@ class RubyDebug < ArcadiaExt
   attr_reader :rds
   attr_reader :rdc
   def on_before_build(_event)
-    if !full_in_path_command('rdebug').nil?
+    if RubyWhich.new.which("rdebug") != []
       #ArcadiaContractListener.new(self, EditorContract, :do_editor_event)
       Arcadia.attach_listener(self, BufferEvent)
       @breakpoints = Hash.new

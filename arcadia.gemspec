@@ -31,4 +31,7 @@ require 'rubygems'
   s.has_rdoc = false
   s.extra_rdoc_files = ["README"]
   s.add_dependency("ruby-debug", ">= 0.9.3")
+  s.add_dependency("rogerdpack-whichr")
+#  s.add_dependency("ruby-wmi") # don't build on linux
+#  s.add_dependency("win32-process")
 end

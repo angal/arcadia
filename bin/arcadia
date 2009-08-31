@@ -3,6 +3,7 @@
 #   arcadia - Arcadia Ruby ide
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
+require 'rubygems' # for a few dependencies
 $pwd = Dir.pwd
 Dir.chdir("#{File.dirname(__FILE__)}/..")
 if FileTest.exist?('conf/arcadia.init.rb')

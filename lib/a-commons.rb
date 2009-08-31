@@ -466,8 +466,7 @@ module Autils
 	end
 
   def is_windows?
-    !(RUBY_PLATFORM =~ /(win|w)32$/).nil?
-    #RUBY_PLATFORM.include?('win')
+    RUBY_PLATFORM =~ /mingw|mswin/
   end
 	
 end
