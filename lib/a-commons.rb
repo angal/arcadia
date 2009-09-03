@@ -455,7 +455,7 @@ module Autils
 	def full_in_path_command(_command=nil)
 	  return nil if _command.nil?
 		_ret = nil
-		RUBY_PLATFORM.include?('win32') ? _sep = ';':_sep=':'
+		RUBY_PLATFORM =~ /win32|mingw/ ? _sep = ';':_sep=':'
 		ENV['PATH'].split(_sep).each{|_path|
 			_file = File.join(_path, _command)
 			if FileTest.exist?(_file)
@@ -656,8 +656,8 @@ class Application
 	  self['conf'][_property]
   end
   
-  def sys_info
-    "[Platform = #{RUBY_PLATFORM}] [Ruby version = #{RUBY_VERSION}]"
+  def Application.sys_info
+    "[Platform = #{RUBY_PLATFORM}]\n[Ruby version = #{RUBY_VERSION}]"
   end
   
   def Application.conf_group(_group)

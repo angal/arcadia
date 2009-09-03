@@ -53,8 +53,8 @@ class TkApplication < Application
     @tcltk_info = TclTkInfo.new
   end
   
-  def sys_info
-   "#{super} [TclTk version = #{tcltk_info.level}]"
+  def self.sys_info
+   "#{super}\n[TclTk version = #{TclTkInfo.new.level}]"
   end
   
   def run

@@ -36,7 +36,7 @@ class Arcadia < TkApplication
     ObjectSpace.define_finalizer($arcadia, self.class.method(:finalize).to_proc)
     publish('action.on_exit', proc{do_exit})
     #_title = "Arcadia Ruby ide :: [Platform = #{RUBY_PLATFORM}] [Ruby version = #{RUBY_VERSION}] [TclTk version = #{tcltk_info.level}]"
-    _title = "Arcadia Ruby ide :: #{sys_info}"
+    _title = "Arcadia ide "
     @root = TkRoot.new(
       'background'=> self['conf']['background']
       ){
@@ -996,7 +996,7 @@ class ArcadiaAboutSplash < TkToplevel
       foreground  '#ffffff'
       font Arcadia.instance['conf']['splash.credits.font']
       justify  'left'
-      place('width' => '210','x' => 100,'y' => 95,'height' => 19)
+      place('width' => '210','x' => 100,'y' => 95,'height' => 25)
     }
     @tkLabelStep = TkLabel.new(self){
       text  ''
@@ -1005,19 +1005,19 @@ class ArcadiaAboutSplash < TkToplevel
       font Arcadia.instance['conf']['splash.banner.font']
       justify  'left'
       anchor  'w'
-      place('width'=>-5,'relwidth' => 1,'x' => 5,'y' => 160,'height' => 19)
+      place('width'=>-5,'relwidth' => 1,'x' => 5,'y' => 160,'height' => 45)
     }
     @progress  = TkVariable.new
     reset
-    _width = 340
-    _height = 200
+    _width = 380
+    _height = 240
     #_width = 0;_height = 0
     _x = TkWinfo.screenwidth(self)/2 -  _width / 2
     _y = TkWinfo.screenheight(self)/2 -  _height / 2
     geometry = _width.to_s+'x'+_height.to_s+'+'+_x.to_s+'+'+_y.to_s
     Tk.tk_call('wm', 'geometry', self, geometry )
     bind("Double-Button-1", proc{self.destroy})
-    info = "Ruby version = #{RUBY_VERSION} - TclTk version = #{Arcadia.instance.tcltk_info.level}"
+    info = TkApplication.sys_info
     set_sysinfo(info)
   end
 
