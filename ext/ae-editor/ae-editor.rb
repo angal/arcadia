@@ -3511,7 +3511,7 @@ class AgMultiEditor < ArcadiaExt
       else
         open_buffer(_tab_name, _basefilename,0)
       end
-
+      @tabs_editor[_tab_name].reset_highlight
       @tabs_editor[_tab_name].load_file(_filename)
     end
     
