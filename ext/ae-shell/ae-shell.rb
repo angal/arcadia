@@ -53,7 +53,9 @@ class Shell < ArcadiaExt
         Arcadia.console(self,'msg'=>"Running #{_filename}...", 'level'=>'debug') # info?
         start_time = Time.now
         @arcadia['pers']['run.file.last']=_filename if _event.persistent
-        _cmd_ = "#{@arcadia['conf']['shell.ruby']} -C'#{File.dirname(_filename)}' '#{_filename}' 2>&1"
+        executable = @arcadia['conf']['shell.ruby']
+        executable += "w" if RUBY_PLATFORM =~ /mswin|mingw/ # use rubyw here...
+        _cmd_ = "#{executable} -C'#{File.dirname(_filename)}' '#{_filename}' 2>&1"
         if is_windows?
           require 'win32/process'
           require 'ruby-wmi'
@@ -78,7 +80,7 @@ class Shell < ArcadiaExt
             end
           }
 
-          timer=TkAfter.new(1000,-1,procy) # repeating...
+          timer=TkAfter.new(1000,-1,procy) # -1 = repeating every 1000ms...
           timer.start
         else
           _cmd_ = "|#{_cmd_}"
