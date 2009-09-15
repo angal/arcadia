@@ -1771,7 +1771,7 @@ class AgEditor
   def reset_highlight
     @is_line_bold.clear
     @is_tag_bold.clear
-    @highlight_zone.clear
+    @highlight_zone.clear if @highlighting
     @last_line_begin=0
     @last_line_end=0
     @last_zone_begin=0
@@ -2779,7 +2779,7 @@ class AgEditor
   end
 
   def init_editing(_ext='rb', _w1=150, _w2=60)
-    @is_ruby = _ext=='rb'||_ext=='rbw'
+    @is_ruby = _ext=='rb'|| _ext=='rbw'
     @classbrowsing = @is_ruby
     @lang_hash = languages_hash(_ext)
 #    if !_ext.nil? && @is_ruby
