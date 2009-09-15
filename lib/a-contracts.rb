@@ -38,6 +38,18 @@ end
 class FinalizeEvent < ArcadiaEvent
 end
 
+
+class NeedRubyGemWizardEvent < ArcadiaEvent
+  class Result < Result
+    attr_accessor :installed
+  end
+  attr_accessor :extension_name
+  attr_accessor :gem_name
+  attr_accessor :gem_repository
+  attr_accessor :gem_min_version
+  attr_accessor :gem_max_version
+end
+
 # +------------------------------------------+
 #     Generic Layout Event 
 #     
