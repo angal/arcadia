@@ -317,6 +317,10 @@ class Event
     @results = Array.new
   end
   
+  def add_finalize_callback(_proc)
+    ObjectSpace.define_finalizer(self, _proc) 
+  end
+  
   def add_result(_sender, _args=nil)
     if self.class::Result
       res = self.class::Result.new(_sender, _args)
