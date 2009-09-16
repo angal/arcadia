@@ -52,19 +52,21 @@ class Shell < ArcadiaExt
         Arcadia.console(self,'msg'=>"Running #{_filename}...", 'level'=>'debug') # info?
         start_time = Time.now
         @arcadia['pers']['run.file.last']=_filename if _event.persistent
-        _cmd_ = "#{@arcadia['conf']['shell.ruby']} -C'#{File.dirname(_filename)}' '#{_filename}'"
+        executable = @arcadia['conf']['shell.ruby']
+        executable += "w" if is_windows? # use rubyw.exe
+        _cmd_ = "#{executable} -C'#{File.dirname(_filename)}' '#{_filename}' 2>&1"
+
         if is_windows?
           require 'win32/process'
           require 'ruby-wmi'
-          output_file_name = "out_#{@@next_number}.txt"
-          @@next_number += 1
-          # windows needs to run it through another cmd for some reason or it doesn't redirect right
-          _cmd_ = "cmd /c \"#{_cmd_} > #{output_file_name} 2>&1 \""
-          child = Process.create(:command_line => _cmd_)
+          output_file_name = "out_#{@@next_number += 1}_#{Process.pid}.txt"
+          output = File.open(output_file_name, 'wb')
+          child = Process.create :command_line => _cmd_,  :startup_info => {:stdout => output}
           timer=nil
           procy = proc {
             still_alive = WMI::Win32_Process.find(:first, :conditions => {:ProcessId => child.process_id})
             if(!still_alive)
+              output.close
               timer.stop
               File.open(output_file_name, 'r') do |f|
                 _readed = f.read
@@ -77,7 +79,7 @@ class Shell < ArcadiaExt
             end
           }
 
-          timer=TkAfter.new(1000,-1,procy) # repeating...
+          timer=TkAfter.new(1000,-1,procy) # -1 = repeating every 1000ms...
           timer.start
         else
           _cmd_ = "|#{_cmd_} 2>&1"
