@@ -560,7 +560,7 @@ class RubyDebugView
   end
 
   def is_simple_class?(_var)
-    ['Numeric','Fixnum','String','FalseClass','TrueClass','NilClass','Float','BigDecimal','Bignum'].include?(_var.value_class) && !_var.value.to_s.strip.include?("\n")
+    ['Numeric','Fixnum','String','FalseClass','TrueClass','NilClass','Float','BigDecimal','Bignum','Symbol'].include?(_var.value_class) && !_var.value.to_s.strip.include?("\n")
   end
   
   def show_expression(_exp, _hash)
@@ -1047,7 +1047,7 @@ class RubyDebugClient
       end
       return @session
     rescue Exception => e
-      Arcadia.console(self, 'msg'=>"Error on start_session : #{e.class}:#{e.message}", 'level'=>'debug')
+      Arcadia.console(self, 'msg'=>"Error on start_session : #{e.class}:#{e.message} #{e.backtrace.join('..')}", 'level'=>'debug')
       #Arcadia.new_debug_msg(self,"Error on start_session : #{e.class}:#{e.message}")    
     end
   end
