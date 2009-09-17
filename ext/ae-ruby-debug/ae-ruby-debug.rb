@@ -560,7 +560,7 @@ class RubyDebugView
   end
 
   def is_simple_class?(_var)
-    ['Numeric','Fixnum','String','FalseClass','TrueClass','NilClass'].include?(_var.value_class) && !_var.value.to_s.strip.include?("\n")
+    ['Numeric','Fixnum','String','FalseClass','TrueClass','NilClass','Float','BigDecimal','Bignum'].include?(_var.value_class) && !_var.value.to_s.strip.include?("\n")
   end
   
   def show_expression(_exp, _hash)
