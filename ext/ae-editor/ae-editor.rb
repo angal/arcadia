@@ -267,7 +267,7 @@ class SafeCompleteCode
     if _dec_line.include?('.new')
       pre, post = _dec_line.split('.new')
       dec_line_processed = "#{pre}.new"
-      post.strip!
+      post.strip! if post
       if post && post[0..0]=='('
         k=0
         ch = '('
@@ -948,7 +948,11 @@ class AgEditor
     if @file
       _file = @file+'~~'
     else
-      _file = File.join(Arcadia.instance.local_dir,'buffer~~')
+      n=0
+      while File.exist?(File.join(Arcadia.instance.local_dir,"buffer#{n}~~"))
+        n+=1
+      end
+      _file = File.join(Arcadia.instance.local_dir,"buffer#{n}~~")
     end
     f = File.new(_file, "w")
     begin
@@ -1599,9 +1603,10 @@ class AgEditor
     if !@file
       _file = create_temp_file
       begin
-        Arcadia.process_event(RunRubyFileEvent.new(self, 'file'=>_file, 'persistent'=>false))
+        _event = Arcadia.process_event(RunRubyFileEvent.new(self, 'file'=>_file, 'persistent'=>false))
       ensure
-        File.delete(_file) if File.exist?(_file)
+        _event.add_finalize_callback(proc{File.delete(_file) if File.exist?(_file)})
+       # File.delete(_file) if File.exist?(_file)
       end
     else
       save if !@read_only

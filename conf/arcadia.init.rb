@@ -1,15 +1,39 @@
 # In this file init configuration
+load_ok=true
+if load_ok
+begin
+  require 'rubygems' # for a few dependencies
+rescue LoadError => e
+load_ok=false
+print <<EOL
+ ----------------------------------------------
+       *** LOAD ERROR ***
+ ----------------------------------------------
+       Arcadia require rubygems     
+       you must install before run ...       
+ ----------------------------------------------
+EOL
+end
+end
 
+if load_ok
 begin
   require 'tk'
 rescue LoadError => e
+load_ok=false
 print <<EOL
+ ----------------------------------------------
+       *** LOAD ERROR ***
  ----------------------------------------------
        Arcadia require ruby-tk extension     
        and tcl/tk run-time                   
        you must install before run ...       
  ----------------------------------------------
 EOL
+end
+end
+
+if !load_ok
 i=30
 l=i
 msg=e.message
@@ -21,7 +45,7 @@ while l < msg.length
   l=l+i
 end
 print <<EOL
- ---Tk LoadError Details-----------------------
+ ----- LoadError Details-----------------------
     Platform : "#{RUBY_PLATFORM}"          
     Ruby version : "#{RUBY_VERSION}"
     Message : 
@@ -30,5 +54,4 @@ print <<EOL
 EOL
 exit
 end
-
 Tk.tk_call "eval","set auto_path [concat $::auto_path tcl]"

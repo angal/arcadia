@@ -840,7 +840,7 @@ class DirProjects < ArcadiaExt
         path = File::SEPARATOR
       end
       path = path + steps[j]
-      if @htree.exist?(path)
+      if @htree.exist?(path) 
         @htree.open_tree(path, false)
       end
       j=j+1

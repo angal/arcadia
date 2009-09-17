@@ -233,7 +233,7 @@ class Output < ArcadiaExt
       @main_frame.text.tag_add(tag_name,_ibegin,_iend)
       @main_frame.text.tag_bind(tag_name,"Double-ButtonPress-1",
         proc{
-          Arcadia.process_event(OpenBufferEvent.new(self,'file'=>_file, 'row'=>_line))
+          Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>_file, 'row'=>_line))
         }
       )
       @main_frame.text.tag_bind(tag_name,"Enter",

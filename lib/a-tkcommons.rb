@@ -1142,6 +1142,7 @@ class TkProgressframe < TkFloatTitledFrame
   attr_accessor :max
   def initialize(parent=nil, _max=100, *args)
     super(parent)
+    _max=1 if _max<=0
     @max = _max
     @progress = TkVariable.new
     @progress.value = -1

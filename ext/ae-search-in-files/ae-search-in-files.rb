@@ -80,7 +80,7 @@ class SearchInFilesListener
       Arcadia.console(self, 'msg'=>e.message, 'level'=>'error')
       #Arcadia.new_error_msg(self, e.message)
     ensure
-      @progress_bar.destroy
+      @progress_bar.destroy if @progress_bar
     end
 
   end
@@ -174,6 +174,21 @@ class SearchOutput
     return _r_node
   end
   
+  def add_result(_node, _file, _line='', _line_text='')
+    @count = @count+1
+    @tree.itemconfigure(_node, 'fill'=>@found_color, 'text'=>@text_result+' { '+@count.to_s+' found }')
+    _text = _file+':'+_line+' : '+_line_text
+    _node_name = new_node_name
+    @tree.insert('end', _node ,_node+'@@@'+_node_name, {
+      'fill'=>@item_color,
+      'anchor'=>'w',
+      'font' => Arcadia.conf('treeitem.font'),
+      'text' =>  _text.strip
+    })
+    @results[_node][_node_name]=[_file,_line]
+    Tk.update
+  end
+
   def add_result(_node, _file, _line='', _line_text='')
     @count = @count+1
     @tree.itemconfigure(_node, 'fill'=>@found_color, 'text'=>@text_result+' { '+@count.to_s+' found }')

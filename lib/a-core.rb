@@ -32,6 +32,7 @@ class Arcadia < TkApplication
     set_sysdefaultproperty
     ArcadiaDialogManager.new(self)
     ArcadiaActionDispatcher.new(self)
+    ArcadiaGemsWizard.new(self)
     #self.load_local_config(false)
     ObjectSpace.define_finalizer($arcadia, self.class.method(:finalize).to_proc)
     publish('action.on_exit', proc{do_exit})
@@ -159,12 +160,42 @@ class Arcadia < TkApplication
   		}
   end
 
+  def check_gems_dependences(_ext)
+    ret = true
+    gems_property = self['conf']["#{_ext}.gems"]
+    if gems_property
+      gems = gems_property.split(',').collect{| g | g.strip }
+      if gems && gems.length > 0
+        gems.each{|gem|
+          # consider gem only if it is not installed
+          if !Gem.available?(gem)
+            repository_property =  self['conf']["#{_ext}.gems.#{gem}.repository"]
+            args = Hash.new
+            args['extension_name']=_ext
+            args['gem_name']=gem
+            args['gem_repository']=repository_property if repository_property
+            _event = Arcadia.process_event(NeedRubyGemWizardEvent.new(self, args))
+            if _event && _event.results
+              ret = ret && _event.results[0].installed
+            end
+            break if !ret
+          end
+        } 
+      end 
+    end 
+    ret
+  end
+
   def do_build
     # create extensions
-    @exts.each{|extension|
+    Array.new.concat(@exts).each{|extension|
       if extension && ext_active?(extension)
         @splash.next_step('... creating '+extension)  if @splash
-        ext_create(extension)
+        # before creating extension check gems dependences
+        gems_installed = check_gems_dependences(extension)
+        if !gems_installed || !ext_create(extension)
+          @exts.delete(extension)
+        end
       end
     }
     _build_event = Arcadia.process_event(BuildEvent.new(self))
@@ -191,22 +222,21 @@ class Arcadia < TkApplication
   end
 
   def ext_create(_extension)
+    ret = true
     begin
       source = self['conf'][_extension+'.require']
       class_name = self['conf'][_extension+'.class']
       if source.strip.length > 0
-        #p source
-	eval("require '#{source}'") 
-        #eval('require ' + "'" + source + "'")
+	      require source 
       end
       if class_name.strip.length > 0
         publish(_extension, eval(class_name).new(self, _extension))
       end
-    rescue Exception
-      raise
-      msg = "Loading "+'"'+extension+'"'+" ("+$!.class.to_s+") "+" : "+$! + " at : "+$@.to_s
+    rescue Exception,LoadError
+      ret = false
+      msg = "Loading \"#{_extension}\" (#{$!.class.to_s}) : #{$!} at : #{$@.to_s}"
       ans = Tk.messageBox('icon' => 'error', 'type' => 'abortretryignore',
-      'title' => '(Arcadia) Extensions', 'parent' => @root,
+      'title' => "(Arcadia) Extensions '#{_extension}'", 'parent' => @root,
       'message' => msg)
       if  ans == 'abort'
         raise
@@ -217,6 +247,7 @@ class Arcadia < TkApplication
         Tk.update
       end
     end
+    ret
   end
 
   def ext_method(_extension, _method)
@@ -1077,6 +1108,59 @@ class ArcadiaActionDispatcher
 
 end
 
+class ArcadiaGemsWizard
+  def initialize(_arcadia)
+    @arcadia = _arcadia
+    Arcadia.attach_listener(self, NeedRubyGemWizardEvent)
+  end
+  
+  def on_need_ruby_gem_wizard(_event)
+    # ... todo implamentation
+    msg = "Appears that gem : '#{_event.gem_name}' required by : '#{_event.extension_name}' is not installed!\n Do you want to try install it now?" 
+    ans = Tk.messageBox('icon' => 'error', 'type' => 'yesno',
+      'title' => "(Arcadia) Extensions '#{_event.extension_name}'",
+      'message' => msg)
+      if  ans == 'yes'
+        _event.add_result(self, 'installed'=>try_to_install_gem(_event.gem_name,_event.gem_repository))
+      else
+        _event.add_result(self, 'installed'=>false)
+      end
+  end
+  
+  def try_to_install_gem(name, repository=nil, version = '>0')
+    ret = false
+    # TODO WIZARD
+    
+#    # rubygems version must be >= 1.2 Gem::RubyGemsVersion
+#    if Gem::RubyGemsVersion >= '1.2'
+#      begin
+#        gem name, version
+#      rescue LoadError, Gem::LoadError => e
+#        require 'rubygems/gem_runner'
+#        begin
+#          gr = Gem::GemRunner.new
+#          com = %W[install #{name}]
+#          com.concat(%W[--source= #{repository}]) if repository
+#          p com
+#          gr.run(com)
+#        rescue Gem::SystemExitException=>e
+#          if e.exit_code == 0
+#            ret = true
+#            p "Successfully installed. #{e.message}"
+#          else
+#            msg = "Install of '#{name}' (#{version}) failed. #{e.message}"
+#            Tk.messageBox('icon' => 'error', 
+#              'type' => 'ok',
+#              'title' => "(Arcadia) gem",
+#              'message' => msg)
+#          end
+#        end
+#      end
+#    end
+    ret
+  end
+  
+end
 
 class ArcadiaDialogManager
   def initialize(_arcadia)

@@ -770,7 +770,14 @@ class RubyDebugServer
 
   def start_session_new(_filename, _host='localhost', _remote_port='8989')
     if is_windows?
-       commandLine = "rdebug.cmd --host #{_host} --port #{_remote_port} -sw #{_filename}"
+      if RubyWhich.new.which("rdebug.bat") != []
+        rdebug_cmd = "rdebug.bat" 
+      elsif RubyWhich.new.which("rdebug.cmd") != []
+        rdebug_cmd = "rdebug.cmd"
+      else
+        rdebug_cmd = "rdebug"
+      end
+       commandLine = "#{rdebug_cmd} --host #{_host} --port #{_remote_port} -sw #{_filename}"
     else
        commandLine = "rdebug --host #{_host} --port #{_remote_port} -sw #{_filename}"
     end
@@ -787,7 +794,14 @@ class RubyDebugServer
   
   def start_session(_filename, _host='localhost', _remote_port='8989')
     if is_windows?
-      commandLine = "rdebug.cmd --port #{_remote_port} -sw #{_filename}"
+      if RubyWhich.new.which("rdebug.bat") != []
+        rdebug_cmd = "rdebug.bat" 
+      elsif RubyWhich.new.which("rdebug.cmd") != []
+        rdebug_cmd = "rdebug.cmd"
+      else
+        rdebug_cmd = "rdebug"
+      end
+      commandLine = "#{rdebug_cmd} --port #{_remote_port} -sw #{_filename}"
     else
       commandLine = "rdebug --host #{_host} --port #{_remote_port} -sw #{_filename}"
     end
