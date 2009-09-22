@@ -17,6 +17,7 @@ require 'rubygems'
     candidates << "README"
     candidates << "bin/arcadia"
     candidates << "bin/arcadia.bat"
+    candidates << "bin/arc"
     candidates << "conf/arcadia.conf"
     candidates << "conf/arcadia.init.rb"
     candidates << "conf/arcadia.res.rb"
@@ -25,13 +26,12 @@ require 'rubygems'
   end
   s.bindir = "bin"
   s.executables << "arcadia"
+  s.executables << "arc"
   s.default_executable = 'arcadia'
-  # disable rdoc generation until we've got more
   s.rdoc_options << '--title' << 'Arcadia Documentation' <<  '--main'  << 'README' << '-q'
-  s.has_rdoc = false
   s.extra_rdoc_files = ["README"]
   s.add_dependency("ruby-debug", ">= 0.9.3")
   s.add_dependency("rogerdpack-whichr")
-#  s.add_dependency("ruby-wmi") # don't build on linux
-#  s.add_dependency("win32-process")
+#  s.add_dependency("ruby-wmi") # doesn't build on linux
+#  s.add_dependency("win32-process") # same here
 end
