@@ -2,8 +2,8 @@
 #   ae-editor.rb - Arcadia Ruby ide
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
-#   §require_dir_ref=../..
-#   §require_omissis=conf/arcadia.init
+#   &require_dir_ref=../..
+#   &require_omissis=conf/arcadia.init
 
 require 'tk'
 require 'tktext'
@@ -350,15 +350,15 @@ class SafeCompleteCode
       # 0) se è un commento non lo prendo in considerazione
       if line.strip.length > 0 && line.strip[0..0]=='#'
         @modified_row = @modified_row-1
-        m = /§require_dir_ref=[\s]*(.)*/.match(line)
+        m = /&require_dir_ref=[\s]*(.)*/.match(line)
         if m 
-          require_dir_ref=line.split('§require_dir_ref=')[1].strip
+          require_dir_ref=line.split('&require_dir_ref=')[1].strip
           @modified_source = "#{@modified_source}Dir.chdir('#{require_dir_ref}')\n"
           @modified_row = @modified_row+1
         end   
-        m = /§require_omissis=[\s]*(.)*/.match(line)
+        m = /&require_omissis=[\s]*(.)*/.match(line)
         if m 
-          require_omissis=line.split('§require_omissis=')[1].strip
+          require_omissis=line.split('&require_omissis=')[1].strip
           @modified_source = "#{@modified_source}require '#{require_omissis}'\n"
           @modified_row = @modified_row+1
         end   
@@ -2827,7 +2827,7 @@ class AgEditor
       if _filename
         #init_editing(file_extension(_filename))
         File::open(_filename,'rb'){ |file|
-          @text.insert('end',file.readlines.collect!{| line | line.chomp+"\n" }.to_s)
+          @text.insert('end',file.readlines.collect!{| line | line.chomp}.join("\n"))
           #@text.insert('end',file.read)
         }
 	      File.open(_filename, 'rb') { |file|

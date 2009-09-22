@@ -2,9 +2,9 @@
 #   ae-output.rb - Arcadia Ruby ide
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
-#   §require_dir_ref=../..
-#   §require_omissis=conf/arcadia.init
-#   §require_omissis=lib/a-commons
+#   &require_dir_ref=../..
+#   &require_omissis=conf/arcadia.init
+#   &require_omissis=lib/a-commons
 
 require "tk"
 #require "base/a-utils"

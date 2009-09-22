@@ -317,7 +317,7 @@ class AGRenderer
         return nil
       end
 
-      _prop['def_string'] != nil && !_prop['def_string'] ? is_string = false: is_string = true
+      _prop['def_string'] != nil && !_prop['def_string'] ? is_string = false : is_string = true
 
       if _val.kind_of?(String) && is_string
         _val = "'",_val,"'"
@@ -331,7 +331,7 @@ class AGRenderer
 	def render_value_default(_prop, _family)
       return nil if _prop == nil
       _val = _prop['value']
-      _prop['def_string'] != nil && !_prop['def_string'] ? is_string = false: is_string = true
+      _prop['def_string'] != nil && !_prop['def_string'] ? is_string = false : is_string = true
       if _val.kind_of?(String) && is_string
         _val = "'",_val,"'"
       elsif _val != nil

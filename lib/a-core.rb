@@ -2,11 +2,11 @@
 #   a-core.rb - Arcadia Ruby ide
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
-#   §require_dir_ref=..
-#   §require_omissis=conf/arcadia.init
-#   §require_omissis=tk
-#   §require_omissis=tk/label
-#   §require_omissis=tk/toplevel
+#   &require_dir_ref=..
+#   &require_omissis=conf/arcadia.init
+#   &require_omissis=tk
+#   &require_omissis=tk/label
+#   &require_omissis=tk/toplevel
 
 
 
@@ -23,7 +23,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.7.0.1',
+        '0.8.0',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -2615,5 +2615,4 @@ class ArcadiaLayout
     ret
   end
 end
-
 

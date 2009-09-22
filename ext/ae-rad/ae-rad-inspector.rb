@@ -1030,7 +1030,7 @@ class TkMenuButtonObjBoard < ObjBoard
       _space = _space + '  ' 
     end
     if _agobj.ag_parent != nil 
-      _result = _space + '¦'+_result 
+      _result = _space + '|'+_result 
     end
     return _result
   end

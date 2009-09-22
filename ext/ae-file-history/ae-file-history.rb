@@ -2,11 +2,11 @@
 #   ae-file-history.rb - Arcadia Ruby ide
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
-#   §require_dir_ref=../..
-#   §require_omissis=conf/arcadia.init
-#   §require_omissis=lib/a-commons
-#   §require_omissis=lib/a-tkcommons
-#   §require_omissis=lib/a-core
+#   &require_dir_ref=../..
+#   &require_omissis=conf/arcadia.init
+#   &require_omissis=lib/a-commons
+#   &require_omissis=lib/a-tkcommons
+#   &require_omissis=lib/a-core
 
 
 class TreeNode
@@ -258,7 +258,7 @@ class FilesHistrory < ArcadiaExt
       f = File::open(history_file,'r')
       f_open = $arcadia['pers']['editor.files.open'].split("|") if $arcadia['pers']['editor.files.open']
       begin
-        _lines = f.readlines.collect!{| line | line.chomp+"\n" }.to_s
+        _lines = f.readlines.collect!{| line | line.chomp+"\n" }
         _lines.sort.each{|_line|
           _file = _line.split(';')[0]
           if FileTest::exist?(_file)
