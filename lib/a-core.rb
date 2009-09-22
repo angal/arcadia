@@ -198,7 +198,23 @@ class Arcadia < TkApplication
         end
       end
     }
-    _build_event = Arcadia.process_event(BuildEvent.new(self))
+    begin
+      _build_event = Arcadia.process_event(BuildEvent.new(self))
+    rescue Exception
+      ret = false
+      msg = "During build event processing(#{$!.class.to_s}) : #{$!} at : #{$@.to_s}"
+      ans = Tk.messageBox('icon' => 'error', 'type' => 'abortretryignore',
+      'title' => "(Arcadia) Build face", 'parent' => @root,
+      'message' => msg)
+      if  ans == 'abort'
+        raise
+        exit
+      elsif ans == 'retry'
+        retry
+      else
+        Tk.update
+      end
+    end
   end
   
   def load_maximised
