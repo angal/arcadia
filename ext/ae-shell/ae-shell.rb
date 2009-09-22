@@ -63,7 +63,6 @@ class Shell < ArcadiaExt
           output_file_name = "out_#{@@next_number += 1}_#{Process.pid}.txt"
           output = File.open(output_file_name, 'wb')
           child = Process.create :command_line => _cmd_,  :startup_info => {:stdout => output, :stderr => output}
-          
           timer=nil
           procy = proc {
             still_alive = WMI::Win32_Process.find(:first, :conditions => {:ProcessId => child.process_id})
