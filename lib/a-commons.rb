@@ -495,6 +495,16 @@ module Configurable
                 _line = ''
               end
             end
+            var_ruby_version = _line.split('@')
+            if var_ruby_version.length > 1
+              version = var_ruby_version[0]
+              if (RUBY_VERSION[0..version.length-1]==version)
+                _line = var_ruby_version[1]
+              else
+                _line = ''
+              end
+            end
+            
             var = _line.split('=')
             if var.length > 1
               _value = var[1].strip
@@ -815,5 +825,4 @@ class Application
   def run
   end
 end
-
 
