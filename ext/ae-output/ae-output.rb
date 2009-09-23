@@ -193,7 +193,12 @@ class Output < ArcadiaExt
     @cursor = @main_frame.text.cget('cursor')
     @j=0
     file_tag=Hash.new
-    @main_frame.text.value.each{|l|
+    if String.method_defined?(:lines)
+	lines = @main_frame.text.value.lines
+    else
+	lines = @main_frame.text.value
+    end
+    lines.each{|l|
       _row = _row+1
       if _row >= _from_row
         _end = 0

@@ -665,7 +665,7 @@ class RubyDebugView
   end
   
   def node_name(_node, _parent)
-    return "#{_parent}@@@#{_node.gsub('$','__S__').gsub('&','__E__').gsub(':','__D__').gsub('!','__A__')}" 
+    return "#{_parent}@@@#{_node.to_s.gsub('$','__S__').gsub('&','__E__').gsub(':','__D__').gsub('!','__A__')}" 
   end
 
   def var_name(_node)
@@ -890,7 +890,7 @@ end
 #    * undisp[lay][ nnn]
 #      delete one particular or all display expressions if no expression number given
 #    * del[ete][ nnn]
-#      delete some or all breakpoints (get the number using break)
+#      delete some or all breakpoints (get the number using ÃÂbreakÃÂ)
 #    * c[ont]
 #      run until program ends or hit breakpoint
 #    * r[un]
