@@ -890,7 +890,7 @@ end
 #    * undisp[lay][ nnn]
 #      delete one particular or all display expressions if no expression number given
 #    * del[ete][ nnn]
-#      delete some or all breakpoints (get the number using ÃÂbreakÃÂ)
+#      delete some or all breakpoints (get the number using ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂbreakÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ)
 #    * c[ont]
 #      run until program ends or hit breakpoint
 #    * r[un]
@@ -1556,7 +1556,10 @@ class RubyDebug < ArcadiaExt
           @static_breakpoints.each{|_b|
             #Arcadia.console(self,'msg'=>" breakpoint_add #{_b[:file]}:#{_b[:line]}")
             breakpoint_add_live(_b[:file], _b[:line])
-          } 
+          }
+          if @static_breakpoints.length > 0 && conf("auto_resume_break_on_first_line")!='no'
+            @rdv.debug_send(:resume)
+          end
         end
       rescue Exception => e
         Arcadia.console(self, 'msg'=>"---> "+e.to_s, 'level'=>'debug')
