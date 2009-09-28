@@ -4,7 +4,7 @@
 require 'rubygems'
   SPEC = Gem::Specification.new do |s|
   s.name = "arcadia"
-  s.version = "0.7.0.1"
+  s.version = "0.8.0"
   s.date = "2009-07-22"
   s.author = "Antonio Galeone"
   s.email = "antonio-galeone@rubyforge.org"
@@ -35,3 +35,4 @@ require 'rubygems'
 #  s.add_dependency("ruby-wmi") # doesn't build on linux
 #  s.add_dependency("win32-process") # same here
 end
+

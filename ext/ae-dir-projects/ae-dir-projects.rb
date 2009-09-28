@@ -2,11 +2,11 @@
 #   ae-dir-projects.rb - Arcadia Ruby ide
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
-#   §require_dir_ref=../..
-#   §require_omissis=conf/arcadia.init
-#   §require_omissis=lib/a-commons
-#   §require_omissis=lib/a-tkcommons
-#   §require_omissis=lib/a-core
+#   &require_dir_ref=../..
+#   &require_omissis=conf/arcadia.init
+#   &require_omissis=lib/a-commons
+#   &require_omissis=lib/a-tkcommons
+#   &require_omissis=lib/a-core
 
 
 
