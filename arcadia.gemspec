@@ -30,7 +30,7 @@ require 'rubygems'
   s.default_executable = 'arcadia'
   s.rdoc_options << '--title' << 'Arcadia Documentation' <<  '--main'  << 'README' << '-q'
   s.extra_rdoc_files = ["README"]
-  s.add_dependency("ruby-debug", ">= 0.9.3")
+#  s.add_dependency("ruby-debug", ">= 0.9.3") # TODO 
   s.add_dependency("rogerdpack-whichr")
 #  s.add_dependency("ruby-wmi") # doesn't build on linux
 #  s.add_dependency("win32-process") # same here
