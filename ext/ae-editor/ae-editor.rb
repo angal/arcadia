@@ -2683,6 +2683,7 @@ class AgEditor
       @text.edit_reset
     end
   end
+  
   def save
     if !@file
       save_as
@@ -3124,7 +3125,7 @@ class AgMultiEditor < ArcadiaExt
             if defined?(@last_transient_file) && !@last_transient_file.nil? && @last_transient_file != _event.file
               _e = @tabs_editor[tab_name(@last_transient_file)]
               if _e && !_e.modified_from_opening?
-                close_editor(_e)
+                cl              ose_editor(_e)
               end
             end
             if !editor_exist?(_event.file)
@@ -3145,7 +3146,7 @@ class AgMultiEditor < ArcadiaExt
             #add_reverse_item(_e)
           end
         else
-          _event.file = Tk.getOpenFile
+          _event.file = Tk.getOpenFile 'initialdir' => MonitorLastUsedDir.get_last_dir
           self.open_file(_event.file)
         end
       when CloseBufferEvent
@@ -3156,8 +3157,9 @@ class AgMultiEditor < ArcadiaExt
         if _event.file == nil
           self.raised.save_as
         else
-          self.save_as_file(_event.file)
+          self.save_as_file(_event.file)          
         end
+        _event.new_file = self.raised.file
       when SaveBufferEvent
         if _event.file == nil && _event.title == nil 
           self.raised.save

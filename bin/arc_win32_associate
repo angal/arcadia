@@ -1,0 +1,18 @@
+require 'rubygems'
+dir = Gem.bin_path('arcadia', 'arcadia')
+require 'win32/registry'
+require 'whichr'
+# overcome a rubywhich/core bug
+ruby = RubyWhich.new.which("rubyw").reject{|entry| !entry.include?('.')}[0]
+
+arcadia = RubyWhich.new.which("arcadia.bat")[0][0..-5] # strip of the .bat part
+
+ruby.gsub!('/', '\\')
+arcadia.gsub!('/', '\\')
+
+name = Win32::Registry::HKEY_LOCAL_MACHINE.create "Software\\classes\\*\\shell\\open_with_arcadia"
+name.write_s nil, "play with arcadia"
+
+dir = Win32::Registry::HKEY_LOCAL_MACHINE.create "Software\\classes\\*\\shell\\open_with_arcadia\\command"
+
+dir.write_s nil, %!"#{ruby}" "#{arcadia}" "%1"!
