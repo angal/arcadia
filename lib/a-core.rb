@@ -89,7 +89,7 @@ class Arcadia < TkApplication
     Tk.update_idletasks
     #sleep(1)
     @splash.destroy  if @splash
-    if @first_run
+    if @first_run # first ARCADIA ever
       Arcadia.process_event(OpenBufferEvent.new(self,'file'=>'README'))
     elsif ARGV.length > 0
       ARGV.each{|_f|
@@ -959,7 +959,9 @@ class ArcadiaMainMenu < ArcadiaUserControl
       ['Go to line ...', proc{Arcadia.process_event(GoToLineBufferEvent.new(self))}, 2]]
       menu_spec_view = [['View', 0],['Show/Hide Toolbar', proc{$arcadia.show_hide_toolbar}, 2]]
       menu_spec_tools = [['Tools', 0],
-      ['Keys-test', $arcadia['action.test.keys'], 2]
+      ['Keys-test', $arcadia['action.test.keys'], 2],
+      ['Edit prefs', proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>$arcadia.local_file_config))}, 0],
+      ['Load from edited prefs', proc{$arcadia.load_config}, 0]
     ]
     menu_spec_help = [['Help', 0],
     ['About', $arcadia['action.show_about'], 2],]
@@ -2615,4 +2617,3 @@ class ArcadiaLayout
     ret
   end
 end
-
