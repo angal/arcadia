@@ -11,7 +11,6 @@ class SearchInFilesService < ArcadiaExt
 
 end
 
-
 class SearchInFilesListener
   def initialize(_service)
     @service = _service
@@ -56,6 +55,9 @@ class SearchInFilesListener
       @service.frame.show
     end
     begin
+    
+      MonitorLastUsedDir.set_last @find.e_dir.text # save it away TODO make it into a message
+      
       _search_title = 'search result for : "'+@find.e_what.text+'" in :"'+@find.e_dir.text+'"'+' ['+@find.e_filter.text+']'
       _filter = @find.e_dir.text+'/**/'+@find.e_filter.text
       _files = Dir[_filter]
@@ -271,7 +273,7 @@ class FindFrame < TkFloatTitledFrame
       #pack('fill'=>'x')
       #place('relwidth' => 1, 'width'=>-16,'x' => 8,'y' => y0,'height' => 19)
     }
-    @e_dir.text($pwd)
+    @e_dir.text(MonitorLastUsedDir.get_last_dir)
     @b_dir = TkButton.new(@e_dir, Arcadia.style('button') ){
       compound  'none'
       default  'disabled'

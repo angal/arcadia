@@ -12,6 +12,7 @@
 # +------------------------------------------+
 
 class ArcadiaEvent < Event
+  # note--they all have attr_accessor :file, and :dir
 end
 
 class QuitEvent < ArcadiaEvent
@@ -91,6 +92,9 @@ end
 class MoveBufferEvent < BufferEvent
   attr_accessor :old_file	
   attr_accessor :new_file	
+end
+
+class CloseCurrentTabEvent < BufferEvent
 end
 
 class GoToLineBufferEvent < BufferEvent
@@ -182,6 +186,9 @@ end
 #  +---------------------------------------------+
 
 class SearchInFilesEvent < ArcadiaEvent
+  # this message actually does before, on, after
+  # in the time it takes to open the dialog
+  # the dialog then receives its input [i.e. all the messages are done before the search is through]
   class Result < SearchBufferEvent::Result
     attr_accessor :file
   end
@@ -189,6 +196,7 @@ class SearchInFilesEvent < ArcadiaEvent
 end
 
 class AckInFilesEvent < ArcadiaEvent
+  # don't subclass SearchInFilesEvent or listeners for SearchInFiles will also get our messages
   class Result < SearchBufferEvent::Result
     attr_accessor :file
   end
@@ -272,4 +280,3 @@ class ActionEvent < ArcadiaEvent
   attr_accessor :action
   attr_accessor :action_args
 end
-

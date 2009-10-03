@@ -205,6 +205,10 @@ class ArcadiaExt
     #ObjectSpace.define_finalizer(self, self.method(:finalize).to_proc)
   end
   
+  def open_file_dialog
+     Tk.getOpenFile 'initialdir' => MonitorLastUsedDir.get_last_dir
+  end
+  
   def conf_array(_name)
     res = []
     value = @arcadia['conf'][_name]
@@ -347,7 +351,7 @@ module EventBus #(or SourceEvent)
     #before fase
     event_classes.each do |_c|
       _process_fase(_c, _event, 'before')
-      break if _event.is_breaked?
+      break if _event.is_breaked? # not responding to this means "you need to pass in an instance, not a class name
     end unless _event.is_breaked?
     # fase
     event_classes.each do |_c|

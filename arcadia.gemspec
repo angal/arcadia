@@ -13,7 +13,7 @@ require 'rubygems'
   s.platform = Gem::Platform::RUBY
   s.description = "Arcadia Ruby Ide"
   s.summary = "An light Ide for Ruby written in Ruby using the classic tcl/tk GUI toolkit."
-    candidates = Dir.glob("{lib,ext/ae-breakpoints,ext/ae-editor,ext/ae-file-history,ext/ae-output,ext/ae-rad,ext/ae-ruby-debug,ext/ae-search-in-files,ext/ae-dir-projects,ext/ae-shell,ext/ack-in-files,tcl}/**/*")
+    candidates = Dir.glob("{lib,ext/*,tcl}/**/*")
     candidates << "README"
     candidates << "bin/arcadia"
     candidates << "bin/arcadia.bat"

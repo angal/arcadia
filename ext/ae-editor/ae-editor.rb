@@ -682,6 +682,7 @@ class AgEditorOutline
     end
   end
   
+  # I think this is "if synced expand out the outline for the current selection"
   def shure_select_node(_node)
     return if @selecting_node
     #return if @tree_exp.exist?(_node.rif)
@@ -754,7 +755,7 @@ class AgEditorOutline
         if !_editor_line.include?(_hinner_text)
           Arcadia.console(self, 'msg'=>"... rebuild tree \n")
           if @tree_thread && @tree_thread.alive?
-            @tree_thread.exit
+            @tree_thread.exit # kill the old tree
           end
           @tree_thread = Thread.new{
             build_tree(_line)
@@ -821,7 +822,7 @@ class AgEditorOutline
       if (_label_match) && (_label_match.strip == _son.label.strip)
         @selected = _son
       end
-      build_tree_from_node(_son, _label_match)
+      build_tree_from_node(_son, _label_match) # recursion -- if there are no sons it will do nothing
     end
   end
 
@@ -1328,6 +1329,9 @@ class AgEditor
 
   end
   
+  #
+  # setup all key bindings (normal, +control, etc)
+  #
   def activate_key_binding
     activate_complete_code_key_binding if @is_ruby
     @text.bind_append("Control-KeyPress"){|e|
@@ -1340,7 +1344,7 @@ class AgEditor
         begin
           @text.edit_undo
         rescue RuntimeError => e
-          throw e unless e.to_s.include? "nothing to undo" # this is ok
+          throw e unless e.to_s.include? "nothing to undo" # this is ok--we've done undo back to the beginning
           break
         end
         _e = @text.index('insert').split('.')[0].to_i
@@ -1354,7 +1358,7 @@ class AgEditor
         if @file
           _dir = File.dirname(@file)
         else
-          _dir = Dir.pwd
+          _dir = MonitorLastUsedDir.get_last_dir
         end
         Arcadia.process_event(OpenBufferEvent.new(self,'file'=>Tk.getOpenFile('initialdir'=>_dir)))
         break
@@ -1384,6 +1388,10 @@ class AgEditor
         @text.insert('insert',"{")
       when 'plus'
         @text.insert('insert',"}")
+      when 'g'
+        Arcadia.process_event(GoToLineBufferEvent.new(self))
+      when 'w'
+        Arcadia.process_event(CloseCurrentTabEvent.new(self))
       end
     }
 
@@ -1549,6 +1557,7 @@ class AgEditor
     }
   end
 
+  # show the "find in file" dialog
   def find
     _r = @text.tag_ranges('sel')
     if _r.length>0
@@ -1987,8 +1996,8 @@ class AgEditor
       :command,
       :label=>'Data image from file',
       :hidemargin => false,
-      :command=> proc{
-        file = Tk.getOpenFile
+      :command=>       proc{
+        file = open_file_dialog
         if file
           require 'base64'
           f = File.open(file,"rb")
@@ -3117,7 +3126,7 @@ class AgMultiEditor < ArcadiaExt
       when NewBufferEvent
         self.open_buffer
       when OpenBufferEvent
-        if _event.file 
+        if _event.file
           if _event.row
             _index = _event.row.to_s+'.0' 
           end
@@ -3125,7 +3134,7 @@ class AgMultiEditor < ArcadiaExt
             if defined?(@last_transient_file) && !@last_transient_file.nil? && @last_transient_file != _event.file
               _e = @tabs_editor[tab_name(@last_transient_file)]
               if _e && !_e.modified_from_opening?
-                cl              ose_editor(_e)
+                close_editor(_e)
               end
             end
             if !editor_exist?(_event.file)
@@ -3146,7 +3155,7 @@ class AgMultiEditor < ArcadiaExt
             #add_reverse_item(_e)
           end
         else
-          _event.file = Tk.getOpenFile 'initialdir' => MonitorLastUsedDir.get_last_dir
+          _event.file = open_file_dialog
           self.open_file(_event.file)
         end
       when CloseBufferEvent
@@ -3176,6 +3185,8 @@ class AgMultiEditor < ArcadiaExt
         if _event.line == nil
           @find.show_go_to_line_dialog
         end
+      when CloseCurrentTabEvent
+         close_raised         
       when MoveBufferEvent
         if _event.old_file && _event.new_file && editor_exist?(_event.old_file)
           #close_file(_event.old_file)
@@ -3187,7 +3198,6 @@ class AgMultiEditor < ArcadiaExt
   def get_find
     @find
   end
-  
   
   def create_find
     @find = Find.new(@arcadia.layout.root, self)
@@ -3794,7 +3804,7 @@ class Findview < TkFloatTitledFrame
       #place('width' => 50,'x' => 0,'y' => y0,'height' => 23,'bordermode' => 'inside')
     }
     #place('x'=>0,'y'=>0,'relheight'=> 1,'relwidth'=> 1)
-    place('x'=>100,'y'=>100,'height'=> 220,'width'=> 300)
+    place('x'=>100,'y'=>100,'height'=> 240,'width'=> 300)
     
   end
 

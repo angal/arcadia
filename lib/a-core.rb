@@ -368,7 +368,7 @@ class Arcadia < TkApplication
     publish('buffers.code.in_memory',Hash.new)
     publish('action.load_code_from_buffers', proc{TkBuffersChoise.new})
     publish('output.action.run_last', proc{$arcadia['output'].run_last})
-    publish('main.action.open_file', proc{self['editor'].open_file(Tk.getOpenFile)})
+    publish('main.action.open_file', proc{self['editor'].open_file(open_file_dialog)})
     @splash.next_step('... load obj controller')  if @splash
     @splash.next_step('... load editor')  if @splash
     publish('main.action.new_file',proc{$arcadia['editor'].open_buffer()})
@@ -941,7 +941,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
   def build
     menu_spec_file = [
       ['File', 0],
-      ['Open', proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>Tk.getOpenFile))}, 0],
+      ['Open', proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>open_file_dialog))}, 0],
       ['New', $arcadia['main.action.new_file'], 0],
       #['Save', proc{EditorContract.instance.save_file_raised(self)},0],
       ['Save', proc{Arcadia.process_event(SaveBufferEvent.new(self))},0],
@@ -953,11 +953,13 @@ class ArcadiaMainMenu < ArcadiaUserControl
       ['Copy', $arcadia['main.action.edit_copy'], 0],
       ['Paste', $arcadia['main.action.edit_paste'], 0]]
       menu_spec_search = [['Search', 0],
-      ['Find ...', proc{Arcadia.process_event(SearchBufferEvent.new(self))}, 2],
+      ['Find/Replace ...', proc{Arcadia.process_event(SearchBufferEvent.new(self))}, 2],
       ['Find in files...', proc{Arcadia.process_event(SearchInFilesEvent.new(self))}, 2],
       ['Ack in files...', proc{Arcadia.process_event(AckInFilesEvent.new(self))}, 2],
       ['Go to line ...', proc{Arcadia.process_event(GoToLineBufferEvent.new(self))}, 2]]
-      menu_spec_view = [['View', 0],['Show/Hide Toolbar', proc{$arcadia.show_hide_toolbar}, 2]]
+      menu_spec_view = [['View', 0],['Show/Hide Toolbar', proc{$arcadia.show_hide_toolbar}, 2],
+      ['Close current tab', proc{Arcadia.process_event(CloseCurrentTabEvent.new(self))}, 0],
+      ]
       menu_spec_tools = [['Tools', 0],
       ['Keys-test', $arcadia['action.test.keys'], 2],
       ['Edit prefs', proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>$arcadia.local_file_config))}, 0],
@@ -1065,6 +1067,7 @@ class ArcadiaAboutSplash < TkToplevel
     _y = TkWinfo.screenheight(self)/2 -  _height / 2
     geometry = _width.to_s+'x'+_height.to_s+'+'+_x.to_s+'+'+_y.to_s
     Tk.tk_call('wm', 'geometry', self, geometry )
+    #bind("ButtonPress-1", proc{self.destroy})
     bind("Double-Button-1", proc{self.destroy})
     info = TkApplication.sys_info
     set_sysinfo(info)
