@@ -194,9 +194,9 @@ class Output < ArcadiaExt
     @j=0
     file_tag=Hash.new
     if String.method_defined?(:lines)
-	lines = @main_frame.text.value.lines
+      lines = @main_frame.text.value.lines
     else
-	lines = @main_frame.text.value
+      lines = @main_frame.text.value
     end
     lines.each{|l|
       _row = _row+1
