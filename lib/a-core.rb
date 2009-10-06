@@ -1880,7 +1880,7 @@ class ArcadiaLayout
         end
       end
     else  # CLOSE OTHER
-      # verifichiamo se la contro parte è uno splitter_adapter
+      # verifichiamo se la contro parte ÃÂ¨ uno splitter_adapter
       other_ds = domains_on_frame(@panels[_domain]['splitted_frames'].frame1)
       if other_ds.length == 1
         other_dom = other_ds[0]

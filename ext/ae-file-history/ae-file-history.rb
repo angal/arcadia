@@ -117,11 +117,16 @@ class FilesHistrory < ArcadiaExt
     
     do_select_item = proc{|_self|
       if _self.selection_get[0].length >0
-      	_selected = ""
-      	_self.selection_get[0].each{|_block|
-       	 _selected = _selected + _block.to_s + "\s" 
-      	}
-      	_selected = _selected.strip
+        _selected = ""
+        if String.method_defined?(:lines)
+      	   selection_lines = _self.selection_get[0].lines
+        else
+      	   selection_lines = _self.selection_get[0].lines
+        end
+       	selection_lines.each{|_block|
+        	 _selected = _selected + _block.to_s + "\s" 
+       	}
+       	_selected = _selected.strip
       else
         _selected = _self.selection_get[0]
       end

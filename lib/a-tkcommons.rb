@@ -240,6 +240,7 @@ class TkFrameAdapter < TkFrame
     super(scope_parent, *args)
     @scope_parent = scope_parent
     @movable = true
+    #ObjectSpace.define_finalizer(self, self.method(:detach_frame).to_proc)
   end
 
   def add_moved_by(_obj)
@@ -265,7 +266,7 @@ class TkFrameAdapter < TkFrame
     if @movable
       @frame.bind_append("Configure",proc{ refresh})
       @frame.bind_append("Map",proc{refresh})
-      @frame.bind_append("Unmap",proc{unplace})
+      @frame.bind_append("Unmap",proc{unplace if TkWinfo.mapped?(@frame)})
     end
     self
   end
@@ -1431,6 +1432,5 @@ class KeyTest < TkFloatTitledFrame
     place('x'=>100,'y'=>100,'height'=> 220,'width'=> 500)
   end
 end
-
 
 

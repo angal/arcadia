@@ -415,7 +415,12 @@ class DirProjects < ArcadiaExt
     if @htree.selection_get[0]
       if @htree.selection_get[0].length >0
        	_selected = ""
-        @htree.selection_get[0].each{|_block|
+        if String.method_defined?(:lines)
+      	   selection_lines = @htree.selection_get[0].lines
+        else
+      	   selection_lines = @htree.selection_get[0].lines
+        end
+        selection_lines.each{|_block|
           _selected = _selected + _block.to_s + "\s" 
         }
         _selected = _selected.strip

@@ -347,7 +347,7 @@ class SafeCompleteCode
     @modified_source = "#{@modified_source}Dir.chdir('#{File.dirname(@file)}')\n" if @file
     @modified_row = @modified_row+1
     source_array.each_with_index{|line,j|
-      # 0) se è un commento non lo prendo in considerazione
+      # 0) se Ã¨ un commento non lo prendo in considerazione
       if line.strip.length > 0 && line.strip[0..0]=='#'
         @modified_row = @modified_row-1
         m = /&require_dir_ref=[\s]*(.)*/.match(line)
@@ -3804,7 +3804,8 @@ class Findview < TkFloatTitledFrame
       #place('width' => 50,'x' => 0,'y' => y0,'height' => 23,'bordermode' => 'inside')
     }
     #place('x'=>0,'y'=>0,'relheight'=> 1,'relwidth'=> 1)
-    place('x'=>100,'y'=>100,'height'=> 240,'width'=> 300)
+    place('x'=>100,'y'=>100,'height'=> 420,'width'=> 300)
+
     
   end
 
