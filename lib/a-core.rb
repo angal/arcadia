@@ -8,8 +8,6 @@
 #   &require_omissis=tk/label
 #   &require_omissis=tk/toplevel
 
-
-
 require "conf/arcadia.res"
 require 'tkextlib/bwidget'
 require "lib/a-tkcommons"
@@ -951,7 +949,9 @@ class ArcadiaMainMenu < ArcadiaUserControl
       menu_spec_edit = [['Edit', 0],
       ['Cut', $arcadia['main.action.edit_cut'], 2],
       ['Copy', $arcadia['main.action.edit_copy'], 0],
-      ['Paste', $arcadia['main.action.edit_paste'], 0]]
+      ['Paste', $arcadia['main.action.edit_paste'], 0],
+      ['Prettify Current', proc{Arcadia.process_event(PrettifyTextEvent.new(self))}, 0]]
+      
       menu_spec_search = [['Search', 0],
       ['Find/Replace ...', proc{Arcadia.process_event(SearchBufferEvent.new(self))}, 2],
       ['Find in files...', proc{Arcadia.process_event(SearchInFilesEvent.new(self))}, 2],

@@ -2427,6 +2427,7 @@ class AgEditor
   end
 
 
+  # modify in this instance means the (...) in the tab header of each file
   def modified?
     return !(@buffer === text_value)
   end
@@ -2751,15 +2752,20 @@ class AgEditor
           if Tk.messageBox('icon' => 'error', 'type' => 'yesno',
             'title' => '(Arcadia) Libs', 'parent' => @text,
             'message' => msg) == 'yes'
-            @text.delete('1.0','end')
-            reset_highlight if @highlighting
-            load_file(@file)
+            reload
+            
           else
             @file_last_access_time = ftime
           end
       end
     end
   end
+  
+  def reload
+    @text.delete('1.0','end')
+            reset_highlight if @highlighting
+            load_file(@file)
+   end
   
   def languages_hash(_ext=nil)
     @@langs_hash = Hash.new if !defined?(@@langs_hash)
@@ -3186,7 +3192,13 @@ class AgMultiEditor < ArcadiaExt
           @find.show_go_to_line_dialog
         end
       when CloseCurrentTabEvent
-         close_raised         
+         close_raised
+      when PrettifyTextEvent
+        require 'rbeautify.rb' # gem
+        self.raised.save # so we can beautify it kludgely here...
+        path = raised.file
+        RBeautify.beautify_file(path)
+        self.raised.reload
       when MoveBufferEvent
         if _event.old_file && _event.new_file && editor_exist?(_event.old_file)
           #close_file(_event.old_file)
