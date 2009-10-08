@@ -418,7 +418,7 @@ class DirProjects < ArcadiaExt
         if String.method_defined?(:lines)
       	   selection_lines = @htree.selection_get[0].lines
         else
-      	   selection_lines = @htree.selection_get[0].lines
+      	   selection_lines = @htree.selection_get[0].split("\n")
         end
         selection_lines.each{|_block|
           _selected = _selected + _block.to_s + "\s" 

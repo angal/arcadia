@@ -2694,15 +2694,19 @@ class AgEditor
     end
   end
   
-  def save
+  
+  def save ignore_read_only = false
     if !@file
       save_as
-    elsif @read_only
-      Arcadia.dialog(self, 
-        'type' => 'ok',
-        'title' =>"#{@file}:read-only", 
-        'msg' =>"The file : #{@file} is read-only!",
-        'level' =>'warning')
+    elsif @read_only && !ignore_read_only
+      r=Arcadia.dialog(self,
+      'type' => 'yes_no_cancel',
+      'title' =>"#{@file}:read-only",
+      'msg' =>"The file : #{@file} is read-only! -- save anyway?",
+      'level' =>'warning')
+      if r=="yes"
+        save true
+      end
     else
       f = File.new(@file, "wb")
       begin
