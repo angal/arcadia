@@ -2733,11 +2733,12 @@ class AgEditor
   end
 
   def check_file_last_access_time
-    if @file && @file_last_access_time
-   
-    ftime = File.mtime(@file)
-      if @file_last_access_time != ftime
-        msg = 'File "'+@file+'" is changed! Reload?'
+    if @file
+      file_exist = File.exist?(@file)
+      if @file_last_access_time && file_exist
+        ftime = File.mtime(@file)
+        if @file_last_access_time != ftime
+          msg = 'File "'+@file+'" is changed! Reload?'
           if Tk.messageBox('icon' => 'error', 'type' => 'yesno',
             'title' => '(Arcadia) Libs', 'parent' => @text,
             'message' => msg) == 'yes'
@@ -2747,6 +2748,18 @@ class AgEditor
           else
             @file_last_access_time = ftime
           end
+        end
+      elsif !file_exist
+        msg = 'Appears that file "'+@file+'" was deleted by other process! Do you want to resave it?'
+        if Tk.messageBox('icon' => 'error', 'type' => 'yesno',
+          'title' => '(Arcadia) editor', 'parent' => @text,
+          'message' => msg) == 'yes'
+          save
+        else
+          @file = nil
+          @buffer = ''
+          set_modify
+        end
       end
     end
   end
