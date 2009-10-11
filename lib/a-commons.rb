@@ -524,6 +524,8 @@ module Configurable
         f.close unless f.nil?
       end
       return r_hash      
+    else
+      puts 'warning--file does not exist', _property_file
     end
   end
   

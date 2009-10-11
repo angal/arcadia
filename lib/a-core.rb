@@ -148,7 +148,12 @@ class Arcadia < TkApplication
            if var_plat.length > 1
              new_key = var_plat[0] + ':' + name + '.' + var_plat[1]
            else
-             new_key = name+'.'+key
+             begin
+              new_key = name+'.'+key
+             rescue => e
+              puts 'is an extension missing a name?'
+              raise e
+             end
            end	
        	   conf_hash2[new_key]= value
        	 }
@@ -244,7 +249,14 @@ class Arcadia < TkApplication
 	      require source 
       end
       if class_name.strip.length > 0
-        publish(_extension, eval(class_name).new(self, _extension))
+        klass = nil
+        begin
+          klass = eval(class_name)
+        rescue => e
+          puts 'does an extension class have the wrong name associated with it, in its conf file?, or is not listing the right .rb file?'
+          raise e
+        end
+        publish(_extension, klass.new(self, _extension))
       end
     rescue Exception,LoadError
       ret = false

@@ -475,8 +475,8 @@ class RubyDebugView
     begin
       if _command == 'quit'
         msg = "Really quit debug ? (y/n)"
-        ans = Tk.messageBox('icon' => 'question', 'type' => 'yesno',
-        'title' => '(Arcadia) Debug', 'message' => msg)
+        ans = 'yes'#Tk.messageBox('icon' => 'question', 'type' => 'yesno',
+#        'title' => '(Arcadia) Debug', 'message' => msg)
         if  ans == 'yes'
           debug_send(:quit_yes)
           clear
