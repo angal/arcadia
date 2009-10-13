@@ -3,16 +3,18 @@
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
 
+require File.dirname(__FILE__) + '/../ae-search-in-files/ae-search-in-files.rb'
+
 class AckInFilesService < ArcadiaExt
   def on_before_build(_event)
     Arcadia.attach_listener(AckInFilesListener.new(self),AckInFilesEvent)
   end
 end
 
-class AckInFilesListener
+class AckInFilesListener <  SearchInFilesListener
   def initialize(_service)
     @service = _service
-    create_find
+    create_find 'Ack in files'
   end
 
   def on_before_ack_in_files(_event)
@@ -21,30 +23,7 @@ class AckInFilesListener
     end
   end
   
-  #def on_search_in_files(_event)
-    #Arcadia.new_msg(self, "... ti ho fregato!")
-  #end
-
-  #def on_after_search_in_files(_event)
-  #end
-  
-  def create_find
-    @find = FindFrame.new(@service.arcadia.layout.root)
-    @find.on_close=proc{@find.hide}
-    @find.hide
-    @find.b_go.bind('1', proc{Thread.new{do_find}})
-    @find.e_what_entry.bind_append('KeyRelease'){|e|
-      case e.keysym
-      when 'Return'
-        do_find
-        Tk.callback_break
-      end
-    }
-    @find.title("Ack in files")
-  end
-  private :create_find
-
-   def do_find
+   def do_find # overwrite
     return if @find.e_what.text.strip.length == 0  || @find.e_filter.text.strip.length == 0  || @find.e_dir.text.strip.length == 0
     @find.hide
     if !defined?(@search_output)
@@ -86,8 +65,12 @@ class AckInFilesListener
         _text = $3
         @search_output.add_result(_node, _filename, _lineno, _text)
         @progress_bar.progress
-        break if progress_stop
+        break if progress_stop # early out
       }
+      if answer_lines == []
+        @search_output.new_result('None found', '')
+      end
+      
     rescue Exception => e
       Arcadia.console(self, 'msg'=>e.message + e.backtrace.inspect, 'level'=>'error')
       #Arcadia.new_error_msg(self, e.message)

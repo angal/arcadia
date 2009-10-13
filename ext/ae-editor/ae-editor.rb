@@ -1390,6 +1390,8 @@ class AgEditor
         @text.insert('insert',"}")
       when 'g'
         Arcadia.process_event(GoToLineBufferEvent.new(self))
+      when 'n'
+        $arcadia['main.action.new_file'] # necessary? Is there an event for this?
       when 'w'
         Arcadia.process_event(CloseCurrentTabEvent.new(self))
       end
@@ -2947,8 +2949,9 @@ class AgMultiEditor < ArcadiaExt
   def on_build(_event)
     @main_frame = AgMultiEditorView.new(self.frame.hinner_frame)
     @outline_bar = AgEditorOutlineToolbar.new(self.frame(1).hinner_frame, self)
-    create_find
+    create_find # this is the "find within current file" one
     pop_up_menu
+    
     #self.open_last_files
   end
 
