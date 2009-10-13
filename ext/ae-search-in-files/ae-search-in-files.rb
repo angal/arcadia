@@ -287,7 +287,6 @@ class FindFrame < TkFloatTitledFrame
       pack('side'=>'right')
       #pack('side'=>'right','ipadx'=>5, 'padx'=>5)
     }.bind('1', proc{
-          puts 'button hit'
          change_dir
          Tk.callback_break
     })
