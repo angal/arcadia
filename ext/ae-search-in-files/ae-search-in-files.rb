@@ -256,7 +256,6 @@ class FindFrame < TkFloatTitledFrame
     }
     @e_filter_entry = TkWinfo.children(@e_filter)[0]
     @e_filter_entry.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_filter_entry))})
-    @e_filter_entry.bind_append("KeyRelease",proc{puts 'here4'; Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_filter_entry))})
 
     @e_filter.text('*.rb')
     y0 = y0 + d
