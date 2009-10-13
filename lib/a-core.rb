@@ -8,8 +8,6 @@
 #   &require_omissis=tk/label
 #   &require_omissis=tk/toplevel
 
-
-
 require "conf/arcadia.res"
 require 'tkextlib/bwidget'
 require "lib/a-tkcommons"
@@ -150,7 +148,12 @@ class Arcadia < TkApplication
            if var_plat.length > 1
              new_key = var_plat[0] + ':' + name + '.' + var_plat[1]
            else
-             new_key = name+'.'+key
+             begin
+              new_key = name+'.'+key
+             rescue => e
+              puts 'is an extension missing a name?'
+              raise e
+             end
            end	
        	   conf_hash2[new_key]= value
        	 }
@@ -246,7 +249,14 @@ class Arcadia < TkApplication
 	      require source 
       end
       if class_name.strip.length > 0
-        publish(_extension, eval(class_name).new(self, _extension))
+        klass = nil
+        begin
+          klass = eval(class_name)
+        rescue => e
+          puts 'does an extension class have the wrong name associated with it, in its conf file?, or is not listing the right .rb file?'
+          raise e
+        end
+        publish(_extension, klass.new(self, _extension))
       end
     rescue Exception,LoadError
       ret = false
@@ -951,7 +961,9 @@ class ArcadiaMainMenu < ArcadiaUserControl
       menu_spec_edit = [['Edit', 0],
       ['Cut', $arcadia['main.action.edit_cut'], 2],
       ['Copy', $arcadia['main.action.edit_copy'], 0],
-      ['Paste', $arcadia['main.action.edit_paste'], 0]]
+      ['Paste', $arcadia['main.action.edit_paste'], 0],
+      ['Prettify Current', proc{Arcadia.process_event(PrettifyTextEvent.new(self))}, 0]]
+      
       menu_spec_search = [['Search', 0],
       ['Find/Replace ...', proc{Arcadia.process_event(SearchBufferEvent.new(self))}, 2],
       ['Find in files...', proc{Arcadia.process_event(SearchInFilesEvent.new(self))}, 2],

@@ -1,0 +1,4 @@
+name=shutdown early
+active=yes
+require=ext/ack-in-files/ack-in-files
+class=ShutdownEarly

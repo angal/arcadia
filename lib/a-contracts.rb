@@ -101,6 +101,10 @@ class GoToLineBufferEvent < BufferEvent
   attr_accessor :line
 end
 
+class PrettifyTextEvent < BufferEvent
+
+end
+
 class SearchBufferEvent < BufferEvent
   class Result < Result
     attr_accessor :row, :col
