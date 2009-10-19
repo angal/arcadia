@@ -1,4 +1,6 @@
-classes=key,value,operator,comment,link
+scanner=re
+language=conf
+re.classes=key,value,operator,comment,link
 re.key=(.*)\=
 re.value=\=(.*)
 re.operator=\=
@@ -15,12 +17,12 @@ re_op.only_first=operator
 #hightlight.operator.foreground=red
 #hightlight.operator.style=bold
 
-hightlight.comment.foreground=>>>hightlight.11.foreground
-hightlight.key.foreground=>>>hightlight.5.foreground
-hightlight.key.style=bold
-hightlight.value.foreground=>>>hightlight.6.foreground
-hightlight.value.style=bold
-hightlight.operator.foreground=>>>hightlight.14.foreground
-hightlight.operator.style=bold
-hightlight.link.foreground=>>>hightlight.12.foreground
-hightlight.link.style=bold
+re.hightlight.comment.foreground=>>>hightlight.11.foreground
+re.hightlight.key.foreground=>>>hightlight.5.foreground
+re.hightlight.key.style=bold
+re.hightlight.value.foreground=>>>hightlight.6.foreground
+re.hightlight.value.style=bold
+re.hightlight.operator.foreground=>>>hightlight.14.foreground
+re.hightlight.operator.style=bold
+re.hightlight.link.foreground=>>>hightlight.12.foreground
+re.hightlight.link.style=bold

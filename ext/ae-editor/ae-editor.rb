@@ -347,7 +347,7 @@ class SafeCompleteCode
     @modified_source = "#{@modified_source}Dir.chdir('#{File.dirname(@file)}')\n" if @file
     @modified_row = @modified_row+1
     source_array.each_with_index{|line,j|
-      # 0) se ÃÂ¨ un commento non lo prendo in considerazione
+      # 0) if a comment I do not consider it
       if line.strip.length > 0 && line.strip[0..0]=='#'
         @modified_row = @modified_row-1
         m = /&require_dir_ref=[\s]*(.)*/.match(line)
@@ -879,7 +879,6 @@ class AgEditorOutline
 end
 
 class AgEditor
-  include Configurable
   attr_accessor :file
   attr_reader :read_only 
   attr_reader :page_frame
@@ -931,6 +930,14 @@ class AgEditor
       padx 0
       tabs $arcadia['conf']['editor.tabs']
     }
+
+    class << @text
+      def tag_adds(tag, *args)
+        tk_send_without_enc('tag', 'add', _get_eval_enc_str(tag), 
+                            *args.flatten)
+        self
+      end
+    end
 
     #do_tag_configure_global('debug')
     @text.tag_configure('eval','foreground' => 'yellow', 'background' =>'red','borderwidth'=>1, 'relief'=>'raised')
@@ -1345,9 +1352,10 @@ class AgEditor
         end
         _e = @text.index('insert').split('.')[0].to_i
         if @highlighting
-          for j in _b..._e
-            rehighlightline(j)
-          end
+          rehighlightlines(_b,_e)
+#          for j in _b..._e
+#            rehighlightline(j)
+#          end
         end
         break
       when 'o'  
@@ -1369,9 +1377,10 @@ class AgEditor
         @text.text_paste
         _e = @text.index('insert').split('.')[0].to_i
         if @highlighting
-          for j in _b..._e
-            rehighlightline(j)
-          end
+          rehighlightlines(_b,_e)
+#          for j in _b..._e
+#            rehighlightline(j)
+#          end
         end
         break
       end
@@ -1430,7 +1439,8 @@ class AgEditor
           else
             @text.insert(_row.to_s+'.0',"#")
           end
-          rehighlightline(_row) if @highlighting
+          #rehighlightline(_row) if @highlighting
+          rehighlightlines(_row, _row) if @highlighting
         end
 
       end
@@ -1443,11 +1453,13 @@ class AgEditor
       when 'BackSpace'
         _index = @text.index('insert')
         _row, _col = _index.split('.')
-        rehighlightline(_row.to_i) if @highlighting
+        rehighlightlines(_row.to_i,_row.to_i) if @highlighting
+  #      rehighlightline(_row.to_i) if @highlighting
       when 'Delete'
         _index = @text.index('insert')
         _row, _col = _index.split('.')
-        rehighlightline(_row.to_i) if @highlighting
+        rehighlightlines(_row.to_i, _row.to_i) if @highlighting
+  #      rehighlightline(_row.to_i) if @highlighting
       when 'F5'
         run_buffer
       when 'F3'
@@ -1491,13 +1503,13 @@ class AgEditor
 #          #Thread.new do
 #            complete_code.call
 #          #end
-        when 'Control_L','Return', 'Control_V', 'BackSpace', 'Delete'
-          do_line_update
+#        when 'Control_L','Return', 'Control_V', 'BackSpace', 'Delete'
+#          do_line_update
         when 'Up','Down'
           refresh_outline
-      end
-      case e.keysym
-      when 'Return'
+#      end
+#      case e.keysym
+      when 'Return' #,'Control_L', 'Control_V', 'BackSpace', 'Delete'
         _index = @text.index('insert')
         _row, _col = _index.split('.')
         _txt = @text.get((_row.to_i-1).to_s+'.0',_index)
@@ -1515,8 +1527,13 @@ class AgEditor
           do_line_update
         end
       else 
+        if ['Control_L', 'Control_V', 'BackSpace', 'Delete'].include?(e.keysym)
+          do_line_update
+        end
         if @highlighting && /\w/.match(e.keysym)
-          rehighlightline(@text.index('insert').split('.')[0].to_i)
+    #      rehighlightline(@text.index('insert').split('.')[0].to_i)
+          row = @text.index('insert').split('.')[0].to_i
+          rehighlightlines(row, row)
         end
       end
       check_modify
@@ -1770,19 +1787,35 @@ class AgEditor
 
   def reset_highlight
     @is_line_bold.clear
-    @is_tag_bold.clear
     @highlight_zone.clear if @highlighting
     @last_line_begin=0
     @last_line_end=0
     @last_zone_begin=0
     @last_zone_end=0
   end
+  
+  def change_highlight(_ext)
+    new_highlight_scanner = @controller.highlight_scanner(_ext)
+    if new_highlight_scanner != @highlight_scanner
+      @highlight_scanner.classes.each{|c|
+        @text.tag_remove(c,'1.0', 'end')
+        @text.tag_delete(c)
+        @is_tag_bold.delete(c)
+      }
+      @highlight_scanner = new_highlight_scanner
+      reset_highlight
+      @highlight_scanner.classes.each{|c|
+        do_tag_configure(c)
+      }
+    end
+  end
 
-  def initialize_highlight
+  def initialize_highlight(_ext)
+    @highlight_scanner = @controller.highlight_scanner(_ext)
     @is_line_bold = Hash.new
     @is_tag_bold = Hash.new
     do_tag_configure_global('debug')
-    if @lang_hash.nil?
+    if @lang_hash.nil? || @highlight_scanner.nil?
       @highlighting = false
       return
     end
@@ -1794,19 +1827,8 @@ class AgEditor
     @last_line_end = 0
     @last_zone_begin=0;
     @last_zone_end=0;
-    #@is_line_bold = Hash.new
-    #@is_tag_bold = Hash.new
-    @h_classes = @lang_hash['classes'].split(',')
-    @h_re = Hash.new
-    @op_to_end_line = Array.new
-    @op_to_end_line.concat(@lang_hash['re_op.to_line_end'].split(',')) if @lang_hash['re_op.to_line_end']
-
-    @op_only_first = Array.new
-    @op_only_first.concat(@lang_hash['re_op.only_first'].split(',')) if @lang_hash['re_op.only_first']
-    
-    @h_classes.each{|c|
+    @highlight_scanner.classes.each{|c|
       do_tag_configure(c)
-      @h_re[c]=Regexp::new(@lang_hash["re.#{c}"].strip) if @lang_hash["re.#{c}"]
     }
 
     ['sel','selected','tabs','spaces'].each{|_name|
@@ -1820,23 +1842,23 @@ class AgEditor
 
   def do_tag_configure(_name)
     h = Hash.new
-    if @lang_hash['hightlight.'+_name+'.foreground']
-      h['foreground']=@lang_hash['hightlight.'+_name+'.foreground']
+    if @lang_hash["#{@lang_hash['scanner']}.hightlight."+_name+'.foreground']
+      h['foreground']=@lang_hash["#{@lang_hash['scanner']}.hightlight."+_name+'.foreground']
     end
-    if @lang_hash['hightlight.'+_name+'.background']
-      h['background']=@lang_hash['hightlight.'+_name+'.background']
+    if @lang_hash["#{@lang_hash['scanner']}.hightlight."+_name+'.background']
+      h['background']=@lang_hash["#{@lang_hash['scanner']}.hightlight."+_name+'.background']
     end
-    if @lang_hash['hightlight.'+_name+'.style']== 'bold'
+    if @lang_hash["#{@lang_hash['scanner']}.hightlight."+_name+'.style']== 'bold'
       h['font']=@font_bold
       @is_tag_bold[_name]= true
     else
       @is_tag_bold[_name]= false
     end
-    if @lang_hash['hightlight.'+_name+'.relief']
-      h['relief']=@lang_hash['hightlight.'+_name+'.relief']
+    if @lang_hash["#{@lang_hash['scanner']}.hightlight."+_name+'.relief']
+      h['relief']=@lang_hash["#{@lang_hash['scanner']}.hightlight."+_name+'.relief']
     end
-    if @lang_hash['hightlight.'+_name+'.borderwidth']
-      h['borderwidth']=@lang_hash['hightlight.'+_name+'.borderwidth']
+    if @lang_hash["#{@lang_hash['scanner']}.hightlight."+_name+'.borderwidth']
+      h['borderwidth']=@lang_hash["#{@lang_hash['scanner']}.hightlight."+_name+'.borderwidth']
     end
     @text.tag_configure(_name, h)
   end
@@ -2259,85 +2281,94 @@ class AgEditor
     return (_riga.to_i + _gap_row).to_s + '.'+ (_colonna.to_i + _gap_col).to_s
   end
 
-  def find_and_set_tag_ml(_re, _row, _txt, _tag, _tag_rem = nil)
-    m = _re.match(_txt)
-    _offset = 0
-    _s_txt = _txt
-    #_old_txt = ''
-    while m && (_txt=m.post_match)
-      if !defined?(_old_txt) || _txt != _old_txt
+#  def find_and_set_tag_ml(_re, _row, _txt, _tag, _tag_rem = nil)
+#    m = _re.match(_txt)
+#    _offset = 0
+#    _s_txt = _txt
+#    #_old_txt = ''
+#    while m && (_txt=m.post_match)
+#      if !defined?(_old_txt) || _txt != _old_txt
+#
+#        apos =  pos_to_index(_s_txt, _offset+m.begin(0))
+#        _offset = _offset + m.end(0)
+#        
+#        
+#        _old_txt = _txt
+#        _r = _row + apos[0]
+#        _ibegin = _r.to_s+'.'+apos[1].to_s
+#        _iend = _r.to_s+'.'+(apos[1]+m.end(0)-m.begin(0)).to_s
+#        if _tag_rem
+#          _tag_rem.each {|value|
+#            @text.tag_remove(value,_ibegin, _iend)
+#          }
+#        end
+#        @text.tag_add(_tag,_ibegin, _iend)
+#        if @is_tag_bold[_tag]
+#          @is_line_bold[_r]=true
+#        end
+#
+#        if @op_only_first.include?(_tag) && _txt
+#          #eliminino la prima riga a partire dal risultato
+#          _p = _txt.index("\n")+1
+#          if _p
+#              _txt = _txt[_p..-1]
+#              _offset = _offset + _p
+#          else
+#            m = nil
+#          end
+#        end
+#        m = _re.match(_txt)
+#        
+#      else
+#        m = nil
+#      end
+#    end
+#  end
 
-        apos =  pos_to_index(_s_txt, _offset+m.begin(0))
-        _offset = _offset + m.end(0)
-        
-        
-        _old_txt = _txt
-        _r = _row + apos[0]
-        _ibegin = _r.to_s+'.'+apos[1].to_s
-        _iend = _r.to_s+'.'+(apos[1]+m.end(0)-m.begin(0)).to_s
-        if _tag_rem
-          _tag_rem.each {|value|
-            @text.tag_remove(value,_ibegin, _iend)
-          }
-        end
-        @text.tag_add(_tag,_ibegin, _iend)
-        if @is_tag_bold[_tag]
-          @is_line_bold[_r]=true
-        end
 
-        if @op_only_first.include?(_tag) && _txt
-          #eliminino la prima riga a partire dal risultato
-          _p = _txt.index("\n")+1
-          if _p
-              _txt = _txt[_p..-1]
-              _offset = _offset + _p
-          else
-            m = nil
-          end
-        end
-        m = _re.match(_txt)
-        
-      else
-        m = nil
-      end
-    end
-  end
+#  def find_and_set_tag(_re, _row, _txt, _tag, _tag_rem = nil)
+#    m = _re.match(_txt)
+#    _end = 0
+#    if m && @is_tag_bold[_tag]
+#      @is_line_bold[_row]=true
+#    end
+#    #_old_txt = ''
+#    while m && (_txt=m.post_match)
+#      if !defined?(_old_txt) || _txt != _old_txt
+#        _old_txt = _txt 
+#        _ibegin = _row.to_s+'.'+(m.begin(0)+_end).to_s
+#        _end = m.end(0) + _end
+#        _iend = _row.to_s+'.'+(_end.to_s)
+#        if _tag_rem
+#          _tag_rem.each {|value|
+#            @text.tag_remove(value,_ibegin, _iend)
+#          }
+#        end
+#        @text.tag_add(_tag,_ibegin, _iend)
+#        if @op_only_first.include?(_tag)
+#          m = nil
+#        else
+#          m = _re.match(_txt)
+#        end
+#      else
+#        m = nil
+#      end
+#    end
+#  end
 
 
-  def find_and_set_tag(_re, _row, _txt, _tag, _tag_rem = nil)
-    m = _re.match(_txt)
-    _end = 0
-    if m && @is_tag_bold[_tag]
-      @is_line_bold[_row]=true
-    end
-    #_old_txt = ''
-    while m && (_txt=m.post_match)
-      if !defined?(_old_txt) || _txt != _old_txt
-        _old_txt = _txt 
-        _ibegin = _row.to_s+'.'+(m.begin(0)+_end).to_s
-        _end = m.end(0) + _end
-        _iend = _row.to_s+'.'+(_end.to_s)
-        if _tag_rem
-          _tag_rem.each {|value|
-            @text.tag_remove(value,_ibegin, _iend)
-          }
-        end
-        @text.tag_add(_tag,_ibegin, _iend)
-        if @op_only_first.include?(_tag)
-          m = nil
-        else
-          m = _re.match(_txt)
-        end
-      else
-        m = nil
-      end
+  def text_value_lines
+    if String.method_defined?(:lines)
+      return @text.value.lines
+    else
+      return @text.value
     end
   end
 
   def show_spaces
     @spaces_show = true
     _row = 1
-    @text.value.each{|_line|
+    text_value_lines.each{|_line|
       show_chars_line(_row, _line, /[ ^\t]\s*/, 'spaces')
       _row = _row+1
     }
@@ -2347,7 +2378,7 @@ class AgEditor
   def show_tabs
     @tabs_show = true
     _row = 1
-    @text.value.each{|_line|
+    text_value_lines.each{|_line|
       show_chars_line(_row, _line, /\t/, 'tabs')
       _row = _row+1
     }
@@ -2369,7 +2400,7 @@ class AgEditor
 
   def indentation_space_2_tabs(_n_space=2)
     _row = 1
-    @text.value.each{|_line|
+    text_value_lines.each{|_line|
       m = /\s*/.match(_line)
       _end = 0
       if m && m.begin(0)==0
@@ -2389,7 +2420,7 @@ class AgEditor
 
   def indentation_tabs_2_space(_n_space=2)
     _row = 1
-    @text.value.each{|_line|
+    text_value_lines.each{|_line|
       m = /\t*/.match(_line)
       _end = 0
       if m && m.begin(0)==0
@@ -2451,94 +2482,17 @@ class AgEditor
     end
   end
 
-  def highlightlines(_row, _lines, _check_mod = false)
-    if _check_mod 
-      check_modify
-    end
-    _txt = _lines
-    _end = 0
-    
-#    @op_to_end_line.each{|c|
-#      if @h_re[c]
-#        m_c = @h_re[c].match(_txt)
-#        if m_c then
-#          _ibegin = _row.to_s+'.'+(m_c.begin(0)).to_s
-#          _iend = _row.to_s+'.'+(_line.length - 1).to_s
-#          @text.tag_add(c,_ibegin, _iend)
-#          _txt = m_c.pre_match
-#        end
-#      end
-#    } if @lang_hash['re_op.to_line_end']
-
-    arem = Array.new
-    
-      
-    @h_classes.each{|c|
-      if !@op_to_end_line.include?(c) && @h_re[c]
-        find_and_set_tag_ml(@h_re[c], _row, _txt, c, arem)
-        arem << c
-      end
-    } if _txt.strip.length > 0  
-
-    find_and_set_tag_ml(/\t/, _row, _txt, 'tabs', arem) if @tabs_show 
-    find_and_set_tag_ml(/[ ^\t]\s*/, _row, _txt, 'spaces', arem) if @spaces_show 
-  end
 
 
-  def highlightline(_row, _line, _check_mod = false)
-    #p "highlightline #{_row} _line=#{_line}"
-    if _check_mod 
-      check_modify
-    end
-    _txt = _line
-    _end = 0
-    
-    @op_to_end_line.each{|c|
-      if @h_re[c]
-        m_c = @h_re[c].match(_txt)
-        if m_c then
-          _ibegin = _row.to_s+'.'+(m_c.begin(0)).to_s
-          _iend = _row.to_s+'.'+(_line.length - 1).to_s
-          @text.tag_add(c,_ibegin, _iend)
-          #p "tag_add  found #{c}"
-          _txt = m_c.pre_match
-        end
-      end
-    } if @lang_hash['re_op.to_line_end']
 
-    arem = Array.new
-    
-      
-    @h_classes.each{|c|
-      if !@op_to_end_line.include?(c) && @h_re[c]
-        find_and_set_tag(@h_re[c], _row, _txt, c, arem)
-        arem << c
-      end
-    } if _txt.strip.length > 0  
 
-    find_and_set_tag(/\t/, _row, _txt, 'tabs', arem) if @tabs_show 
-    find_and_set_tag(/[ ^\t]\s*/, _row, _txt, 'spaces', arem) if @spaces_show 
-  end
-
-  def rehighlightline(_row)
-    _ibegin = _row.to_s+'.0'
-    _iend = (_row+1).to_s+'.0'
-    #p "rehighlightline _ibegin=#{_ibegin}"
-    #p "rehighlightline _iend=#{_iend}"
-    #p "_line = #{@text.get(_ibegin, _iend)}"
-    @h_classes.each{|c| @text.tag_remove(c,_ibegin, _iend)}
-    _line = @text.get(_ibegin, _iend)
-    highlightline(_row, _line)
-  end
 
   def rehighlightlines(_row_begin, _row_end)
     _ibegin = _row_begin.to_s+'.0'
     _iend = (_row_end+1).to_s+'.0'
-    @h_classes.each{|c| @text.tag_remove(c,_ibegin, _iend)}
-    _lines = @text.get(_ibegin, _iend)
-    highlightlines(_row_begin, _lines)
+    @highlight_scanner.classes.each{|c| @text.tag_remove(c,_ibegin, _iend)}
+    highlightlines(_row_begin, _row_end)
   end
-
 
   def row(_index='insert')
     _row = @text.index(_index).split('.')[0].to_i
@@ -2563,7 +2517,7 @@ class AgEditor
           _zone_begin = ((line_begin) / @highlight_zone_length).to_i + 1
           _zone_end = ((line_end) / @highlight_zone_length).to_i + 1
           #Arcadia.new_msg(self, "for lines #{line_begin}..#{line_end} \n
-          _zone_begin=#{_zone_begin} ; _zone_end=#{_zone_end}")
+          #_zone_begin=#{_zone_begin} ; _zone_end=#{_zone_end}")
           (_zone_begin >=@last_zone_begin)?_zone_begin.upto(_zone_end+1){|_zone| 
             highlight_zone(_zone)
           }:_zone_end.downto(_zone_begin-1){|_zone| 
@@ -2574,7 +2528,6 @@ class AgEditor
           @last_zone_begin = _zone_begin
           @last_zone_end = _zone_end
         end
-        
         @text_line_num.delete('1.0','end')
 
         _rx, _ry, _widht, _heigth = @text.bbox(line_begin_index);
@@ -2621,23 +2574,55 @@ class AgEditor
       refresh_outline if Tk.focus==@text
   end
 
-  def highlight_zone_new(_zone)
-    if !@highlight_zone[_zone]
-      _b = @highlight_zone_length*(_zone - 1) 
-      _e = @highlight_zone_length*(_zone) #+ 1
-      rehighlightlines(_b,_e)
-      @highlight_zone[_zone] = true
+  def highlightlines(_row_begin, _row_end, _check_mod = false)
+    if _check_mod 
+      check_modify
+    end
+    #_row_begin = _row_begin+1
+    _ibegin = _row_begin.to_s+'.0'
+    _iend = (_row_end+1).to_s+'.0'
+    @highlight_scanner.classes.each{|c| @text.tag_remove(c,_ibegin, _iend)}
+    _lines = @text.get(_ibegin, _iend)
+    tags_map = @highlight_scanner.highlight_tags(_row_begin,_lines)
+    tags_map.each do |key,value|      
+      to_tag = Array.new
+      value.each{|ite|
+        to_tag.concat(ite)
+        if @is_tag_bold[key]
+          if ite.length==2
+            row_begin = ite[0].split('.')[0].to_i
+            row_end = ite[1].split('.')[0].to_i
+            for row in row_begin...row_end 
+              @is_line_bold[row]=true
+            end
+          end
+#          ite.each{|p|
+#            row_begin = p[0].split('.')[0].to_i
+#            row_end = p[1].split('.')[0].to_i
+#            for row in row_begin...row_end 
+#              @is_line_bold[row]=true
+#            end
+#          }
+        end
+      }
+      @text.tag_adds(key.to_s,to_tag)
+    end
+    if @tabs_show || @spaces_show
+      if @lang_hash['scanner']!='re' && !defined?(@rescanner)
+        @rescanner = ReHighlightScanner.new(@lang_hash) if !defined?(@rescanner)
+      else
+        @rescanner = @highlight_scanner
+      end
+      @rescanner.highlight_tags(_row_begin,_lines,['tabs']) if @tabs_show
+      @rescanner.highlight_tags(_row_begin,_lines,['spaces']) if @spaces_show
     end
   end
 
-
   def highlight_zone(_zone, _force_highlight=false)
     if !@highlight_zone[_zone] || _force_highlight
-      _b = @highlight_zone_length*(_zone - 1) 
+      _b = @highlight_zone_length*(_zone - 1) +1
       _e = @highlight_zone_length*(_zone) #+ 1
-      for j in _b..._e
-        rehighlightline(j)
-      end
+      rehighlightlines(_b,_e)
       @highlight_zone[_zone] = true
     end
   end
@@ -2670,7 +2655,8 @@ class AgEditor
           _iend = _row+'.'+(line.length - 1).to_s
           @text.tag_add('comment',_ibegin, _iend)
         else
-          highlightline(_row.to_i, line, false)
+          #highlightline(_row.to_i, line, false)
+          highlightlines(_row.to_i, _row.to_i, false)
         end
       end
       _row = (_row.to_i + 1).to_s
@@ -2714,12 +2700,21 @@ class AgEditor
   end
 
   def save_as
-    @file = Tk.getSaveFile("filetypes"=>[["Ruby Files", [".rb", ".rbw"]],["All Files", [".*"]]])
-    @file = nil if @file == ""  # cancelled
-    if @file
+    file = Tk.getSaveFile("filetypes"=>[["Ruby Files", [".rb", ".rbw"]],["All Files", [".*"]]])
+    file = nil if file == ""  # cancelled
+    if file
+      new_file_name(file)
       save
-      @controller.change_file_name(@page_frame, @file)
+      @controller.change_file_name(@page_frame, file)
       #EditorContract.instance.file_created(self, 'file'=>@file)
+    end
+  end
+
+  def new_file_name(_new_file)
+    @file =_new_file
+    base_name= File.basename(_new_file)
+    if base_name.include?('.')
+      self.change_highlight(base_name.split('.')[-1])
     end
   end
 
@@ -2764,37 +2759,12 @@ class AgEditor
     end
   end
   
-  def languages_hash(_ext=nil)
-    @@langs_hash = Hash.new if !defined?(@@langs_hash)
-    return nil if _ext.nil?
-    if @@langs_hash[_ext].nil?
-      #_ext='' if _ext.nil?
-      lang_file = File.dirname(__FILE__)+'/langs/'+_ext+'.lang'
-      if File.exist?(lang_file)
-        @@langs_hash[_ext] = properties_file2hash(lang_file)
-      elsif File.exist?(lang_file+'.bind')
-        b= properties_file2hash(lang_file+'.bind')
-        if b 
-          if @@langs_hash[b['bind']].nil?
-            lang_file_bind = File.dirname(__FILE__)+'/langs/'+b['bind']+".lang"
-            if File.exist?(lang_file_bind)
-              @@langs_hash[b['bind']]=properties_file2hash(lang_file_bind)
-              @@langs_hash[_ext]=@@langs_hash[b['bind']]
-            end
-          else
-            @@langs_hash[_ext]=@@langs_hash[b['bind']]
-          end
-        end
-      end
-      self.resolve_properties_link(@@langs_hash[_ext], Arcadia.instance['conf']) if @@langs_hash[_ext]
-    end
-    @@langs_hash[_ext]
-  end
 
   def init_editing(_ext='rb', _w1=150, _w2=60)
     @is_ruby = _ext=='rb'|| _ext=='rbw'
     @classbrowsing = @is_ruby
-    @lang_hash = languages_hash(_ext)
+    @lang_hash = @controller.languages_hash(_ext)
+#    @highlight_scanner = @controller.highlight_scanner(_ext)
 #    if !_ext.nil? && @is_ruby
 #      @fm = AGTkVSplittedFrames.new(@page_frame,_w1)
 #      @fm1 = AGTkVSplittedFrames.new(@fm.right_frame,_w2)
@@ -2806,7 +2776,7 @@ class AgEditor
     @fm1 = AGTkVSplittedFrames.new(@page_frame,@page_frame,_w2)
     @fm1.splitter_frame.configure('relief'=>'flat')
     initialize_text(@fm1.right_frame)
-    initialize_highlight
+    initialize_highlight(_ext)
     initialize_line_number(@fm1.left_frame)
     initialize_text_binding
   end
@@ -2907,9 +2877,162 @@ class AgMultiEditorView
   
 end
 
+class HighlightScanner
+  
+  def initialize(_langs_conf)
+    @langs_conf = _langs_conf
+    @lang=@langs_conf['language'].to_sym if @langs_conf['language']
+  end
+  
+  def highlight_tags(_row_begin,_code)
+  end
+  
+  def classes
+    if !defined?(@h_classes)
+      @h_classes = @langs_conf["#{@langs_conf['scanner']}.classes"].split(',')
+    end
+    @h_classes
+  end
+end
+
+class ReHighlightScanner < HighlightScanner
+  def initialize(_langs_conf)
+    super(_langs_conf)
+    @h_re = Hash.new
+    @op_to_end_line = Array.new
+    @op_to_end_line.concat(@langs_conf['re_op.to_line_end'].split(',')) if @langs_conf['re_op.to_line_end']
+
+    @op_only_first = Array.new
+    @op_only_first.concat(@langs_conf['re_op.only_first'].split(',')) if @langs_conf['re_op.only_first']
+    
+    self.classes.each{|c|
+      @h_re[c]=Regexp::new(@langs_conf["re.#{c}"].strip) if @langs_conf["re.#{c}"]
+    }
+  end
+
+
+  def find_tag(_tag, _row, _txt)
+    to_ret = []
+    _re = @h_re[_tag]
+    m = _re.match(_txt)
+    _end = 0
+    while m && (_txt=m.post_match)
+      if !defined?(_old_txt) || _txt != _old_txt
+        _old_txt = _txt 
+        _ibegin = _row.to_s+'.'+(m.begin(0)+_end).to_s
+        _end = m.end(0) + _end
+        _iend = _row.to_s+'.'+(_end.to_s)
+        to_ret << [_ibegin, _iend]
+        if @op_only_first.include?(_tag)
+          m = nil
+        else
+          m = _re.match(_txt)
+        end
+      else
+        m = nil
+      end
+    end
+    to_ret
+  end
+  
+  def highlight_tags(_row_begin,_code,_classes=self.classes)
+    super(_row_begin,_code)
+    tags_map = Hash.new 
+    lines = _code.split("\n")
+    lines.each_with_index{|_line,_i|
+      _line+="\n"
+      _row = _row_begin+_i
+      #p "_row=#{_row}-_line=#{_line}"
+      _txt = _line
+      _end = 0
+      @op_to_end_line.each{|c|
+        if _classes.include?(c) && @h_re[c]
+          m_c = @h_re[c].match(_txt)
+          if m_c then
+            _ibegin = _row.to_s+'.'+(m_c.begin(0)).to_s
+            _iend = _row.to_s+'.'+(_line.length - 1).to_s
+            tags_map[c] = [] if tags_map[c].nil?
+            tags_map[c] << [_ibegin, _iend]
+            _txt = m_c.pre_match
+          end
+        end
+      } if @langs_conf['re_op.to_line_end']
+  
+      _classes.each{|c|
+        if !@op_to_end_line.include?(c) && @h_re[c]
+          _tags = find_tag(c, _row, _txt)
+          if _tags.length >0
+            tags_map[c] = [] if tags_map[c].nil?
+            tags_map[c].concat(_tags)
+          end
+        end
+      } if _txt.strip.length > 0  
+    }
+    tags_map
+  end
+end
+  
+class CoderayHighlightScanner < HighlightScanner
+  def initialize(_langs_conf)
+    super(_langs_conf)
+    require 'coderay'
+  end
+#  def highlight_tags(_row_begin,_code)
+#    super(_row_begin,_code)
+#    case @lang
+#      when :ruby
+#        _highlight_tags_ruby(_row_begin,_code)
+#    end
+#  end
+  def highlight_tags(_row_begin,_code)
+    super(_row_begin,_code)
+    c_scanner = CodeRay::Scanners[@lang].new _code
+    row=_row_begin
+    col=0
+    tags_map = Hash.new 
+    c_scanner.tokens.each{|tok|
+      #p tok
+      if tok[1]==:space && tok[0].include?("\n")
+        row+=tok[0].count("\n")
+        begin_gap = tok[0].split("\n")[-1]
+        if begin_gap && tok[0][-1..-1]!="\n"
+          col = begin_gap.length
+        else
+          col = 0
+        end
+      elsif !([:open,:close].include?(tok[0])&& tok[1].class==Symbol)
+        toklength = tok[0].length
+        t_begin="#{row}.#{col}"
+        if tok[0].include?("\n")
+          ar = tok[0].split
+          row+=tok[0].count("\n")
+
+          begin_gap = ar[-1]
+          if begin_gap && tok[0][-1..-1]!="\n"
+            col = begin_gap.length
+          else
+            col = 0
+          end
+        else
+          col+=toklength
+        end
+        t_end="#{row}.#{col}"
+        if tok[1]!=:space
+          tags_map[tok[1]] = [] if tags_map[tok[1]].nil?
+          tags_map[tok[1]] << [t_begin,t_end]
+          #Arcadia.console(self, 'msg'=>"#{tok[1]}=#{[t_begin,t_end]}", 'level'=>'error')          
+          #p [t_begin,t_end]
+        end
+      end  
+    }
+    tags_map
+  end
+end
+
 
 class AgMultiEditor < ArcadiaExt
   include Autils
+  include Configurable
   attr_reader :breakpoints
   attr_reader :splitted_frame
   attr_reader :outline_bar
@@ -2969,6 +3092,60 @@ class AgMultiEditor < ArcadiaExt
       end
     }
   end
+
+  def highlight_scanner(_ext=nil)
+    return nil if _ext.nil?
+    scanner = nil
+    @highlight_scanner_hash = Hash.new if !defined?(@highlight_scanner_hash)
+    lh = languages_hash(_ext)
+    if lh && lh['language'] && lh['scanner']  
+      if @highlight_scanner_hash[lh['language']].nil?
+        case lh['scanner']
+          when 'coderay'
+            @highlight_scanner_hash[lh['language']]=CoderayHighlightScanner.new(lh)
+          when 're'
+            @highlight_scanner_hash[lh['language']]=ReHighlightScanner.new(lh)
+        end
+      end
+      scanner = @highlight_scanner_hash[lh['language']]
+    end
+    scanner
+  end
+
+  def languages_hash(_ext=nil)
+    @@langs_hash = Hash.new if !defined?(@@langs_hash)
+    return nil if _ext.nil?
+    if @@langs_hash[_ext].nil?
+      #_ext='' if _ext.nil?
+      lang_file = File.dirname(__FILE__)+'/langs/'+_ext+'.lang'
+      if File.exist?(lang_file)
+        @@langs_hash[_ext] = properties_file2hash(lang_file)
+      elsif File.exist?(lang_file+'.bind')
+        b= properties_file2hash(lang_file+'.bind')
+        if b 
+          if @@langs_hash[b['bind']].nil?
+            lang_file_bind = File.dirname(__FILE__)+'/langs/'+b['bind']+".lang"
+            if File.exist?(lang_file_bind)
+              @@langs_hash[b['bind']]=properties_file2hash(lang_file_bind)
+              @@langs_hash[_ext]=@@langs_hash[b['bind']]
+            end
+          else
+            @@langs_hash[_ext]=@@langs_hash[b['bind']]
+          end
+        end
+      end
+      if @@langs_hash[_ext] && @@langs_hash[_ext]['@include'] != nil
+        include_file = "#{File.dirname(__FILE__)}/langs/#{@@langs_hash[_ext]['@include']}"
+        if File.exist?(include_file)
+          include_hash = properties_file2hash(include_file)
+          @@langs_hash[_ext] = include_hash.merge(@@langs_hash[_ext])
+        end
+      end 
+      self.resolve_properties_link(@@langs_hash[_ext], Arcadia.instance['conf']) if @@langs_hash[_ext]
+    end
+    @@langs_hash[_ext]
+  end
+
 
   def pop_up_menu
     @pop_up = TkMenu.new(
@@ -3402,17 +3579,22 @@ class AgMultiEditor < ArcadiaExt
     @main_frame.enb.itemconfigure(page_name(_tab), 'text'=> _new_text)
   end
 
+  def change_tab_icon(_tab, _new_text)
+    @main_frame.enb.itemconfigure(page_name(_tab), 'image'=> Arcadia.file_icon(_new_text))
+  end
+
   def change_file(_old_file, _new_file)
     _tab_name=tab_file_name(_old_file)
     _tab = @main_frame.enb.get_frame(_tab_name)
     e =  @tabs_editor[_tab_name]
-    e.file =_new_file if e
+    e.new_file_name(_new_file) if e
     change_file_name(_tab, _new_file)
   end
 
   def change_file_name(_tab, _new_file)
     _new_label = File.basename(_new_file)
     change_tab_title(_tab, _new_label)
+    change_tab_icon(_tab, _new_label)
     @tabs_file[page_name(_tab)] = _new_file
   end
 
@@ -3564,6 +3746,7 @@ class AgMultiEditor < ArcadiaExt
       end
       _tab = @main_frame.enb.insert('end', _buffer_name ,
         'text'=> _title,
+        'image'=> Arcadia.file_icon(_title),
         'background'=> Arcadia.style("tabpanel.background"),
         'foreground'=> Arcadia.style("tabpanel.foreground"),
         'raisecmd'=>proc{do_buffer_raise(_buffer_name, _title)}

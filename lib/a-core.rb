@@ -160,6 +160,14 @@ class Arcadia < TkApplication
   		}
   end
 
+  def gem_available?(_gem)
+      if Gem.respond_to?(:available?)
+          return Gem.available?(_gem)
+      else
+          return !Gem.source_index.find_name(_gem).empty?
+      end
+  end
+
   def check_gems_dependences(_ext)
     ret = true
     gems_property = self['conf']["#{_ext}.gems"]
@@ -168,7 +176,7 @@ class Arcadia < TkApplication
       if gems && gems.length > 0
         gems.each{|gem|
           # consider gem only if it is not installed
-          if !Gem.available?(gem)
+          if !gem_available?(gem)
             repository_property =  self['conf']["#{_ext}.gems.#{gem}.repository"]
             args = Hash.new
             args['extension_name']=_ext
@@ -609,6 +617,32 @@ class Arcadia < TkApplication
     if @@instance
         return @@instance.layout
 	  end
+  end
+  
+  def Arcadia.file_icon(_file_name)
+    if @@instance['file_icons'] == nil
+      @@instance['file_icons'] = Hash.new 
+      @@instance['file_icons']['default']= TkPhotoImage.new('dat' => FILE_ICON_DEFAULT)
+    end
+    _base_name= File.basename(_file_name)
+    if _base_name.include?('.')
+      file_dn = _base_name.split('.')[-1]
+    else
+      file_dn = "no_ext"
+    end
+    if @@instance['file_icons'][file_dn].nil?
+      file_icon_name="FILE_ICON_#{file_dn.upcase}"
+      begin
+        if eval("defined?(#{file_icon_name})")
+          @@instance['file_icons'][file_dn]= TkPhotoImage.new('dat' => eval(file_icon_name))
+        else
+          @@instance['file_icons'][file_dn]= @@instance['file_icons']['default']
+        end
+      rescue Exception
+        @@instance['file_icons'][file_dn]= @@instance['file_icons']['default']
+      end
+    end
+    @@instance['file_icons'][file_dn]
   end
 
 #  def Arcadia.res(_res)
@@ -1875,7 +1909,7 @@ class ArcadiaLayout
         end
       end
     else  # CLOSE OTHER
-      # verifichiamo se la contro parte ÃÂ¨ uno splitter_adapter
+      # verifichiamo se la contro parte ÃÂÃÂ¨ uno splitter_adapter
       other_ds = domains_on_frame(@panels[_domain]['splitted_frames'].frame1)
       if other_ds.length == 1
         other_dom = other_ds[0]

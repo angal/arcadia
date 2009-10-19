@@ -121,7 +121,7 @@ class FilesHistrory < ArcadiaExt
         if String.method_defined?(:lines)
       	   selection_lines = _self.selection_get[0].lines
         else
-      	   selection_lines = _self.selection_get[0].lines
+      	   selection_lines = _self.selection_get[0]
         end
        	selection_lines.each{|_block|
         	 _selected = _selected + _block.to_s + "\s" 
@@ -291,8 +291,8 @@ class FilesHistrory < ArcadiaExt
 
     #@image_kdir = TkPhotoImage.new('dat' => BOOK_GIF)
     @image_kdir = TkPhotoImage.new('dat' => ICON_FOLDER_OPEN_GIF)
-    @image_kfile_rb = TkPhotoImage.new('dat' => RUBY_DOCUMENT_GIF)
-    @image_kfile = TkPhotoImage.new('dat' => DOCUMENT_GIF)
+#    @image_kfile_rb = TkPhotoImage.new('dat' => RUBY_DOCUMENT_GIF)
+#    @image_kfile = TkPhotoImage.new('dat' => DOCUMENT_GIF)
 
 	  build_tree_from_node(root)
   end
@@ -357,10 +357,12 @@ class FilesHistrory < ArcadiaExt
   def image(_kind, _label='.rb')
       if _kind == 'KDir'
         return @image_kdir
-      elsif _kind == 'KFile' && _label.include?('.rb')
-        return @image_kfile_rb
-      else
-        return @image_kfile
+      elsif _kind == 'KFile'
+        return Arcadia.file_icon(_label)
+#      elsif _kind == 'KFile' && _label.include?('.rb')
+#        return @image_kfile_rb
+#      else
+#        return @image_kfile
       end
   end
 

@@ -1,0 +1,4 @@
+language=rhtml
+scanner=coderay
+@include=coderay.tokens
+coderay.classes=inline_delimiter,tag,reserved,method,class,char,comment,instance_variable,constant,string,content,integer

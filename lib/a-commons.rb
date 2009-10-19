@@ -811,14 +811,16 @@ class Application
     if @objs[_name]
       return @objs[_name]
     else
-      raise RuntimeError, "resurce '"+_name+"' unavabled ", caller
+      return nil
+      #raise RuntimeError, "resurce '"+_name+"' unavabled ", caller
     end
   end
 
   def []=(_name, _value)
-    if @objs[_name]
-      @objs[_name] = _value
-    end
+    @objs[_name] = _value
+#    if @objs[_name]
+#      @objs[_name] = _value
+#    end
   end
 
 
