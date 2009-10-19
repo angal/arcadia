@@ -172,8 +172,8 @@ class DirProjects < ArcadiaExt
     self.pop_up_menu_tree
     @image_kdir = TkPhotoImage.new('dat' => BOOK_GIF)
     @image_kdir_closed = TkPhotoImage.new('dat' => FOLDER_GIF)
-    @image_kfile_rb = TkPhotoImage.new('dat' => RUBY_DOCUMENT_GIF)
-    @image_kfile = TkPhotoImage.new('dat' => DOCUMENT_GIF)
+#    @image_kfile_rb = TkPhotoImage.new('dat' => RUBY_DOCUMENT_GIF)
+#    @image_kfile = TkPhotoImage.new('dat' => DOCUMENT_GIF)
 	  self.load_projects
     @htree.areabind_append('KeyPress'){|e| key_press(e[1])}
 	end
@@ -418,7 +418,7 @@ class DirProjects < ArcadiaExt
         if String.method_defined?(:lines)
       	   selection_lines = @htree.selection_get[0].lines
         else
-      	   selection_lines = @htree.selection_get[0].lines
+      	   selection_lines = @htree.selection_get[0]
         end
         selection_lines.each{|_block|
           _selected = _selected + _block.to_s + "\s" 
@@ -880,11 +880,15 @@ class DirProjects < ArcadiaExt
         return @image_kdir
       elsif _kind == 'project'
         return @image_kdir_closed
-      elsif _kind == 'file' && _label.include?('.rb')
-        return @image_kfile_rb
-      else
-        return @image_kfile
+      elsif _kind == 'file'
+        return Arcadia.file_icon(_label)
       end
+
+#      elsif _kind == 'file' && _label.include?('.rb')
+#        return @image_kfile_rb
+#      else
+#        return @image_kfile
+#      end
   end
 
 

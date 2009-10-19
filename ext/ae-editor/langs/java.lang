@@ -1,0 +1,4 @@
+language=java
+scanner=coderay
+@include=coderay.tokens
+coderay.classes=keyword,directive,type,method,class,char,comment,instance_variable,constant,string,content,integer
