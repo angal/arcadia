@@ -11,11 +11,10 @@ class SearchInFilesService < ArcadiaExt
 
 end
 
-
 class SearchInFilesListener
   def initialize(_service)
     @service = _service
-    create_find
+    create_find 'Search in files'
   end
 
   def on_before_search_in_files(_event)
@@ -31,19 +30,24 @@ class SearchInFilesListener
   #def on_after_search_in_files(_event)
   #end
   
-  def create_find
+  def create_find title
     @find = FindFrame.new(@service.arcadia.layout.root)
     @find.on_close=proc{@find.hide}
     @find.hide
-    @find.b_go.bind('1', proc{Thread.new{do_find}})
-    @find.e_what_entry.bind_append('KeyRelease'){|e|
+    @find.b_go.bind('1', proc{Thread.new{do_find}}) # add trigger to button    
+    
+    enter_proc = proc {|e|
       case e.keysym
       when 'Return'
         do_find
         Tk.callback_break
       end
     }
-    @find.title("Search in files")
+    
+    for method in [:e_what_entry, :e_filter_entry, :e_dir_entry] do
+      @find.send(method).bind_append('KeyRelease') { |*args| enter_proc.call *args } # ltodo why can't we pass it in like &enter_proc?
+    end
+    @find.title(title)
   end
   private :create_find
   
@@ -56,6 +60,9 @@ class SearchInFilesListener
       @service.frame.show
     end
     begin
+    
+      MonitorLastUsedDir.set_last @find.e_dir.text # save it away TODO make it into a message
+      
       _search_title = 'search result for : "'+@find.e_what.text+'" in :"'+@find.e_dir.text+'"'+' ['+@find.e_filter.text+']'
       _filter = @find.e_dir.text+'/**/'+@find.e_filter.text
       _files = Dir[_filter]
@@ -207,10 +214,8 @@ class SearchOutput
 end
 
 class FindFrame < TkFloatTitledFrame
-  attr_reader :e_what
-  attr_reader :e_what_entry
-  attr_reader :e_filter
-  attr_reader :e_dir
+  attr_reader :e_what, :e_filter, :e_dir
+  attr_reader :e_what_entry, :e_filter_entry, :e_dir_entry
   attr_reader :b_go
   def initialize(_parent)
     super(_parent)
@@ -230,6 +235,7 @@ class FindFrame < TkFloatTitledFrame
       place('relwidth' => 1, 'width'=>-16,'x' => 8,'y' => y0,'height' => 19)
     }
     @e_what_entry = TkWinfo.children(@e_what)[0]
+    # this means "after each key press 
     @e_what_entry.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_what_entry))})
     
     y0 = y0 + d
@@ -245,7 +251,7 @@ class FindFrame < TkFloatTitledFrame
       autocomplete 'true'
       expand 'tab'
       takefocus 'true'
-      #pack('padx'=>10, 'fill'=>'x')
+            #pack('padx'=>10, 'fill'=>'x')
       place('relwidth' => 1, 'width'=>-16,'x' => 8,'y' => y0,'height' => 19)
     }
     @e_filter_entry = TkWinfo.children(@e_filter)[0]
@@ -271,7 +277,9 @@ class FindFrame < TkFloatTitledFrame
       #pack('fill'=>'x')
       #place('relwidth' => 1, 'width'=>-16,'x' => 8,'y' => y0,'height' => 19)
     }
-    @e_dir.text($pwd)
+    @e_dir.text(MonitorLastUsedDir.get_last_dir)
+    @e_dir_entry = TkWinfo.children(@e_dir)[0]
+
     @b_dir = TkButton.new(@e_dir, Arcadia.style('button') ){
       compound  'none'
       default  'disabled'

@@ -45,7 +45,9 @@ class TreeNode
 			 break if node != nil
 	  }
 	  if node == nil
-	    if _path.length > 0 && (_path.include?("/")||_path.include?("\\"))
+	    if _path == '/' || _path == '\\'
+	       # ok -- we have the root
+	    elsif _path.length > 0 && (_path.include?("/")||_path.include?("\\"))
 	      _path.include?("/")?_sep="/":_sep="\\"
 	      _parent_length = _path.length - _path.split(_sep)[-1].length
 	      _parent_path = _path[0.._parent_length-2]
@@ -121,7 +123,7 @@ class FilesHistrory < ArcadiaExt
         if String.method_defined?(:lines)
       	   selection_lines = _self.selection_get[0].lines
         else
-      	   selection_lines = _self.selection_get[0]
+      	   selection_lines = _self.selection_get[0].split("\n")
         end
        	selection_lines.each{|_block|
         	 _selected = _selected + _block.to_s + "\s" 

@@ -8,8 +8,6 @@
 #   &require_omissis=tk/label
 #   &require_omissis=tk/toplevel
 
-
-
 require "conf/arcadia.res"
 require 'tkextlib/bwidget'
 require "lib/a-tkcommons"
@@ -89,7 +87,7 @@ class Arcadia < TkApplication
     Tk.update_idletasks
     #sleep(1)
     @splash.destroy  if @splash
-    if @first_run
+    if @first_run # first ARCADIA ever
       Arcadia.process_event(OpenBufferEvent.new(self,'file'=>'README'))
     elsif ARGV.length > 0
       ARGV.each{|_f|
@@ -150,7 +148,12 @@ class Arcadia < TkApplication
            if var_plat.length > 1
              new_key = var_plat[0] + ':' + name + '.' + var_plat[1]
            else
-             new_key = name+'.'+key
+             begin
+              new_key = name+'.'+key
+             rescue => e
+              puts 'is an extension missing a name?'
+              raise e
+             end
            end	
        	   conf_hash2[new_key]= value
        	 }
@@ -254,7 +257,14 @@ class Arcadia < TkApplication
 	      require source 
       end
       if class_name.strip.length > 0
-        publish(_extension, eval(class_name).new(self, _extension))
+        klass = nil
+        begin
+          klass = eval(class_name)
+        rescue => e
+          puts 'does an extension class have the wrong name associated with it, in its conf file?, or is not listing the right .rb file?'
+          raise e
+        end
+        publish(_extension, klass.new(self, _extension))
       end
     rescue Exception,LoadError
       ret = false
@@ -376,7 +386,7 @@ class Arcadia < TkApplication
     publish('buffers.code.in_memory',Hash.new)
     publish('action.load_code_from_buffers', proc{TkBuffersChoise.new})
     publish('output.action.run_last', proc{$arcadia['output'].run_last})
-    publish('main.action.open_file', proc{self['editor'].open_file(Tk.getOpenFile)})
+    publish('main.action.open_file', proc{self['editor'].open_file(open_file_dialog)})
     @splash.next_step('... load obj controller')  if @splash
     @splash.next_step('... load editor')  if @splash
     publish('main.action.new_file',proc{$arcadia['editor'].open_buffer()})
@@ -975,7 +985,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
   def build
     menu_spec_file = [
       ['File', 0],
-      ['Open', proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>Tk.getOpenFile))}, 0],
+      ['Open', proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>open_file_dialog))}, 0],
       ['New', $arcadia['main.action.new_file'], 0],
       #['Save', proc{EditorContract.instance.save_file_raised(self)},0],
       ['Save', proc{Arcadia.process_event(SaveBufferEvent.new(self))},0],
@@ -985,15 +995,21 @@ class ArcadiaMainMenu < ArcadiaUserControl
       menu_spec_edit = [['Edit', 0],
       ['Cut', $arcadia['main.action.edit_cut'], 2],
       ['Copy', $arcadia['main.action.edit_copy'], 0],
-      ['Paste', $arcadia['main.action.edit_paste'], 0]]
+      ['Paste', $arcadia['main.action.edit_paste'], 0],
+      ['Prettify Current', proc{Arcadia.process_event(PrettifyTextEvent.new(self))}, 0]]
+      
       menu_spec_search = [['Search', 0],
-      ['Find ...', proc{Arcadia.process_event(SearchBufferEvent.new(self))}, 2],
+      ['Find/Replace ...', proc{Arcadia.process_event(SearchBufferEvent.new(self))}, 2],
       ['Find in files...', proc{Arcadia.process_event(SearchInFilesEvent.new(self))}, 2],
       ['Ack in files...', proc{Arcadia.process_event(AckInFilesEvent.new(self))}, 2],
       ['Go to line ...', proc{Arcadia.process_event(GoToLineBufferEvent.new(self))}, 2]]
-      menu_spec_view = [['View', 0],['Show/Hide Toolbar', proc{$arcadia.show_hide_toolbar}, 2]]
+      menu_spec_view = [['View', 0],['Show/Hide Toolbar', proc{$arcadia.show_hide_toolbar}, 2],
+      ['Close current tab', proc{Arcadia.process_event(CloseCurrentTabEvent.new(self))}, 0],
+      ]
       menu_spec_tools = [['Tools', 0],
-      ['Keys-test', $arcadia['action.test.keys'], 2]
+      ['Keys-test', $arcadia['action.test.keys'], 2],
+      ['Edit prefs', proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>$arcadia.local_file_config))}, 0],
+      ['Load from edited prefs', proc{$arcadia.load_config}, 0]
     ]
     menu_spec_help = [['Help', 0],
     ['About', $arcadia['action.show_about'], 2],]
@@ -1097,6 +1113,7 @@ class ArcadiaAboutSplash < TkToplevel
     _y = TkWinfo.screenheight(self)/2 -  _height / 2
     geometry = _width.to_s+'x'+_height.to_s+'+'+_x.to_s+'+'+_y.to_s
     Tk.tk_call('wm', 'geometry', self, geometry )
+    #bind("ButtonPress-1", proc{self.destroy})
     bind("Double-Button-1", proc{self.destroy})
     info = TkApplication.sys_info
     set_sysinfo(info)
@@ -1909,7 +1926,7 @@ class ArcadiaLayout
         end
       end
     else  # CLOSE OTHER
-      # verifichiamo se la contro parte ÃÂÃÂ¨ uno splitter_adapter
+      # verifichiamo se la contro parte ÃÂ¨ uno splitter_adapter
       other_ds = domains_on_frame(@panels[_domain]['splitted_frames'].frame1)
       if other_ds.length == 1
         other_dom = other_ds[0]

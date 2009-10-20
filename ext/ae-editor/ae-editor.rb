@@ -682,6 +682,7 @@ class AgEditorOutline
     end
   end
   
+  # I think this is "if synced expand out the outline for the current selection"
   def shure_select_node(_node)
     return if @selecting_node
     #return if @tree_exp.exist?(_node.rif)
@@ -754,7 +755,7 @@ class AgEditorOutline
         if !_editor_line.include?(_hinner_text)
           Arcadia.console(self, 'msg'=>"... rebuild tree \n")
           if @tree_thread && @tree_thread.alive?
-            @tree_thread.exit
+            @tree_thread.exit # kill the old tree
           end
           @tree_thread = Thread.new{
             build_tree(_line)
@@ -821,7 +822,7 @@ class AgEditorOutline
       if (_label_match) && (_label_match.strip == _son.label.strip)
         @selected = _son
       end
-      build_tree_from_node(_son, _label_match)
+      build_tree_from_node(_son, _label_match) # recursion -- if there are no sons it will do nothing
     end
   end
 
@@ -1335,6 +1336,9 @@ class AgEditor
 
   end
   
+  #
+  # setup all key bindings (normal, +control, etc)
+  #
   def activate_key_binding
     activate_complete_code_key_binding if @is_ruby
     @text.bind_append("Control-KeyPress"){|e|
@@ -1347,7 +1351,7 @@ class AgEditor
         begin
           @text.edit_undo
         rescue RuntimeError => e
-          throw e unless e.to_s.include? "nothing to undo" # this is ok
+          throw e unless e.to_s.include? "nothing to undo" # this is ok--we've done undo back to the beginning
           break
         end
         _e = @text.index('insert').split('.')[0].to_i
@@ -1362,7 +1366,7 @@ class AgEditor
         if @file
           _dir = File.dirname(@file)
         else
-          _dir = Dir.pwd
+          _dir = MonitorLastUsedDir.get_last_dir
         end
         Arcadia.process_event(OpenBufferEvent.new(self,'file'=>Tk.getOpenFile('initialdir'=>_dir)))
         break
@@ -1393,6 +1397,12 @@ class AgEditor
         @text.insert('insert',"{")
       when 'plus'
         @text.insert('insert',"}")
+      when 'g'
+        Arcadia.process_event(GoToLineBufferEvent.new(self))
+      when 'n'
+        $arcadia['main.action.new_file'] # necessary? Is there an event for this?
+      when 'w'
+        Arcadia.process_event(CloseCurrentTabEvent.new(self))
       end
     }
 
@@ -1566,6 +1576,7 @@ class AgEditor
     }
   end
 
+  # show the "find in file" dialog
   def find
     _r = @text.tag_ranges('sel')
     if _r.length>0
@@ -2009,8 +2020,8 @@ class AgEditor
       :command,
       :label=>'Data image from file',
       :hidemargin => false,
-      :command=> proc{
-        file = Tk.getOpenFile
+      :command=>       proc{
+        file = open_file_dialog
         if file
           require 'base64'
           f = File.open(file,"rb")
@@ -2449,6 +2460,7 @@ class AgEditor
   end
 
 
+  # modify in this instance means the (...) in the tab header of each file
   def modified?
     return !(@buffer === text_value)
   end
@@ -2669,15 +2681,20 @@ class AgEditor
       @text.edit_reset
     end
   end
-  def save
+  
+  
+  def save ignore_read_only = false
     if !@file
       save_as
-    elsif @read_only
-      Arcadia.dialog(self, 
-        'type' => 'ok',
-        'title' =>"#{@file}:read-only", 
-        'msg' =>"The file : #{@file} is read-only!",
-        'level' =>'warning')
+    elsif @read_only && !ignore_read_only
+      r=Arcadia.dialog(self,
+      'type' => 'yes_no_cancel',
+      'title' =>"#{@file}:read-only",
+      'msg' =>"The file : #{@file} is read-only! -- save anyway?",
+      'level' =>'warning')
+      if r=="yes"
+        save true
+      end
     else
       f = File.new(@file, "wb")
       begin
@@ -2737,9 +2754,8 @@ class AgEditor
           if Tk.messageBox('icon' => 'error', 'type' => 'yesno',
             'title' => '(Arcadia) Libs', 'parent' => @text,
             'message' => msg) == 'yes'
-            @text.delete('1.0','end')
-            reset_highlight if @highlighting
-            load_file(@file)
+            reload
+            
           else
             @file_last_access_time = ftime
           end
@@ -2759,6 +2775,11 @@ class AgEditor
     end
   end
   
+  def reload
+    @text.delete('1.0','end')
+            reset_highlight if @highlighting
+            load_file(@file)
+   end
 
   def init_editing(_ext='rb', _w1=150, _w2=60)
     @is_ruby = _ext=='rb'|| _ext=='rbw'
@@ -3073,8 +3094,9 @@ class AgMultiEditor < ArcadiaExt
   def on_build(_event)
     @main_frame = AgMultiEditorView.new(self.frame.hinner_frame)
     @outline_bar = AgEditorOutlineToolbar.new(self.frame(1).hinner_frame, self)
-    create_find
+    create_find # this is the "find within current file" one
     pop_up_menu
+    
     #self.open_last_files
   end
 
@@ -3306,7 +3328,7 @@ class AgMultiEditor < ArcadiaExt
       when NewBufferEvent
         self.open_buffer
       when OpenBufferEvent
-        if _event.file 
+        if _event.file
           if _event.row
             _index = _event.row.to_s+'.0' 
           end
@@ -3335,7 +3357,7 @@ class AgMultiEditor < ArcadiaExt
             #add_reverse_item(_e)
           end
         else
-          _event.file = Tk.getOpenFile
+          _event.file = open_file_dialog
           self.open_file(_event.file)
         end
       when CloseBufferEvent
@@ -3346,8 +3368,9 @@ class AgMultiEditor < ArcadiaExt
         if _event.file == nil
           self.raised.save_as
         else
-          self.save_as_file(_event.file)
+          self.save_as_file(_event.file)          
         end
+        _event.new_file = self.raised.file
       when SaveBufferEvent
         if _event.file == nil && _event.title == nil 
           self.raised.save
@@ -3364,6 +3387,14 @@ class AgMultiEditor < ArcadiaExt
         if _event.line == nil
           @find.show_go_to_line_dialog
         end
+      when CloseCurrentTabEvent
+         close_raised
+      when PrettifyTextEvent
+        require 'rbeautify.rb' # gem
+        self.raised.save # so we can beautify it kludgely here...
+        path = raised.file
+        RBeautify.beautify_file(path)
+        self.raised.reload
       when MoveBufferEvent
         if _event.old_file && _event.new_file && editor_exist?(_event.old_file)
           #close_file(_event.old_file)
@@ -3375,7 +3406,6 @@ class AgMultiEditor < ArcadiaExt
   def get_find
     @find
   end
-  
   
   def create_find
     @find = Find.new(@arcadia.layout.root, self)

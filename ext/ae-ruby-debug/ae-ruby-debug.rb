@@ -475,8 +475,8 @@ class RubyDebugView
     begin
       if _command == 'quit'
         msg = "Really quit debug ? (y/n)"
-        ans = Tk.messageBox('icon' => 'question', 'type' => 'yesno',
-        'title' => '(Arcadia) Debug', 'message' => msg)
+        ans = 'yes'#Tk.messageBox('icon' => 'question', 'type' => 'yesno',
+#        'title' => '(Arcadia) Debug', 'message' => msg)
         if  ans == 'yes'
           debug_send(:quit_yes)
           clear
@@ -745,7 +745,7 @@ class RubyDebugView
         end
         #@controller.rdc.send(_command)
       rescue Exception => e
-        Arcadia.console(self, 'msg'=>"---> "+e.to_s, 'level'=>'debug')
+        Arcadia.console(self, 'msg'=>"---> "+e.to_s + ' ' + e.backtrace[0], 'level'=>'debug')
         #Arcadia.new_debug_msg(self,"---> "+e.to_s)
       end
     end
@@ -1562,7 +1562,7 @@ class RubyDebug < ArcadiaExt
           end
         end
       rescue Exception => e
-        Arcadia.console(self, 'msg'=>"---> "+e.to_s, 'level'=>'debug')
+        Arcadia.console(self, 'msg'=>"---> "+e.to_s+ ' ' + e.backtrace[0], 'level'=>'debug')
       end
     end
   end
@@ -1599,7 +1599,7 @@ class RubyDebug < ArcadiaExt
         begin
           debug_free
         rescue Exception => e
-          Arcadia.console(self, 'msg'=>"debug_quit:---> "+e.to_s, 'level'=>'debug')
+          Arcadia.console(self, 'msg'=>"debug_quit:---> "+e.to_s+ ' ' + e.backtrace[0], 'level'=>'debug')
           #Arcadia.new_debug_msg(self, "debug_quit:---> "+e.to_s)
           #@arcadia['shell'].outln("debug_quit:---> "+e.to_s )
         end

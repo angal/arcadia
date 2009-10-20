@@ -418,7 +418,7 @@ class DirProjects < ArcadiaExt
         if String.method_defined?(:lines)
       	   selection_lines = @htree.selection_get[0].lines
         else
-      	   selection_lines = @htree.selection_get[0]
+      	   selection_lines = @htree.selection_get[0].split("\n")
         end
         selection_lines.each{|_block|
           _selected = _selected + _block.to_s + "\s" 
@@ -433,7 +433,7 @@ class DirProjects < ArcadiaExt
 
   def do_new_project(_parent_folder_node=nil)
     if _parent_folder_node.nil?
-      _parent_folder_node=Tk.chooseDirectory 
+      _parent_folder_node=Tk.chooseDirectory 'initialdir' =>  MonitorLastUsedDir.get_last_dir
     end
     if _parent_folder_node && File.exists?(node2file(_parent_folder_node)) && File.ftype(node2file(_parent_folder_node)) == 'directory'
       tmp_node_name = "#{node2file(_parent_folder_node)}#{File::SEPARATOR}_new_project_"
@@ -462,7 +462,7 @@ class DirProjects < ArcadiaExt
   
   def do_open_project(_proj_name=nil)
     if _proj_name.nil?
-      _proj_name=Tk.chooseDirectory 
+      _proj_name=Tk.chooseDirectory 'initialdir' =>  MonitorLastUsedDir.get_last_dir
       add_project(_proj_name) if _proj_name && File.exists?(_proj_name)
     end
   end

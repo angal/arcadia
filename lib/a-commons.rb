@@ -205,6 +205,10 @@ class ArcadiaExt
     #ObjectSpace.define_finalizer(self, self.method(:finalize).to_proc)
   end
   
+  def open_file_dialog
+     Tk.getOpenFile 'initialdir' => MonitorLastUsedDir.get_last_dir
+  end
+  
   def conf_array(_name)
     res = []
     value = @arcadia['conf'][_name]
@@ -347,7 +351,7 @@ module EventBus #(or SourceEvent)
     #before fase
     event_classes.each do |_c|
       _process_fase(_c, _event, 'before')
-      break if _event.is_breaked?
+      break if _event.is_breaked? # not responding to this means "you need to pass in an instance, not a class name
     end unless _event.is_breaked?
     # fase
     event_classes.each do |_c|
@@ -520,6 +524,8 @@ module Configurable
         f.close unless f.nil?
       end
       return r_hash      
+    else
+      puts 'warning--file does not exist', _property_file
     end
   end
   
@@ -644,7 +650,7 @@ class Application
 
   def initialize(_ap=ApplicationParams.new)
     @@instance = self
-    eval('$'+_ap.name+'=self')
+    eval('$'+_ap.name+'=self') # set $arcadia to this instance
     publish('applicationParams', _ap)
     publish(_ap.name,self)
     @first_run = false
@@ -652,6 +658,7 @@ class Application
     if !File.exists?(self['applicationParams'].persistent_file)
       File.new(self['applicationParams'].persistent_file, File::CREAT).close
     end
+    # read in the settings'
     publish('conf', properties_file2hash(self['applicationParams'].config_file)) if self['applicationParams'].config_file
     publish('origin_conf', Hash.new.update(self['conf'])) if self['conf']
     publish('pers', properties_file2hash(self['applicationParams'].persistent_file)) if self['applicationParams'].persistent_file
@@ -700,9 +707,8 @@ class Application
   end
 
   def Application.del_conf(_k)
-    @@instance['conf'].delete(_k) if @@instance['conf'][_k]
+    @@instance['conf'].delete(_k)
   end
-
 
   def prepare
   end
@@ -716,8 +722,12 @@ class Application
     end
   end
 
+  def local_file_config
+    File.join(local_dir, File.basename(self['applicationParams'].config_file))
+  end
+  
   def update_local_config
-      local_file_config = File.join(local_dir,File.basename(self['applicationParams'].config_file))
+      # local_dir is ~/arcadia
       if FileTest.exist?(local_file_config)
         if FileTest.writable?(local_dir)
           f = File.new(local_file_config, "w")
@@ -727,7 +737,7 @@ class Application
               if p
                 p.keys.sort.each{|key|
                   if self['origin_conf'][key] == self['conf'][key]
-                    f.syswrite('#'+key+'='+self['conf'][key]+"\n")
+                    f.syswrite('#'+key+'='+self['conf'][key]+"\n") # write it as a comment since it isn't a real change
                   else
                     f.syswrite(key+'='+self['conf'][key]+"\n")
                   end
@@ -743,7 +753,6 @@ class Application
   
   # this method load config file from local directory for personalizations
   def load_local_config(_create_if_not_exist=true)
-      local_file_config = File.join(local_dir,File.basename(self['applicationParams'].config_file))
       if FileTest.exist?(local_file_config)
         self['conf'].update(self.properties_file2hash(local_file_config))
       elsif _create_if_not_exist
@@ -785,13 +794,14 @@ class Application
   end
   
   def local_dir
-    _local_dir = File.join(ENV["HOME"],'.'+self['applicationParams'].name)  if ENV["HOME"] 
+    home = File.expand_path '~'
+    _local_dir = File.join(home,'.'+self['applicationParams'].name) if home
     if _local_dir && !File.exist?(_local_dir)
-      if FileTest.exist?(ENV["HOME"])
+      if FileTest.exist?(home)
         Dir.mkdir(_local_dir)
         @first_run = true
       else
-        msg = "Locad dir "+'"'+ENV["HOME"]+'"'+" must be writable!"
+        msg = "Local dir "+'"'+home+'"'+" must be writable!"
         Arcadia.dialog(self, 'type'=>'ok', 'title' => "(#{self['applicationParams'].name})", 'msg' => msg, 'level'=>'error')
         exit
       end
