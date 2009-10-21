@@ -3423,8 +3423,10 @@ class AgMultiEditor < ArcadiaExt
     _files =''
     @tabs_editor.each_value{|editor|
       if editor.file != nil
+        #_insert_index = editor.text.index('insert')
+        _insert_index = editor.text.index('@0,0')
         _files=_files+'|' if _files.strip.length > 0
-        _files=_files + editor.file
+        _files=_files + "#{editor.file};#{_insert_index}"
       end
       #p editor.text.dump_tag('0.1',editor.text.index('end'))
       close_editor(editor,true)
@@ -3494,8 +3496,10 @@ class AgMultiEditor < ArcadiaExt
       _files_index =$arcadia['pers']['editor.files.open'].split("|")
       _files_index.each do |value| 
         _file,_index = value.split(';')
-        if _file
-          open_file(_file,_index)
+        if _file && _index
+          open_file(_file,_index,false)
+        else
+          open_file(_file)
         end
       end
     end
