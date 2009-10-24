@@ -1419,7 +1419,7 @@ class AgEditor
           suf = "\t"
         end
 
-        for _row in _row_begin..._row_end
+        for _row in _row_begin.._row_end
           @text.insert(_row.to_s+'.0',suf)
         end
       when 'U'
@@ -1433,7 +1433,7 @@ class AgEditor
           suf = "\t"
         end
         _l_suf = 	suf.length.to_s
-        for _row in _row_begin..._row_end
+        for _row in _row_begin.._row_end
           if @text.get(_row.to_s+'.0',_row.to_s+'.'+_l_suf) == suf
             @text.delete(_row.to_s+'.0',_row.to_s+'.'+_l_suf)
           end
@@ -1443,7 +1443,7 @@ class AgEditor
         _row_begin = _r[0][0].split('.')[0].to_i
         _row_end = _r[_r.length - 1][1].split('.')[0].to_i
 
-        for _row in _row_begin..._row_end
+        for _row in _row_begin.._row_end
           if @text.get(_row.to_s+'.0',_row.to_s+'.1') == "#"
             @text.delete(_row.to_s+'.0',_row.to_s+'.1')
           else
@@ -1495,7 +1495,7 @@ class AgEditor
           else
             suf = "\t"
           end
-          for _row in _row_begin..._row_end
+          for _row in _row_begin.._row_end
             @text.insert(_row.to_s+'.0', suf)
           end
           break
@@ -1565,7 +1565,7 @@ class AgEditor
             suf = "\t"
             n_space = 1
           end
-          for _row in _row_begin..._row_end
+          for _row in _row_begin.._row_end
             if @text.get(_row.to_s+'.0',_row.to_s+'.'+n_space.to_s) == suf
               @text.delete(_row.to_s+'.0',_row.to_s+'.'+n_space.to_s)
             end
@@ -2541,6 +2541,7 @@ class AgEditor
           @last_zone_end = _zone_end
         end
         @text_line_num.delete('1.0','end')
+        
 
         _rx, _ry, _widht, _heigth = @text.bbox(line_begin_index);
         
@@ -2580,7 +2581,7 @@ class AgEditor
           end
         end
         if _ry && _ry < 0 
-          @text_line_num.yview_scroll(_ry.abs+3,"pixels")
+          @text_line_num.yview_scroll(_ry.abs+2,"pixels")
         end
       end
       refresh_outline if Tk.focus==@text
@@ -2600,11 +2601,11 @@ class AgEditor
       to_tag = Array.new
       value.each{|ite|
         to_tag.concat(ite)
-        if @is_tag_bold[key]
+        if @is_tag_bold[key.to_s]
           if ite.length==2
             row_begin = ite[0].split('.')[0].to_i
             row_end = ite[1].split('.')[0].to_i
-            for row in row_begin...row_end 
+            for row in row_begin..row_end 
               @is_line_bold[row]=true
             end
           end
