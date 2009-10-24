@@ -175,11 +175,13 @@ class DirProjects < ArcadiaExt
 #    @image_kfile_rb = TkPhotoImage.new('dat' => RUBY_DOCUMENT_GIF)
 #    @image_kfile = TkPhotoImage.new('dat' => DOCUMENT_GIF)
 	  self.load_projects
-    @htree.areabind_append('KeyPress'){|e| key_press(e[1])}
+    @htree.areabind_append('KeyPress',proc{|k| 
+        key_press(k)
+    },"%K")
 	end
 	
-	def key_press(_e)
-      case _e.keysym
+	def key_press(_keysym)
+      case _keysym
         when 'F5'
         _selected = self.selected
         do_refresh(_selected)
