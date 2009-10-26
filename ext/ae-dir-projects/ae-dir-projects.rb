@@ -103,9 +103,9 @@ class DirProjects < ArcadiaExt
           @sync = false
           begin
   	        Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>node2file(_selected)))
-  	      ensure
+  	       ensure
             @sync = _sync_val
-  	      end
+  	       end
         elsif !_selected.nil? && @htree.open?(node2file(_selected))
           @htree.close_tree(node2file(_selected))
         elsif !_selected.nil?
@@ -453,7 +453,7 @@ class DirProjects < ArcadiaExt
         ensure
           @htree.delete(file2node(tmp_node_name))
         end
-        return _ret
+        _ret
       }
 #      @htree.textbind('KeyPress', proc{|e| 
 #      p 'pippo'})
@@ -493,7 +493,7 @@ class DirProjects < ArcadiaExt
           @htree.delete(file2node(tmp_node_name))
           shure_select_node(new_dir_name)
         end
-        return _ret
+        _ret
       }
       @htree.edit(tmp_node_name, tmp_node_name.split(File::SEPARATOR)[-1], _verify_cmd, 1)
     end
@@ -517,7 +517,7 @@ class DirProjects < ArcadiaExt
         ensure
           @htree.delete(file2node(tmp_node_name))
         end
-        return _ret
+        _ret
       }
       @htree.edit(tmp_node_name, tmp_node_name.split(File::SEPARATOR)[-1], _verify_cmd, 1)
     end
@@ -613,7 +613,7 @@ class DirProjects < ArcadiaExt
           shure_delete_node(_source)
           do_refresh(source_dir)
         end
-        return _ret
+        _ret
       }
       @htree.edit(_source, _source.split(File::SEPARATOR)[-1], _verify_cmd, 1)
     end
