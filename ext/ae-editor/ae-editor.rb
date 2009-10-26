@@ -720,29 +720,6 @@ class AgEditorOutline
     end
   end
 
-#  def initialize_sync(_frame)
-#    @cb_sync = TkCheckButton.new(_frame, Arcadia.style('checkbox')){
-#      text  'Sync'
-#      justify  'left'
-#      indicatoron 0
-#      offrelief 'raised'
-#      image TkPhotoImage.new('dat' => SYNCICON20_GIF)
-#      place('x' => 0,'y' => 0,'height' => 26)
-#    }
-#    Tk::BWidget::DynamicHelp::add(@cb_sync, 
-#      'text'=>'Link open editors with content in the Navigator')
-#
-#    do_check = proc {
-#      if @cb_sync.cget('onvalue')==@cb_sync.cget('variable').value.to_i
-#        sync_on
-#      else
-#        sync_off
-#      end
-#    }
-#    @sync = false
-#    @cb_sync.command(do_check)
-#  end
-  
   def initialize_tree(_frame)
     _tree_goto = proc{|_self|
       sync_val = @bar.sync
@@ -785,6 +762,11 @@ class AgEditorOutline
     pop_up_menu_tree
   end
 
+  def destroy
+    @tree_scroll_wrapper.destroy
+    @tree_exp.destroy
+  end
+  
   def show
     @tree_scroll_wrapper.show(0,26)
     Tk.update
@@ -1419,7 +1401,7 @@ class AgEditor
           suf = "\t"
         end
 
-        for _row in _row_begin.._row_end
+        for _row in _row_begin..._row_end
           @text.insert(_row.to_s+'.0',suf)
         end
       when 'U'
@@ -1433,7 +1415,7 @@ class AgEditor
           suf = "\t"
         end
         _l_suf = 	suf.length.to_s
-        for _row in _row_begin.._row_end
+        for _row in _row_begin..._row_end
           if @text.get(_row.to_s+'.0',_row.to_s+'.'+_l_suf) == suf
             @text.delete(_row.to_s+'.0',_row.to_s+'.'+_l_suf)
           end
@@ -1443,16 +1425,15 @@ class AgEditor
         _row_begin = _r[0][0].split('.')[0].to_i
         _row_end = _r[_r.length - 1][1].split('.')[0].to_i
 
-        for _row in _row_begin.._row_end
+        for _row in _row_begin..._row_end
           if @text.get(_row.to_s+'.0',_row.to_s+'.1') == "#"
             @text.delete(_row.to_s+'.0',_row.to_s+'.1')
           else
             @text.insert(_row.to_s+'.0',"#")
           end
           #rehighlightline(_row) if @highlighting
-          rehighlightlines(_row, _row) if @highlighting
         end
-
+        rehighlightlines(_row_begin, _row_end) if @highlighting
       end
     }
     
@@ -1495,7 +1476,7 @@ class AgEditor
           else
             suf = "\t"
           end
-          for _row in _row_begin.._row_end
+          for _row in _row_begin..._row_end
             @text.insert(_row.to_s+'.0', suf)
           end
           break
@@ -1565,7 +1546,7 @@ class AgEditor
             suf = "\t"
             n_space = 1
           end
-          for _row in _row_begin.._row_end
+          for _row in _row_begin..._row_end
             if @text.get(_row.to_s+'.0',_row.to_s+'.'+n_space.to_s) == suf
               @text.delete(_row.to_s+'.0',_row.to_s+'.'+n_space.to_s)
             end
@@ -1815,9 +1796,14 @@ class AgEditor
       }
       @highlight_scanner = new_highlight_scanner
       reset_highlight
-      @highlight_scanner.classes.each{|c|
-        do_tag_configure(c)
-      }
+      if @highlight_scanner
+        @highlight_scanner.classes.each{|c|
+          do_tag_configure(c)
+        }
+        @highlighting = true
+      else
+        @highlighting = false
+      end
     end
   end
 
@@ -2585,6 +2571,11 @@ class AgEditor
         end
       end
       refresh_outline if Tk.focus==@text
+#      if TkWinfo.mapped?(@text_line_num)
+#        x,y,w,h = @text.bbox("#{(line_end).to_s}.3");
+#        @fm1.splitter_frame.go(w,0)
+#        @fm1.do_resize
+#      end
   end
 
   def highlightlines(_row_begin, _row_end, _check_mod = false)
@@ -2777,10 +2768,13 @@ class AgEditor
   end
   
   def reload
+    pos_index = @text.index('insert') 
     @text.delete('1.0','end')
-            reset_highlight if @highlighting
-            load_file(@file)
-   end
+    reset_highlight if @highlighting
+    load_file(@file)
+    @text.see(pos_index)
+    @text.set_insert(pos_index)
+  end
 
   def init_editing(_ext='rb', _w1=150, _w2=60)
     @is_ruby = _ext=='rb'|| _ext=='rbw'
@@ -2814,6 +2808,11 @@ class AgEditor
 
   def hide_outline
     @outline.hide if @outline
+  end
+
+  def destroy_outline
+    @outline.destroy if @outline
+    @outline = nil
   end
   
   def file_extension(_filename=nil)
@@ -3838,6 +3837,7 @@ class AgMultiEditor < ArcadiaExt
 
   def close_editor(_editor, _force=false)
     if _force || can_close_editor?(_editor)
+      _editor.destroy_outline
       close_tab(_editor.page_frame)
     else
       return
