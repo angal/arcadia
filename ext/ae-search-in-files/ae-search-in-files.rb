@@ -34,11 +34,12 @@ class SearchInFilesListener
     @find = FindFrame.new(@service.arcadia.layout.root)
     @find.on_close=proc{@find.hide}
     @find.hide
-    @find.b_go.bind('1', proc{Thread.new{do_find}}) # add trigger to button    
+    @find.b_go.bind('1', proc{Thread.new{update_all_combo;do_find}}) # add trigger to button    
     
     enter_proc = proc {|e|
       case e.keysym
       when 'Return'
+        update_all_combo    
         do_find
         Tk.callback_break
       end
@@ -50,6 +51,33 @@ class SearchInFilesListener
     @find.title(title)
   end
   private :create_find
+
+  def update_what_combo(_txt)
+    values = @find.e_what.cget('values')
+    if (values != nil && !values.include?(_txt))
+      @find.e_what.insert('end', _txt)
+    end
+  end
+
+  def update_filter_combo(_txt)
+    values = @find.e_filter.cget('values')
+    if (values != nil && !values.include?(_txt))
+      @find.e_filter.insert('end', _txt)
+    end
+  end
+
+  def update_dir_combo(_txt)
+    values = @find.e_dir.cget('values')
+    if (values != nil && !values.include?(_txt))
+      @find.e_dir.insert('end', _txt)
+    end
+  end
+  
+  def update_all_combo
+    update_what_combo(@find.e_what.text)
+    update_filter_combo(@find.e_filter.text)
+    update_dir_combo(@find.e_dir.text)
+  end
   
   def do_find
     return if @find.e_what.text.strip.length == 0  || @find.e_filter.text.strip.length == 0  || @find.e_dir.text.strip.length == 0
@@ -257,6 +285,8 @@ class FindFrame < TkFloatTitledFrame
     @e_filter_entry = TkWinfo.children(@e_filter)[0]
     @e_filter_entry.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_filter_entry))})
 
+    @e_filter.insert('end', '*.*')
+    @e_filter.insert('end', '*.rb')
     @e_filter.text('*.rb')
     y0 = y0 + d
 
