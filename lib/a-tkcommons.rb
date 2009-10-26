@@ -1338,6 +1338,11 @@ class TkScrollWidget
       do_xscrollcommand(first,last)
     })
   end
+
+  def destroy
+    @h_scroll.destroy
+    @v_scroll.destroy
+  end
   
   def add_yscrollcommand(cmd=Proc.new)
     @v_scroll_command = cmd
@@ -1432,5 +1437,3 @@ class KeyTest < TkFloatTitledFrame
     place('x'=>100,'y'=>100,'height'=> 220,'width'=> 500)
   end
 end
-
-
