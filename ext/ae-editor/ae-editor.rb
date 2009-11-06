@@ -2009,7 +2009,7 @@ class AgEditor
       :label=>'Data image from file',
       :hidemargin => false,
       :command=>       proc{
-        file = open_file_dialog
+        file = Arcadia.open_file_dialog
         if file
           require 'base64'
           f = File.open(file,"rb")
@@ -3359,7 +3359,7 @@ class AgMultiEditor < ArcadiaExt
             #add_reverse_item(_e)
           end
         else
-          _event.file = open_file_dialog
+          _event.file = Arcadia.open_file_dialog
           self.open_file(_event.file)
         end
       when CloseBufferEvent
