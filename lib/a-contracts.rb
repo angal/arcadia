@@ -49,6 +49,7 @@ class NeedRubyGemWizardEvent < ArcadiaEvent
   attr_accessor :gem_repository
   attr_accessor :gem_min_version
   attr_accessor :gem_max_version
+  attr_accessor :gem_events
 end
 
 # +------------------------------------------+
