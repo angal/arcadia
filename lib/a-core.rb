@@ -1195,6 +1195,9 @@ class ArcadiaSh < TkToplevel
   attr_reader :wait, :result
   def initialize
     super
+    title 'ArcadiaSh'
+    geometry = '800x200+10+10'
+    geometry(geometry)
     @text = TkScrollText.new(self, Arcadia.style('text')){
       wrap  'none'
       undo true
@@ -1217,10 +1220,6 @@ class ArcadiaSh < TkToplevel
     @text.bind_append("KeyPress"){|e| input(e.keysym)}
     @text.bind_append("Control-Shift-KeyPress"){|e| input(e.keysym)}
     @text.bind_append("Shift-KeyPress"){|e| input(e.keysym)}
-    
-    geometry = '800x200+10+10'
-    geometry(geometry)
-    
   end
   
   def exec_buffer
