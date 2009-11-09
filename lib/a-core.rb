@@ -397,7 +397,7 @@ class Arcadia < TkApplication
     publish('buffers.code.in_memory',Hash.new)
     publish('action.load_code_from_buffers', proc{TkBuffersChoise.new})
     publish('output.action.run_last', proc{$arcadia['output'].run_last})
-    publish('main.action.open_file', proc{self['editor'].open_file(open_file_dialog)})
+    publish('main.action.open_file', proc{self['editor'].open_file(Arcadia.open_file_dialog)})
     @splash.next_step('... load obj controller')  if @splash
     @splash.next_step('... load editor')  if @splash
     publish('main.action.new_file',proc{$arcadia['editor'].open_buffer()})
@@ -639,6 +639,11 @@ class Arcadia < TkApplication
         return @@instance.layout
 	  end
   end
+  
+  def Arcadia.open_file_dialog
+     Tk.getOpenFile 'initialdir' => MonitorLastUsedDir.get_last_dir
+  end
+
   
   def Arcadia.file_icon(_file_name)
     if @@instance['file_icons'] == nil
@@ -996,7 +1001,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
   def build
     menu_spec_file = [
       ['File', 0],
-      ['Open', proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>open_file_dialog))}, 0],
+      ['Open', proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>Arcadia.open_file_dialog))}, 0],
       ['New', $arcadia['main.action.new_file'], 0],
       #['Save', proc{EditorContract.instance.save_file_raised(self)},0],
       ['Save', proc{Arcadia.process_event(SaveBufferEvent.new(self))},0],
@@ -1365,6 +1370,16 @@ class ArcadiaGemsWizard
       end
   end
   
+#  def try_to_install_gem(name, repository=nil, version = '>0')
+#    ret = false
+#    require 'rubygems/command.rb'
+#    require 'rubygems/dependency_installer.rb'
+#    
+#    inst.install name, version
+#    # TODO WIZARD
+#    # TODO accept repository, too
+#  end
+
   def try_to_install_gem(name, repository=nil, version = '>0')
     ret = false
     
@@ -1381,7 +1396,9 @@ class ArcadiaGemsWizard
     sh.destroy
     ret
   end
+
 end
+
 
 class ArcadiaDialogManager
   def initialize(_arcadia)

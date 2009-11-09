@@ -1434,6 +1434,8 @@ class AgEditor
           #rehighlightline(_row) if @highlighting
         end
         rehighlightlines(_row_begin, _row_end) if @highlighting
+      when 'F'
+        Arcadia.process_event(AckInFilesEvent.new(self))
       end
     }
     
@@ -2000,7 +2002,7 @@ class AgEditor
       :label=>'Data image from file',
       :hidemargin => false,
       :command=>       proc{
-        file = open_file_dialog
+        file = Arcadia.open_file_dialog
         if file
           require 'base64'
           f = File.open(file,"rb")
@@ -3350,7 +3352,7 @@ class AgMultiEditor < ArcadiaExt
             #add_reverse_item(_e)
           end
         else
-          _event.file = open_file_dialog
+          _event.file = Arcadia.open_file_dialog
           self.open_file(_event.file)
         end
       when CloseBufferEvent
@@ -3401,7 +3403,7 @@ class AgMultiEditor < ArcadiaExt
   end
   
   def create_find
-    @find = Find.new(@arcadia.layout.root, self)
+    @find = Finder.new(@arcadia.layout.root, self)
     @find.on_close=proc{@find.hide}
     @find.hide
   end
@@ -4030,7 +4032,7 @@ class Findview < TkFloatTitledFrame
   
 end
 
-class Find < Findview
+class Finder < Findview
   attr_reader :e_what
   def initialize(_frame, _controller)
     super(_frame)

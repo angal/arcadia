@@ -205,9 +205,6 @@ class ArcadiaExt
     #ObjectSpace.define_finalizer(self, self.method(:finalize).to_proc)
   end
   
-  def open_file_dialog
-     Tk.getOpenFile 'initialdir' => MonitorLastUsedDir.get_last_dir
-  end
   
   def conf_array(_name)
     res = []
