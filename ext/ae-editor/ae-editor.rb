@@ -1489,17 +1489,10 @@ class AgEditor
 
     @text.bind_append("KeyRelease"){|e|
       case e.keysym
-#        when 'period'
-#          @do_complete = true
-#          #Thread.new do
-#            complete_code.call
-#          #end
-#        when 'Control_L','Return', 'Control_V', 'BackSpace', 'Delete'
-#          do_line_update
-        when 'Up','Down'
+      when 'Up','Down'
           refresh_outline
-#      end
-#      case e.keysym
+      when 'Left', 'Right'
+      
       when 'Return' #,'Control_L', 'Control_V', 'BackSpace', 'Delete'
         _index = @text.index('insert')
         _row, _col = _index.split('.')
@@ -3477,7 +3470,7 @@ class AgMultiEditor < ArcadiaExt
   end
   
   def on_layout_raising_frame(_event)
-    if _event.extension_name == "editor" && _event.frame_name=="outline"
+    if _event.extension_name == "editor" && _event.frame_name=="editor_outline"
       _e = raised
       change_outline(_e, true) if  _e
     end
