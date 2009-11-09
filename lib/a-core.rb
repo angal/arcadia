@@ -51,7 +51,8 @@ class Arcadia < TkApplication
       'background'=> self['conf']['background']
     ).pack('fill'=>'x')
     @mf_root = Tk::BWidget::MainFrame.new(@root,
-     'background'=> self['conf']['background']
+     'background'=> self['conf']['background'],
+     'height'=> 0
       ){
       menu @main_menu_bar
     }.pack(
@@ -181,13 +182,23 @@ class Arcadia < TkApplication
           # consider gem only if it is not installed
           if !gem_available?(gem)
             repository_property =  self['conf']["#{_ext}.gems.#{gem}.repository"]
+            events_property =  self['conf']["#{_ext}.gems.#{gem}.events"]
             args = Hash.new
             args['extension_name']=_ext
             args['gem_name']=gem
             args['gem_repository']=repository_property if repository_property
-            _event = Arcadia.process_event(NeedRubyGemWizardEvent.new(self, args))
-            if _event && _event.results
-              ret = ret && _event.results[0].installed
+            args['gem_events']=events_property if events_property
+            if events_property
+              #EventWatcher.new
+              events_str = events_property.split(',')
+              events_str.each{|event_str|
+                EventWatcherForGem.new(eval(event_str),args)
+              }
+            else
+              _event = Arcadia.process_event(NeedRubyGemWizardEvent.new(self, args))
+              if _event && _event.results
+                ret = ret && _event.results[0].installed
+              end
             end
             break if !ret
           end
@@ -519,7 +530,7 @@ class Arcadia < TkApplication
 
   def can_exit?
     _event = Arcadia.process_event(ExitQueryEvent.new(self, 'can_exit'=>true))
-   return _event.can_exit
+    _event.can_exit
   end
 
   def save_layout
@@ -1175,7 +1186,167 @@ class ArcadiaActionDispatcher
 
 end
 
+class ArcadiaSh < TkToplevel
+  attr_reader :wait, :result
+  def initialize
+    super
+    @text = TkScrollText.new(self, Arcadia.style('text')){
+      wrap  'none'
+      undo true
+      insertofftime 200
+      insertontime 200
+      highlightthickness 0
+      insertbackground #000000
+      insertwidth 6
+    }
+    @text.set_focus
+    @text.tag_configure('error', 'foreground' => '#d93421')
+    @text.tag_configure('response', 'foreground' => '#2c51d9')
+    @text.show
+    @text.show_v_scroll
+    @text.show_h_scroll
+    @input_buffer = ''
+    @wait = true
+    @result = false
+    prompt
+    @text.bind_append("KeyPress"){|e| input(e.keysym)}
+    @text.bind_append("Control-Shift-KeyPress"){|e| input(e.keysym)}
+    @text.bind_append("Shift-KeyPress"){|e| input(e.keysym)}
+    
+    geometry = '800x200+10+10'
+    geometry(geometry)
+    
+  end
+  
+  def exec_buffer
+    out("\n")
+    exec(@input_buffer)
+    @input_buffer=''
+  end
+  
+  def input(_char)
+    case _char
+      when 'Return'
+        Thread.new{exec_buffer}
+        Tk.callback_break
+      when 'Shift_L','Up','Down','Left','Right','Super_L'
+      when 'bar'
+        @input_buffer+='|'
+      when 'backslash'
+        @input_buffer+='\\'
+      when 'slash'
+        @input_buffer+='\/'
+      when 'minus'
+        @input_buffer+='-'
+      when 'ISO_Level3_Shift'
+        @input_buffer+='\~'
+      when 'Delete'
+      when 'BackSpace'
+        @input_buffer = @input_buffer[0..-2]
+      when 'space'
+        @input_buffer+=' '
+      else
+        @input_buffer+=_char
+    end
+  end
+  
+  def prompt
+    @b_exit = TkButton.new(@text, 
+       'command'=>proc{@wait=false},
+       'text'=>'Exit',
+       'padx'=>0,
+       'pady'=>0,
+       'width'=>5,
+       'foreground' => 'white',
+       'background' => '#d92328',
+       'relief'=>'flat')
+    TkTextWindow.new(@text, "end", 'window'=> @b_exit)
+    @b_exec = TkButton.new(@text, 
+       'command'=>proc{Thread.new{exec_buffer}},
+       'text'=>'Exec',
+       'padx'=>0,
+       'pady'=>0,
+       'width'=>5,
+       'foreground' => 'white',
+       'background' => '#1ba626',
+       'relief'=>'flat')
+    TkTextWindow.new(@text, "end", 'window'=> @b_exec)
+    out("\n")
+    out(">>> ")
+  end
+
+  def exec_prompt(_cmd)
+    out("#{_cmd}\n")
+    exec(_cmd)
+  end
+  
+  def prepare_exec(_cmd)
+    @input_buffer=_cmd
+    out("#{_cmd}")
+  end
+  
+  def exec(_cmd)
+    return if _cmd.nil? || _cmd.length ==0
+    @b_exec.destroy if defined?(@b_exec)   
+    @b_exit.destroy if defined?(@b_exit)   
+    require "open3"
+    case _cmd
+      when 'clear'
+        @text.delete('0.0','end')
+    else
+      begin
+        Open3.popen3("#{_cmd}"){|stdin, stdout, stderr|
+          stdout.each do |line|
+            out(line,'response')
+            @result = true
+          end 
+          stderr.each do |line|
+            out(line,'error')
+            @result = false
+          end 
+        }
+      rescue Exception => e
+         out("#{e.message}\n",'error') 
+         @result = false
+      end
+    end
+    prompt
+    @text.see('end')
+  end
+  
+  def out(_str,*tags)
+    @text.insert('end',_str,*tags)
+  end
+  
+end
+
+class EventWatcherForGem
+  include EventBus
+  def initialize(_event, _details)
+    @event=_event
+    @details=_details
+    enanch
+    Arcadia.attach_listener(self, _event)
+  end
+  def enanch
+    implementation=%Q{
+      class << self
+        def #{_method_name(@event, 'before')}(_event)
+          _event.break
+          new_event = Arcadia.process_event(NeedRubyGemWizardEvent.new(self, @details))
+          if new_event && new_event.results
+            ok=new_event.results[0].installed
+            _event.break if !ok
+          end
+        end
+      end
+    }
+    eval(implementation)
+  end
+end
+
 class ArcadiaGemsWizard
+  include Autils
   def initialize(_arcadia)
     @arcadia = _arcadia
     Arcadia.attach_listener(self, NeedRubyGemWizardEvent)
@@ -1196,37 +1367,20 @@ class ArcadiaGemsWizard
   
   def try_to_install_gem(name, repository=nil, version = '>0')
     ret = false
-    # TODO WIZARD
     
-#    # rubygems version must be >= 1.2 Gem::RubyGemsVersion
-#    if Gem::RubyGemsVersion >= '1.2'
-#      begin
-#        gem name, version
-#      rescue LoadError, Gem::LoadError => e
-#        require 'rubygems/gem_runner'
-#        begin
-#          gr = Gem::GemRunner.new
-#          com = %W[install #{name}]
-#          com.concat(%W[--source= #{repository}]) if repository
-#          p com
-#          gr.run(com)
-#        rescue Gem::SystemExitException=>e
-#          if e.exit_code == 0
-#            ret = true
-#            p "Successfully installed. #{e.message}"
-#          else
-#            msg = "Install of '#{name}' (#{version}) failed. #{e.message}"
-#            Tk.messageBox('icon' => 'error', 
-#              'type' => 'ok',
-#              'title' => "(Arcadia) gem",
-#              'message' => msg)
-#          end
-#        end
-#      end
-#    end
+    sh=ArcadiaSh.new
+    cmd = "gem install #{name}"
+    cmd="sudo #{cmd}" if !is_windows?
+    cmd+=" --source=#{repository}" if repository
+    sh.prepare_exec(cmd)    
+    while sh.wait
+      Tk.update
+      #sleep(1)
+    end
+    ret=sh.result
+    sh.destroy
     ret
   end
-  
 end
 
 class ArcadiaDialogManager
@@ -1396,7 +1550,6 @@ class ArcadiaLayout
     end
   end
 
-
   def add_rows(_row,_col, _height, _top_name=nil, _bottom_name=nil)
   		_prepare_rows(_row,_col, _height, false, _top_name, _bottom_name)
   end
@@ -1425,14 +1578,14 @@ class ArcadiaLayout
 #  end
 
   def all_domains(_frame)
-      splitted_adapter = find_splitted_frame(_frame)
-      consider_it = splitted_adapter.kind_of?(AGTkSplittedFrames)
-      if consider_it
-        ret = domains_on_frame(splitted_adapter.frame2).concat(domains_on_frame(splitted_adapter.frame1))
-      else
-        ret = Array.new
-      end
-      ret    
+    splitted_adapter = find_splitted_frame(_frame)
+    consider_it = splitted_adapter.kind_of?(AGTkSplittedFrames)
+    if consider_it
+      ret = domains_on_frame(splitted_adapter.frame2).concat(domains_on_frame(splitted_adapter.frame1))
+    else
+      ret = Array.new
+    end
+    ret    
   end
 
   def all_domains_cols(_frame)
@@ -1452,7 +1605,6 @@ class ArcadiaLayout
     }
     ret
   end
-
 
   def _prepare_cols(_row,_col, _width, _perc=false, _left_name=nil, _right_name=nil)
     if (@frames[_row][_col] !=  nil)
@@ -1635,7 +1787,6 @@ class ArcadiaLayout
     if saved_root_splitted_frames
       @panels[_domain]['root_splitted_frames']=saved_root_splitted_frames
     end
-
     build_invert_menu(true)
   end
 
@@ -1760,7 +1911,7 @@ class ArcadiaLayout
         }
       end
     end
-    return ret_doms
+    ret_doms
   end
 
   def close_runtime_old(_domain)
@@ -1926,7 +2077,6 @@ class ArcadiaLayout
         end
       end
     else  # CLOSE OTHER
-      # verifichiamo se la contro parte ÃÂ¨ uno splitter_adapter
       other_ds = domains_on_frame(@panels[_domain]['splitted_frames'].frame1)
       if other_ds.length == 1
         other_dom = other_ds[0]
@@ -2134,6 +2284,7 @@ class ArcadiaLayout
             :hidemargin => true
         )
       end
+
   end
   
   def build_titled_frame(domain)
@@ -2276,6 +2427,29 @@ class ArcadiaLayout
         end
       end
     }
+    if @panels[_ffw.domain]
+      titledFrame = @panels[_ffw.domain]['root']
+      if titledFrame.instance_of?(TkTitledFrame)
+        mymenu = titledFrame.menu_button('ext').cget('menu')
+        index = mymenu.index('end').to_i
+        if @panels.keys.length > 2
+          i=index-3
+        else
+          i=index-2
+        end
+        if i >= 0
+          index = i.to_s
+        end
+        mymenu.insert(index,:command,
+           :label=>"close \"#{_ffw.title}\"",
+           :image=>TkPhotoImage.new('dat'=>CLOSE_FRAME_GIF),
+           :compound=>'left',
+           :command=>proc{unregister_panel(_ffw, false, true)},
+           :hidemargin => true
+        )
+      end
+    end
+    
   end
 
   
@@ -2286,19 +2460,22 @@ class ArcadiaLayout
         if titledFrame.instance_of?(TkTitledFrame)
           menu = titledFrame.menu_button('ext').cget('menu')
           if refresh_commons_items
-             @panels[dom]['root'].menu_button('ext').cget('menu').delete('0','end')
-             add_commons_menu_items(dom, menu)
+            @panels[dom]['root'].menu_button('ext').cget('menu').delete('0','end')
+            add_commons_menu_items(dom, menu)
           else
+            index = menu.index('end').to_i
             if @panels.keys.length > 2
-              i=menu.index('end').to_i-4
+              i=index-4
             else
-              i=menu.index('end').to_i-3
+              i=index-3
             end
             if i >= 0
               end_index = i.to_s
               @panels[dom]['root'].menu_button('ext').cget('menu').delete('0',end_index)
             end
           end
+#          index = menu.index('end').to_i
+#          @panels[dom]['root'].menu_button('ext').cget('menu').delete('2','end') if index > 1
         end
       end
     }
@@ -2306,79 +2483,8 @@ class ArcadiaLayout
     @wrappers.each{|name,ffw|
       process_frame(ffw) #if ffw.domain
     }
+
   end
-  
-#  def register_panel_old(_domain_name, _name, _title)
-#    p = @panels[_domain_name]
-#    if p!=nil
-#      num = p['sons'].length
-#      if @headed
-#        p['root'].title(_title)
-#        if !p['root'].frame.instance_of?(TkFrameAdapter)
-#          wrapper = TkFrameAdapter.new(self.root, Arcadia.style('frame'))
-#          wrapper.attach_frame(p['root'].frame)
-#          p['root'].frame=wrapper
-#        end
-#        root_frame = p['root'].frame
-#        process_register_panel(_domain_name)
-#      else
-#        root_frame = p['root']
-#      end
-#      if (num == 0 && @autotab)
-#        api = ArcadiaPanelInfo.new(_name,_title,nil)
-#        api.frame = TkFrame.new(root_frame, Arcadia.style('panel')).place('x'=>0, 'y'=>0, 'relwidth'=>1, 'relheight'=>1)
-#        p['sons'][_name] = api
-#        return api.frame
-#      else
-#        if num == 1 && @autotab &&  p['notebook'] == nil
-#          p['notebook'] = Tk::BWidget::NoteBook.new(root_frame, Arcadia.style('tabpanel')){
-#            tabbevelsize 0
-#            internalborderwidth 0
-#            pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
-#          }
-#          api = p['sons'].values[0]
-#          api_tab_frame = p['notebook'].insert('end',
-#            api.name,
-#            'text'=>api.title,
-#            'raisecmd'=>proc{
-#  					    p['root'].title(api.title)
-#  					    p['root'].top_text('')            
-#               changed
-#              notify_observers('RAISE', api.name)
-#            }
-#          )
-#          api.frame.place('in'=>api_tab_frame, 'x'=>0, 'y'=>0, 'relwidth'=>1, 'relheight'=>1)
-#          api.frame.raise
-#        elsif (num==0 && !@autotab)
-#          p['notebook'] = Tk::BWidget::NoteBook.new(root_frame){
-#            tabbevelsize 0
-#            internalborderwidth 0
-#            pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
-#          }
-#        end
-#        _panel = p['notebook'].insert('end',_name , 
-#        		'text'=>_title, 
-#          'raisecmd'=>proc{
-#					  p['root'].title(_title)            
-#            changed
-#            notify_observers('RAISE', _name)
-#          }
-#        		)
-#        p['sons'][_name] = ArcadiaPanelInfo.new(_name,_title,_panel)
-#        p['notebook'].raise(_name)
-#        return _panel
-#      end
-#    else
-#      Arcadia.dialog(self, 
-#        'type'=>'ok',
-#        'msg'=>"domain #{_domain_name} do not exist\nfor '#{_title}'!",
-#        'level'=>'warning' 
-#      )
-#      float_frame = new_float_frame
-#      float_frame.title(_title)
-#      return float_frame.frame
-#    end
-#  end
 
   def register_panel(_ffw, _adapter=nil)
     _domain_name = _ffw.domain
@@ -2423,8 +2529,7 @@ class ArcadiaLayout
             'raisecmd'=>proc{
   					    pan['root'].title(api.title)
   					    pan['root'].top_text('') 
-         	     Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>_ffw.extension, 'frame_name'=>_ffw.name))
-
+         	         Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>pan['sons'][api.name].extension, 'frame_name'=>pan['sons'][api.name].name))
 #               changed
 #               notify_observers('RAISE', api.name)
             }
@@ -2468,7 +2573,6 @@ class ArcadiaLayout
       _ffw.domain = nil
       process_frame(_ffw)
       return TkFrameAdapter.new(self.root, Arcadia.style('frame'))
-      
 #
 #      Arcadia.dialog(self, 
 #        'type'=>'ok',
