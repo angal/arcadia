@@ -1213,19 +1213,18 @@ class ArcadiaSh < TkToplevel
     @text.show
     @text.show_v_scroll
     @text.show_h_scroll
-    @input_buffer = ''
+    #@input_buffer = ''
     @wait = true
     @result = false
     prompt
     @text.bind_append("KeyPress"){|e| input(e.keysym)}
-    @text.bind_append("Control-Shift-KeyPress"){|e| input(e.keysym)}
-    @text.bind_append("Shift-KeyPress"){|e| input(e.keysym)}
   end
   
   def exec_buffer
+    @text.set_insert("end")
+    input_buffer = @text.get(@index_cmd_begin,"insert")
     out("\n")
-    exec(@input_buffer)
-    @input_buffer=''
+    exec(input_buffer)
   end
   
   def input(_char)
@@ -1233,24 +1232,6 @@ class ArcadiaSh < TkToplevel
       when 'Return'
         Thread.new{exec_buffer}
         Tk.callback_break
-      when 'Shift_L','Up','Down','Left','Right','Super_L'
-      when 'bar'
-        @input_buffer+='|'
-      when 'backslash'
-        @input_buffer+='\\'
-      when 'slash'
-        @input_buffer+='\/'
-      when 'minus'
-        @input_buffer+='-'
-      when 'ISO_Level3_Shift'
-        @input_buffer+='\~'
-      when 'Delete'
-      when 'BackSpace'
-        @input_buffer = @input_buffer[0..-2]
-      when 'space'
-        @input_buffer+=' '
-      else
-        @input_buffer+=_char
     end
   end
   
@@ -1277,6 +1258,7 @@ class ArcadiaSh < TkToplevel
     TkTextWindow.new(@text, "end", 'window'=> @b_exec)
     out("\n")
     out(">>> ")
+    @index_cmd_begin = @text.index('insert')
   end
 
   def exec_prompt(_cmd)
@@ -1285,7 +1267,7 @@ class ArcadiaSh < TkToplevel
   end
   
   def prepare_exec(_cmd)
-    @input_buffer=_cmd
+    #@input_buffer=_cmd
     out("#{_cmd}")
   end
   
