@@ -29,6 +29,7 @@ class Shell < ArcadiaExt
       _cmd_ = "#{_event.command}"
       if is_windows?
         io = IO.popen(_cmd_)
+        Arcadia.console(self,'msg'=>io.read, 'level'=>'debug')
       else
         Process.fork{
           open(_cmd_,"r"){|f|
@@ -129,13 +130,9 @@ class Shell < ArcadiaExt
     end
   end
 
-
-
   def is_windows?
-    !(RUBY_PLATFORM =~ /(win|w)32$/).nil?
-    #RUBY_PLATFORM.include?('win')
+    RUBY_PLATFORM =~ /mingw|mswin/
   end
-
 
   def run_last
     run($arcadia['pers']['run.file.last'])

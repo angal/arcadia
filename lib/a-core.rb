@@ -1281,7 +1281,11 @@ class ArcadiaSh < TkToplevel
         @text.delete('0.0','end')
     else
       begin
-        Open3.popen3("#{_cmd}"){|stdin, stdout, stderr|
+        if RUBY_PLATFORM =~ /mingw|mswin/
+         p = IO::popen(_cmd)
+         out(p.read, 'response')
+        else
+         Open3.popen3("#{_cmd}"){|stdin, stdout, stderr|
           stdout.each do |line|
             out(line,'response')
             @result = true
@@ -1290,7 +1294,9 @@ class ArcadiaSh < TkToplevel
             out(line,'error')
             @result = false
           end 
-        }
+       
+         }
+        end
       rescue Exception => e
          out("#{e.message}\n",'error') 
          @result = false
