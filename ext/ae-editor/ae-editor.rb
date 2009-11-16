@@ -867,6 +867,7 @@ class AgEditor
   attr_reader :page_frame
   attr_reader :text, :root
   attr_reader :outline
+  attr_reader :highlighting
   def initialize(_controller, _page_frame)
     @controller = _controller
     @page_frame = _page_frame
@@ -2480,11 +2481,11 @@ class AgEditor
 
 
 
-  def rehighlightlines(_row_begin, _row_end)
+  def rehighlightlines(_row_begin, _row_end, _check_mod=false)
     _ibegin = _row_begin.to_s+'.0'
     _iend = (_row_end+1).to_s+'.0'
     @highlight_scanner.classes.each{|c| @text.tag_remove(c,_ibegin, _iend)}
-    highlightlines(_row_begin, _row_end)
+    highlightlines(_row_begin, _row_end, _check_mod)
   end
 
   def row(_index='insert')
@@ -3060,6 +3061,7 @@ class AgMultiEditor < ArcadiaExt
     Arcadia.attach_listener(self, DebugEvent)
     Arcadia.attach_listener(self, RunRubyFileEvent)
     Arcadia.attach_listener(self, StartDebugEvent)
+    Arcadia.attach_listener(self, FocusEvent)
   end
   
   
@@ -3108,6 +3110,21 @@ class AgMultiEditor < ArcadiaExt
         break 
       end
     }
+  end
+
+  def on_after_focus(_event)
+    if raised && _event.focus_widget == raised.text
+      if [CutTextEvent, PasteTextEvent].include?(_event.class)
+        if raised.highlighting
+          line_begin_index = raised.text.index('@0,0')
+          line_begin = line_begin_index.split('.')[0].to_i
+          line_end = raised.text.index('@0,'+TkWinfo.height(raised.text).to_s).split('.')[0].to_i + 1
+          raised.rehighlightlines(line_begin,line_end,true)
+        else
+          raised.check_modify
+        end      
+      end
+    end
   end
 
   def highlight_scanner(_ext=nil)
