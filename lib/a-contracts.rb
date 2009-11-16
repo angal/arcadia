@@ -234,6 +234,14 @@ class InputExitEvent < InputEvent
   attr_accessor :receiver
 end
 
+# FocusEvent
+# Events for executing operation on focused widget
+class FocusEvent < ArcadiaEvent
+  attr_accessor :focus_widget
+end
+class CutTextEvent < FocusEvent; end
+class CopyTextEvent < FocusEvent; end
+class PasteTextEvent < FocusEvent; end
 
 #class VirtualKeyboardEvent  < ArcadiaEvent
 #end
