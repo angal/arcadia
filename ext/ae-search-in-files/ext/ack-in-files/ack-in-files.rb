@@ -1,9 +1,7 @@
 #
-#   ae-search-in-files.rb - Arcadia Ruby ide
-#   by Antonio Galeone <antonio-galeone@rubyforge.org>
+#   ack-in-files.rb - Arcadia Ruby ide
+#   by Roger D. Pack
 #
-
-require File.dirname(__FILE__) + '/../ae-search-in-files/ae-search-in-files.rb'
 
 class AckInFilesService < ArcadiaExt
   def on_before_build(_event)
