@@ -31,6 +31,8 @@ class Arcadia < TkApplication
     ArcadiaDialogManager.new(self)
     ArcadiaActionDispatcher.new(self)
     ArcadiaGemsWizard.new(self)
+    MonitorLastUsedDir.new
+    FocusEventManager.new
     #self.load_local_config(false)
     ObjectSpace.define_finalizer($arcadia, self.class.method(:finalize).to_proc)
     publish('action.on_exit', proc{do_exit})
@@ -131,12 +133,31 @@ class Arcadia < TkApplication
 	 return (self['conf'][_name+'.active'] != nil && self['conf'][_name+'.active']=='yes')||
        	  (self['conf'][_name+'.active'] == nil)
   end
-	
+
+  def ext_source_must_be_loaded?(_name)
+    ret = ext_active?(_name)
+    if !ret
+    @exts_dip.each{|key,val|
+      if val == _name
+        ret = ret || ext_active?(key)
+      end
+      break if ret
+    }
+    end
+    ret
+  end
+  
   def load_exts_conf
   		@exts = Array.new
   		@exts_i = Array.new
+  		@exts_dip = Hash.new
+  		@exts_loaded = Array.new
+  		load_exts_conf_from('ext')
+  end
+	
+  def load_exts_conf_from(_dir='',_ext_root=nil)
   		dirs = Array.new
-  		files = Dir['ext/*'].concat(Dir[ENV["HOME"]+'/.arcadia/ext/*']).sort
+  		files = Dir["#{_dir}/*"].concat(Dir[ENV["HOME"]+"/.arcadia/#{_dir}/*"]).sort
   		files.each{|f|
   			 dirs << f if File.stat(f).directory? && FileTest.exist?(f+'/'+File.basename(f)+'.conf')
   		}
@@ -158,9 +179,13 @@ class Arcadia < TkApplication
            end	
        	   conf_hash2[new_key]= value
        	 }
-       @exts << name	 	
+       @exts << name
+       if _ext_root
+         @exts_dip[name] = _ext_root
+       end	 	
     		 self['conf'].update(conf_hash2)	
     		 self['origin_conf'].update(conf_hash2)	
+    		 load_exts_conf_from("#{ext_dir}/ext",name)
   		}
   end
 
@@ -211,12 +236,16 @@ class Arcadia < TkApplication
   def do_build
     # create extensions
     Array.new.concat(@exts).each{|extension|
-      if extension && ext_active?(extension)
-        @splash.next_step('... creating '+extension)  if @splash
-        # before creating extension check gems dependences
+      if extension && ext_source_must_be_loaded?(extension)
         gems_installed = check_gems_dependences(extension)
-        if !gems_installed || !ext_create(extension)
+        if !gems_installed || !ext_load(extension)
           @exts.delete(extension)
+        elsif !ext_active?(extension)
+          @exts.delete(extension)
+        elsif ext_active?(extension)
+          @splash.next_step('... creating '+extension)  if @splash
+          @exts.delete(extension) unless 
+            (((@exts_dip[extension] != nil && @exts_loaded.include?(@exts_dip[extension]))||@exts_dip[extension] == nil) && ext_create(extension)) 
         end
       end
     }
@@ -249,7 +278,6 @@ class Arcadia < TkApplication
         i=index.strip.to_i
         @exts_i.each{|e|
           if e.conf('name')==ext && !maxed
-            p "maximizzo #{ext}"
             e.maximize(i)
             maxed=true
             break
@@ -258,15 +286,37 @@ class Arcadia < TkApplication
       end
     end
   end
+  
+  def ext_load(_extension)
+    ret = true
+    begin
+      source = self['conf'][_extension+'.require']
+      if source.strip.length > 0
+	      require source 
+      end
+      @exts_loaded << _extension
+    rescue Exception,LoadError
+      ret = false
+      msg = "Loading \"#{_extension}\" (#{$!.class.to_s}) : #{$!} at : #{$@.to_s}"
+      ans = Tk.messageBox('icon' => 'error', 'type' => 'abortretryignore',
+      'title' => "(Arcadia) Extensions '#{_extension}'", 'parent' => @root,
+      'message' => msg)
+      if  ans == 'abort'
+        raise
+        exit
+      elsif ans == 'retry'
+        retry
+      else
+        Tk.update
+      end
+    end
+    ret
+  end
 
   def ext_create(_extension)
     ret = true
     begin
-      source = self['conf'][_extension+'.require']
       class_name = self['conf'][_extension+'.class']
-      if source.strip.length > 0
-	      require source 
-      end
       if class_name.strip.length > 0
         klass = nil
         begin
@@ -401,9 +451,6 @@ class Arcadia < TkApplication
     @splash.next_step('... load obj controller')  if @splash
     @splash.next_step('... load editor')  if @splash
     publish('main.action.new_file',proc{$arcadia['editor'].open_buffer()})
-    publish('main.action.edit_cut',proc{$arcadia['editor'].raised.text.text_cut()})
-    publish('main.action.edit_copy',proc{$arcadia['editor'].raised.text.text_copy()})
-    publish('main.action.edit_paste',proc{$arcadia['editor'].raised.text.text_paste()})
     @splash.next_step('... load actions')  if @splash
     #provvisorio 
     @keytest = KeyTest.new
@@ -465,45 +512,42 @@ class Arcadia < TkApplication
         suf1 = suf+'.'+group
         begin
           context_path = self['conf']["#{suf1}.context_path"]
-          property = proc{|_str, _suf| self['conf']["#{_suf}.#{_str}"]} 
-          property_to_eval = proc{|_str, _suf| 
-            p = self['conf']["#{_suf}.#{_str}"]
-            _self_on_eval.instance_eval(p) if p 
-          } 
+          context_underline = self['conf']["#{suf1}.context_underline"]
+#          property = proc{|_str, _suf| self['conf']["#{_suf}.#{_str}"]} 
+#          property_to_eval = proc{|_str, _suf| 
+#            p = self['conf']["#{_suf}.#{_str}"]
+#            _self_on_eval.instance_eval(p) if p 
+#          } 
           items = self['conf'][suf1].split(',')
           items.each{|item|
             suf2 = suf1+'.'+item
             disabled = !self['conf']["#{suf2}.disabled"].nil?
-#            property = proc{|_str| self['conf']["#{suf2}.#{_str}"]} 
-#            property_to_eval = proc{|_str| 
-#              p = self['conf']["#{suf2}.#{_str}"]
-#              _self_on_eval.instance_eval(p) if p 
-#            } 
-            name = property.call('name',suf2)
-            caption = property.call('caption',suf2)
-            hint = property.call('hint',suf2)
-            event_class = property_to_eval.call('event_class',suf2)
-            
-            event_args = property_to_eval.call('event_args',suf2)
-            image_data = property_to_eval.call('image_data',suf2)
-            item_args = {
-              'name'=>name,
-              'caption'=>caption,
-              'hint'=>hint,
-              'event_class' =>event_class,
-              'event_args' =>event_args,
-              'image_data' =>image_data,
-              'context'=>group,
-              'context_path'=>context_path
+            iprops=Arcadia.conf_group(suf2)
+            item_args = Hash.new
+            iprops.each{|k,v|
+              value = v.strip
+              if value[0..0]=='!'
+                item_args[k]=_self_on_eval.instance_eval(value[1..-1])  
+              else
+                item_args[k]=value
+              end
             }
+          #  item_args['caption'] = item if item_args['caption'].nil?
+            item_args['name'] = item if item_args['name'].nil?
+            item_args['context'] = group
+            item_args['context_path'] = context_path
             item_args['context_caption'] = groups_caption[gi] if groups_caption
+            item_args['context_underline'] = context_underline.strip.to_i if context_underline
             i = _user_control.new_item(self, item_args)
             i.enable=false if disabled
-
           }
         rescue Exception
           msg = "Loading #{groups} ->#{items} (#{$!.class.to_s} : #{$!.to_s} at : #{$@.to_s})"
-          if Arcadia.dialog(self, 'type'=>'ok_cancel', 'title' => '(Arcadia) Toolbar', 'msg'=>msg)=='cancel'
+          if Arcadia.dialog(self, 
+            'type'=>'ok_cancel', 
+            'title' => '(Arcadia) Toolbar', 
+            'msg'=>msg,
+            'level'=>'error')=='cancel'
             raise
             exit
           else
@@ -619,6 +663,10 @@ class Arcadia < TkApplication
 
   def Arcadia.style(_class)
     Configurable.properties_group(_class, Arcadia.instance['conf'])
+  end
+
+  def Arcadia.conf_group(_path)
+    Configurable.properties_group(_path, Arcadia.instance['conf'])
   end
   
   def Arcadia.persistent(_property, _value=nil, _immediate=false)
@@ -888,18 +936,27 @@ class ArcadiaMainMenu < ArcadiaUserControl
   SUF='user_menu'
   class UserItem < UserItem
     attr_accessor :menu
+    attr_accessor :underline
+    attr_accessor :type
     def initialize(_sender, _args)
       super(_sender, _args)
-      _image = TkPhotoImage.new('data' => @image_data) if @image_data
       _command = proc{
         Arcadia.process_event(@event_class.new(_sender, @event_args))
       } if @event_class
       #_menu = @menu[@parent]
-      @item_obj = @menu.insert('end', :command, 
-        'image'=>_image,
-        'label'=>@caption, 
-        'compound'=>'left',
-        'command'=>_command )
+      item_args = Hash.new
+      item_args['image']=TkPhotoImage.new('data' => @image_data) if @image_data
+      item_args['label']=@caption
+      item_args['underline']=@underline.to_i if @underline != nil
+      item_args['compound']='left'
+      item_args['command']=_command
+      if @type.nil? && _commnad.nil? && @name == '-'
+        @type=:separator
+        item_args.clear
+      elsif @type.nil?
+        @type=:command
+      end
+      @item_obj = @menu.insert('end', @type ,item_args)  
       @index = @menu.index('last')
     end
 
@@ -924,7 +981,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
 #    menu.font(Arcadia.conf('main.mainmenu.font'))
   end
 
-  def get_menu_context(_menubar, _context)
+  def get_menu_context(_menubar, _context, _underline=nil)
     menubuttons =  _menubar[0..-1]
     # cerchiamo il context
     m_i = -1
@@ -938,7 +995,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
     if m_i > -1
       _menubar[m_i][1]
     else
-      _menubar.add_menu([[_context],[]])[1].delete(0)
+      _menubar.add_menu([[_context,_underline],[]])[1].delete(0)
     end
   end
   
@@ -948,15 +1005,18 @@ class ArcadiaMainMenu < ArcadiaUserControl
       i_end = menu_context.index('end')
       if i_end
         0.upto(i_end){|j|
-          l = menu_context.entrycget(j,'label')
-          if l == folder
-           s_i = j
-           break
+          type = menu_context.menutype(j)
+          if type != 'separator'
+            l = menu_context.entrycget(j,'label')
+            if l == folder && type == 'cascade'
+             s_i = j
+             break
+            end
           end
         }
       end
     end
-    if s_i > -1 && menu_context.menutype(s_i) == 'cascade'
+    if s_i > -1 #&& menu_context.menutype(s_i) == 'cascade'
       sub = menu_context.entrycget(s_i, 'menu')
     else
       sub = TkMenu.new(
@@ -975,8 +1035,8 @@ class ArcadiaMainMenu < ArcadiaUserControl
     sub
   end
   
-  def get_menu(_menubar, _context, context_path)
-    context_menu = get_menu_context(_menubar, _context)
+  def get_menu(_menubar, _context, context_path, context_underline=nil)
+    context_menu = get_menu_context(_menubar, _context, context_underline)
     folders = context_path.split('/')
     sub = context_menu
     folders.each{|folder|
@@ -993,7 +1053,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
     else
       conte = _args['context']
     end
-    _args['menu']=get_menu(@menu, conte, _args['context_path'])
+    _args['menu']=get_menu(@menu, conte, _args['context_path'], _args['context_underline'])
     super(_sender, _args)
   end
 
@@ -1009,9 +1069,9 @@ class ArcadiaMainMenu < ArcadiaUserControl
       '---',
       ['Quit', $arcadia['action.on_exit'], 0]]
       menu_spec_edit = [['Edit', 0],
-      ['Cut', $arcadia['main.action.edit_cut'], 2],
-      ['Copy', $arcadia['main.action.edit_copy'], 0],
-      ['Paste', $arcadia['main.action.edit_paste'], 0],
+      ['Cut', proc{Arcadia.process_event(CutTextEvent.new(self))}, 2],
+      ['Copy', proc{Arcadia.process_event(CopyTextEvent.new(self))}, 0],
+      ['Paste', proc{Arcadia.process_event(PasteTextEvent.new(self))}, 0],
       ['Prettify Current', proc{Arcadia.process_event(PrettifyTextEvent.new(self))}, 0]]
       
       menu_spec_search = [['Search', 0],
@@ -1025,7 +1085,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
       menu_spec_tools = [['Tools', 0],
       ['Keys-test', $arcadia['action.test.keys'], 2],
       ['Edit prefs', proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>$arcadia.local_file_config))}, 0],
-      ['Load from edited prefs', proc{$arcadia.load_config}, 0]
+      ['Load from edited prefs', proc{$arcadia.load_local_config}, 0]
     ]
     menu_spec_help = [['Help', 0],
     ['About', $arcadia['action.show_about'], 2],]
@@ -1109,8 +1169,20 @@ class ArcadiaAboutSplash < TkToplevel
       foreground  '#ffffff'
       font Arcadia.instance['conf']['splash.credits.font']
       justify  'left'
+      anchor 'w'
       place('width' => '210','x' => 100,'y' => 95,'height' => 25)
     }
+
+    @tkLabelCredits = TkLabel.new(self){
+      text  'Contributors: Roger D. Pack'
+      background  _bgcolor
+      foreground  '#ffffff'
+      font Arcadia.instance['conf']['splash.credits.font']
+      justify  'left'
+      anchor 'w'
+      place('width' => '210','x' => 100,'y' => 115,'height' => 25)
+    }
+
     @tkLabelStep = TkLabel.new(self){
       text  ''
       background  _bgcolor
@@ -2773,4 +2845,83 @@ class ArcadiaLayout
     ret[3]=_c
     ret
   end
+end
+
+# 
+# receives messages and tracks the
+# by Roger D. Pack
+class MonitorLastUsedDir
+
+  def initialize
+    for event in [SaveBufferEvent, AckInFilesEvent, SearchInFilesEvent, OpenBufferEvent] do
+     Arcadia.attach_listener(self, event)
+    end
+  end
+
+  def on_after_save_as_buffer(_event)
+   MonitorLastUsedDir.set_last _event.new_file
+  end
+
+  def on_after_ack_in_files _event
+    MonitorLastUsedDir.set_last _event.dir
+  end
+  
+  # we want this one...but...not at startup time...hmm.
+  def on_after_open_buffer _event
+    MonitorLastUsedDir.set_last _event.file
+  end
+  
+  alias :on_after_search_in_files :on_after_ack_in_files  
+
+  def self.get_last_dir
+    current = $arcadia['pers']['last.used.dir']
+    if current != nil && current != ''
+     current
+    else
+     $pwd # startup dir
+    end
+  end  
+
+  def MonitorLastUsedDir.set_last to_this # TODO set as private...
+    return if to_this.nil? or to_this == ''
+    if(File.directory?(to_this))
+      to_this_dir = to_this
+    elsif File.directory? File.dirname(to_this)
+      # filename,
+      to_this_dir = File.dirname(to_this)
+    end
+    $arcadia['pers']['last.used.dir'] = File.expand_path(to_this_dir)
+  end
+
+end
+
+class FocusEventManager
+  def initialize
+    Arcadia.attach_listener(self, FocusEvent)
+  end
+  
+  def on_focus(_event)
+    _event.focus_widget=Tk.focus
+    case _event
+      when CutTextEvent
+        do_cut(_event.focus_widget)
+      when CopyTextEvent
+        do_copy(_event.focus_widget)
+      when PasteTextEvent
+        do_paste(_event.focus_widget)
+    end
+  end
+  
+  def do_cut(_focused_widget)
+    _focused_widget.text_cut if _focused_widget.respond_to?(:text_cut)
+  end
+  
+  def do_copy(_focused_widget)
+    _focused_widget.text_copy if _focused_widget.respond_to?(:text_copy)
+  end
+
+  def do_paste(_focused_widget)
+    _focused_widget.text_paste if _focused_widget.respond_to?(:text_paste)
+  end
+  
 end
