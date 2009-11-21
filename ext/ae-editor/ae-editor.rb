@@ -303,10 +303,13 @@ class SafeCompleteCode
 
   def refresh_words
     @words.clear
-    _re = /[\s\t\n]#{@filter}[a-zA-Z0-9\-_]*/
+    _re = /[\s\t\n"'(\[\{=><]#{@filter}[a-zA-Z0-9\-_]*/
     m = _re.match(@source)
     while m && (_txt=m.post_match)
       can = m[0].strip
+      if  ['"','(','[','{',"'",'=','>','<'].include?(can[0..0])
+        can = can[1..-1]
+      end
       @words << can if can != @filter
       m = _re.match(_txt)
     end
