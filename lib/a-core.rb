@@ -1453,6 +1453,7 @@ class ArcadiaGemsWizard
     end
     ret=sh.result
     sh.destroy
+    Gem.clear_paths if ret
     ret
   end
 
