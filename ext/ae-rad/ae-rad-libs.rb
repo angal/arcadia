@@ -218,12 +218,16 @@ class AGRenderer
         code = code, value.renderer.obj_code(_ind+1),"\n"
       end
     }
-    return code.to_s
+    if code.kind_of?(Array)
+      code.flatten.join
+    else  
+      code
+    end
   end
   
   def class_end(_ind=0)
     code = code, "\n", INDENT_UNIT*(_ind+1),"end\n",INDENT_UNIT*(_ind),"end"
-    return code.to_s
+    return code.flatten.join
   end
   
   def obj_code(_ind=0)
@@ -325,7 +329,11 @@ class AGRenderer
         _val = _val.to_s
       end
       #Tk.messageBox('message'=>_val)
-      return _val
+      if _val.kind_of?(Array)
+        _val.flatten.join
+      else
+        _val
+      end
 	end  
 
 	def render_value_default(_prop, _family)
@@ -335,7 +343,7 @@ class AGRenderer
       if _val.kind_of?(String) && is_string
         _val = "'",_val,"'"
       elsif _val != nil
-        _val = _val.to_s
+        _val = _val.flatten.join
       end
       return _val
 	end  

@@ -2379,7 +2379,8 @@ class AGTkToplevel < AGTkContainer
   
   def form2code
     _title = @i_name+'.rb'
-    _text = @renderer.class_code.to_s
+    _text = @renderer.class_code.flatten.join
+    
     Arcadia.process_event(OpenBufferEvent.new(self,'title'=>_title, 'text'=>_text))
     meditor = $arcadia['editor']
     if meditor
