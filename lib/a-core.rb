@@ -643,6 +643,13 @@ class Arcadia < TkApplication
  #     p "#{e.conf('name')}.frames=#{str_frames}"
       end
     }
+    # toolbar
+    if @is_toolbar_show
+      self['conf']['user_toolbar_show']='yes'
+    else
+      self['conf']['user_toolbar_show']='no'
+    end
+    
   end
   
   def do_finalize
