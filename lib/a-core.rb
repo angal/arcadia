@@ -1353,8 +1353,7 @@ class ArcadiaSh < TkToplevel
   def exec(_cmd)
     return if _cmd.nil? || _cmd.length ==0
     @b_exec.destroy if defined?(@b_exec)   
-    @b_exit.destroy if defined?(@b_exit)   
-    require "open3"
+    out("submitted...\n")
     case _cmd
       when 'clear'
         @text.delete('0.0','end')
@@ -1364,6 +1363,7 @@ class ArcadiaSh < TkToplevel
          p = IO::popen(_cmd)
          out(p.read, 'response')
         else
+         require "open3"
          Open3.popen3("#{_cmd}"){|stdin, stdout, stderr|
           stdout.each do |line|
             out(line,'response')
@@ -1381,6 +1381,7 @@ class ArcadiaSh < TkToplevel
          @result = false
       end
     end
+    @b_exit.destroy if defined?(@b_exit)   
     prompt
     @text.see('end')
   end
