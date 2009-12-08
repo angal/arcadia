@@ -76,13 +76,17 @@ class Arcadia < TkApplication
     @splash.next_step('..prepare')  if @splash
     prepare
     @splash.last_step('..load finish')  if @splash
-    start_width = (TkWinfo.screenwidth(@root)-4)
-    start_height = (TkWinfo.screenheight(@root)-20)
-    if RUBY_PLATFORM =~ /mswin|mingw/ # on doze don't go below the start gar
-      start_height -= 50
-      start_width -= 20
+    if self['conf']['geometry']
+      geometry = self['conf']['geometry']
+    else
+      start_width = (TkWinfo.screenwidth(@root)-4)
+      start_height = (TkWinfo.screenheight(@root)-20)
+      if RUBY_PLATFORM =~ /mswin|mingw/ # on doze don't go below the start gar
+        start_height -= 50
+        start_width -= 20
+      end
+      geometry = start_width.to_s+'x'+start_height.to_s+'+0+0'
     end
-    geometry = start_width.to_s+'x'+start_height.to_s+'+0+0'
     @root.deiconify
     @root.raise
     @root.focus(true)
@@ -189,7 +193,7 @@ class Arcadia < TkApplication
   		}
   end
 
-  def gem_available?(_gem)
+  def Arcadia.gem_available?(_gem)
       if Gem.respond_to?(:available?)
           return Gem.available?(_gem)
       else
@@ -205,7 +209,7 @@ class Arcadia < TkApplication
       if gems && gems.length > 0
         gems.each{|gem|
           # consider gem only if it is not installed
-          if !gem_available?(gem)
+          if !Arcadia.gem_available?(gem)
             repository_property =  self['conf']["#{_ext}.gems.#{gem}.repository"]
             events_property =  self['conf']["#{_ext}.gems.#{gem}.events"]
             args = Hash.new
@@ -221,9 +225,10 @@ class Arcadia < TkApplication
               }
             else
               _event = Arcadia.process_event(NeedRubyGemWizardEvent.new(self, args))
-              if _event && _event.results
-                ret = ret && _event.results[0].installed
-              end
+              ret = ret &&  Arcadia.gem_available?(gem)
+#              if _event && _event.results
+#                ret = ret && _event.results[0].installed
+#              end
             end
             break if !ret
           end
@@ -578,6 +583,7 @@ class Arcadia < TkApplication
   end
 
   def save_layout
+    self['conf']['geometry']= TkWinfo.geometry(@root)
     Arcadia.del_conf_group('layout')
     # resizing
     @exts_i.each{|e|
@@ -697,6 +703,10 @@ class Arcadia < TkApplication
   
   def Arcadia.open_file_dialog
      Tk.getOpenFile 'initialdir' => MonitorLastUsedDir.get_last_dir
+  end
+
+  def Arcadia.is_windows?
+    RUBY_PLATFORM =~ /mingw|mswin/
   end
 
   
@@ -1108,14 +1118,16 @@ class ArcadiaMainMenu < ArcadiaUserControl
 #      hh = 25
 #      @last_post = nil
 #      chs.each{|ch|
-#        ch.bind_append("Enter", proc{|x,y,rx,ry| 
-#          @last_post.unpost if @last_post
+#        ch.bind_append("Enter", proc{|x,y,rx,ry|
+#          @last_post.unpost if @last_post && @last_post != ch.menu
 #          ch.menu.post(x-rx,y-ry+hh)
 #          @last_post=ch.menu}, "%X %Y %x %y")
 #        ch.bind_append("Leave", proc{
 #          @last_post.unpost if @last_post
+#          @last_post=nil
 #        })
 #      }
+
     #})
   end
   
@@ -1360,8 +1372,9 @@ class ArcadiaSh < TkToplevel
     else
       begin
         if RUBY_PLATFORM =~ /mingw|mswin/
-         p = IO::popen(_cmd)
+         p = IO::popen("#{_cmd} 2>&1")
          out(p.read, 'response')
+         @result = true
         else
          require "open3"
          Open3.popen3("#{_cmd}"){|stdin, stdout, stderr|
@@ -1397,10 +1410,10 @@ class EventWatcherForGem
   def initialize(_event, _details)
     @event=_event
     @details=_details
-    enanch
+    enhance
     Arcadia.attach_listener(self, _event)
   end
-  def enanch
+  def enhance
     implementation=%Q{
       class << self
         def #{_method_name(@event, 'before')}(_event)
@@ -1461,7 +1474,7 @@ class ArcadiaGemsWizard
     end
     ret=sh.result
     sh.destroy
-    Gem.clear_paths if ret
+    Gem.clear_paths
     ret
   end
 
@@ -1480,7 +1493,11 @@ class ArcadiaDialogManager
       type = 'ok'
     end
     res_array = type.split('_')
-    icon = _event.level
+    if _event.level.nil? || _event.level.length == 0
+      icon = 'info'
+    else
+      icon = _event.level
+    end
     tktype = type.gsub('_','').downcase
     
     tkdialog =  Tk::BWidget::MessageDlg.new(
