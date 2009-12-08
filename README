@@ -1,8 +1,8 @@
 = Arcadia Ruby Ide
-version 0.7.0
+version 0.8.0
 
 by Antonio Galeone
-on Jul 22, 2009
+on Nov 22, 2009
 
 
 == About
@@ -16,27 +16,26 @@ Some of Arcadia ruby ide project features include:
 * Working on any platform where ruby and tcl-tk work.
 * Highly extensibility architecture.
 
-== In this release
+== In this release 0.8.0
 [New extensions]
-	- project drawer 
-
+  ack in files: 
+     - similar to "search in files" using ack utility
 [Improvements]
+	core:
+     - remenber window size/position, show/hide toolbar preferences and layout from previous run  
+	ae-editor:
+     - remember the last file your were editing, with editing location, on startup
+     - added new hightlight engine based on coderay, others kind of file are now
+       supported (erb,rhtml,java)
+     - added auto completion of current word based on words within the current window 
+       also; then added escape key short cut.
 	ae-file-history :
-       - tree "auto expand" if it only has one child
-       - describe better what "sync" means, somehow.
 
 	ae-search-in-files : 
-        - make it so that you don't have to click on one of the search 
-           entries to be able to use the mouse scrollwheel to scroll up and down.
 
 	ae-editor :
-       - auto completion of current word based on words within the current window also
-            like textmate's hitting escape.
-       - added "ctrl +o" shortcut that opens the filesystem dialog 
-         in the directory that file you’re on is.
       
   commons : 
-       - make "do you want to exit" optional
 
 
 
@@ -49,19 +48,16 @@ There are two way:
    a. untar (on unix) (tar -xzf) arcadia-<version>.tar.gz
    b. unzip (on windows) arcadia-<version>.zip
 
-
 == How to run
 * exec on command line "ruby <path/>arcadia"
 
 
 == Short User guide
-Application layout is splitted in vertical 
-and horizontal resizing frames. Clicking on vertical splitter 
-appear two button for left or right one shot frame close. 
-The horizontal splitter has two little button for the same reason.
+Application layout is splitted in vertical and horizontal resizing frames. 
+On vertical and horizontal  splitter appear two button for left or right 
+one shot frame close. 
 Every frame has a title, a button to expand or resizing it and a menu-button 
 for the dynamic layout functions.
-There are very essential feature:
 
 ==== Main Toolbar
 The toolbar button are in order:
@@ -77,7 +73,7 @@ The toolbar button are in order:
 
 ==== Editor
 Editor use the notebook metaphor. Same command are on the popup menu 
-that is raised on "Button-3" click event fundamentalally for closing the tab 
+that is raised on "Button-3" click event fundamentally for closing the tab 
 under the mouse pointer.
 These are same editor short-cut:
 - Ctrl-c  => copy selected text
@@ -86,7 +82,7 @@ These are same editor short-cut:
 - Ctrl-z  => undo
 - Ctrl-f  => copy the selected text on input combobox of find dialog and moves focus
 - Ctrl-s  => save
-- Ctrl-space => completion code
+- Ctrl-space or esc => completion code
 - Ctrl-shift-i => indent the selected block
 - Ctrl-shift-u => unindent the selected block
 - Ctrl-shift-c => comment/uncomment the selected code block
