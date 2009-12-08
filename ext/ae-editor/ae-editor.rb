@@ -455,7 +455,7 @@ class SafeCompleteCode
           @modified_row = @modified_row+1+ss_len
         end
     end
-    if @filter.strip.length > 0
+    if @filter.strip.length > 0 && !is_dot?
 #        refresh_words(source_array)
         refresh_words
     end
@@ -488,18 +488,19 @@ class SafeCompleteCode
   def candidates(_show_error = false)
     temp_file = create_modified_temp_file(@file)
 		begin
-      _cmp_s = "|ruby '#{temp_file}'"
+		 Arcadia.is_windows??ruby='rubyw':ruby='ruby'
+      _cmp_s = "|#{ruby} '#{temp_file}'"
       _ret = nil
       open(_cmp_s,"r") do
         |f|
         _ret = f.readlines.collect!{| line | 
           #line.chomp
-          line
+          line.strip
         } 
       end
-      if @filter.strip.length > 0
+      if @filter.strip.length > 0 && !is_dot?
         @words.each{|w| 
-          if !_ret.include?(w) # && w[0..@filter.length-1] == @filter 
+          if !(_ret.include?(w) || _ret.include?("##{w}")) 
             _ret << w
           end
         }
@@ -1333,19 +1334,18 @@ class AgEditor
 #        @do_complete = true
 #        complete_code.call
       when 'z'
-        _b = @text.index('insert').split('.')[0].to_i
+        #_b = @text.index('insert').split('.')[0].to_i
         begin
           @text.edit_undo
         rescue RuntimeError => e
           throw e unless e.to_s.include? "nothing to undo" # this is ok--we've done undo back to the beginning
           break
         end
-        _e = @text.index('insert').split('.')[0].to_i
+        #_e = @text.index('insert').split('.')[0].to_i
         if @highlighting
+          _b = @text.index('@0,0').split('.')[0].to_i
+          _e = @text.index('@0,'+TkWinfo.height(@text).to_s).split('.')[0].to_i + 1
           rehighlightlines(_b,_e)
-#          for j in _b..._e
-#            rehighlightline(j)
-#          end
         end
         break
       when 'o'  
@@ -2480,10 +2480,6 @@ class AgEditor
   end
 
 
-
-
-
-
   def rehighlightlines(_row_begin, _row_end, _check_mod=false)
     _ibegin = _row_begin.to_s+'.0'
     _iend = (_row_end+1).to_s+'.0'
@@ -2611,10 +2607,12 @@ class AgEditor
       @text.tag_adds(key.to_s,to_tag)
     end
     if @tabs_show || @spaces_show
-      if @lang_hash['scanner']!='re' && !defined?(@rescanner)
-        @rescanner = ReHighlightScanner.new(@lang_hash) if !defined?(@rescanner)
-      else
-        @rescanner = @highlight_scanner
+      if !defined?(@rescanner)
+        if @lang_hash['scanner']!='re'
+          @rescanner = ReHighlightScanner.new(@lang_hash) if !defined?(@rescanner)
+        else
+          @rescanner = @highlight_scanner
+        end
       end
       @rescanner.highlight_tags(_row_begin,_lines,['tabs']) if @tabs_show
       @rescanner.highlight_tags(_row_begin,_lines,['spaces']) if @spaces_show
@@ -3063,7 +3061,7 @@ class AgMultiEditor < ArcadiaExt
     Arcadia.attach_listener(self, BufferEvent)
     Arcadia.attach_listener(self, DebugEvent)
     Arcadia.attach_listener(self, RunRubyFileEvent)
-    Arcadia.attach_listener(self, StartDebugEvent)
+   # Arcadia.attach_listener(self, StartDebugEvent)
     Arcadia.attach_listener(self, FocusEvent)
   end
   
@@ -3083,13 +3081,13 @@ class AgMultiEditor < ArcadiaExt
     end
   end
   
-  def on_before_start_debug(_event)
-    _filename = _event.file
-    if _filename.nil?
-      current_editor = self.raised
-      _event.file =current_editor.file if current_editor
-    end
-  end
+#  def on_before_start_debug(_event)
+#    _filename = _event.file
+#    if _filename.nil?
+#      current_editor = self.raised
+#      _event.file =current_editor.file if current_editor
+#    end
+#  end
 
   def on_build(_event)
     @main_frame = AgMultiEditorView.new(self.frame.hinner_frame)
@@ -3280,7 +3278,15 @@ class AgMultiEditor < ArcadiaExt
   end
 
   def on_before_debug(_event)
+    "on_before_debug #{_event}"
     case _event
+      when StartDebugEvent
+        _filename = _event.file
+        if _filename.nil?
+          current_editor = self.raised
+          _event.file=current_editor.file if current_editor
+        end
+        self.debug_begin
       when SetBreakpointEvent
         if _event.active == 1
           @breakpoints << {:file=>_event.file,:line=>_event.row}
@@ -3300,9 +3306,8 @@ class AgMultiEditor < ArcadiaExt
   end
   
   def on_after_debug(_event)
+    "on_after_debug #{_event}"
     case _event
-      when StartDebugEvent
-        self.debug_begin
       when StepDebugEvent
         if _event.command == :quit_yes 
           self.debug_end
@@ -3436,6 +3441,8 @@ class AgMultiEditor < ArcadiaExt
   def on_finalize(_event)
     @batch_files = true
     _files =''
+    _raised = self.raised
+    Arcadia.persistent('editor.files.last', _raised.file) if _raised
     @tabs_editor.each_value{|editor|
       if editor.file != nil
         #_insert_index = editor.text.index('insert')
@@ -3507,8 +3514,8 @@ class AgMultiEditor < ArcadiaExt
 
   def open_last_files
     @batch_files = true
-    if $arcadia['pers']['editor.files.open']
-      _files_index =$arcadia['pers']['editor.files.open'].split("|")
+    if Arcadia.persistent('editor.files.open')
+      _files_index =Arcadia.persistent('editor.files.open').split("|")
       _files_index.each do |value| 
         _file,_index = value.split(';')
         if _file && _index
@@ -3519,10 +3526,15 @@ class AgMultiEditor < ArcadiaExt
       end
     end
     @batch_files = false
-    _first_page = @main_frame.enb.pages(0) if @main_frame.enb.pages.length > 0
-    if _first_page
-      @main_frame.enb.raise(_first_page) if frame_def_visible?
-      @main_frame.enb.see(_first_page)
+    to_raise_file = Arcadia.persistent('editor.files.last')
+    if to_raise_file
+      raise_file(to_raise_file,0)
+    else
+      _first_page = @main_frame.enb.pages(0) if @main_frame.enb.pages.length > 0
+      if _first_page
+        @main_frame.enb.raise(_first_page) if frame_def_visible?
+        @main_frame.enb.see(_first_page)
+      end
     end
     frame(1)
     #@arcadia.layout.add_observer(self)
@@ -3742,6 +3754,15 @@ class AgMultiEditor < ArcadiaExt
     _fstr = File.expand_path(_filename)
     _fstr =  _filename if _fstr == nil
     tab_name(_fstr)
+  end
+  
+  def raise_file(_filename=nil, _pos=nil)
+    if _filename && frame_def_visible?
+      tab_name=self.tab_file_name(_filename)
+      @main_frame.enb.move(tab_name,_pos) if _pos
+      @main_frame.enb.raise(tab_name)
+      @main_frame.enb.see(tab_name)
+    end    
   end
   
   def open_file(_filename = nil, _text_index='1.0', _mark_selected=true, _exp=true)
@@ -4207,7 +4228,7 @@ class Finder < Findview
       if @cb_reg.cget('onvalue')==@cb_reg.cget('variable').value.to_i
         options << 'regexp'
       end
-      if @cb_ignore_case.cget('onvalue')==@cb_reg.cget('variable').value.to_i
+      if @cb_ignore_case.cget('onvalue')==@cb_ignore_case.cget('variable').value.to_i
         options << 'nocase'
       end
       _index = self.editor.text.tksearch(options,@e_what.text,_istart)
