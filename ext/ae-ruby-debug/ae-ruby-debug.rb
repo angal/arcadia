@@ -890,7 +890,7 @@ end
 #    * undisp[lay][ nnn]
 #      delete one particular or all display expressions if no expression number given
 #    * del[ete][ nnn]
-#      delete some or all breakpoints (get the number using ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂbreakÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ)
+#      delete some or all breakpoints (get the number using break)
 #    * c[ont]
 #      run until program ends or hit breakpoint
 #    * r[un]
@@ -1412,7 +1412,14 @@ class RubyDebug < ArcadiaExt
       when StartDebugEvent
         _filename = _event.file
         _filename = @arcadia['pers']['run.file.last'] if _filename == "*LAST"
-        debug(_filename)
+        if File.exist?(_filename)
+          debug(_filename)
+        else
+          Arcadia.dialog(self,
+            'type'=>'ok',
+            'title'=>'File not exist',
+            'msg'=>"File #{_filename} not exist!")
+        end
       when StepDebugEvent
         if (_event.command == :quit_yes)
           @rds.quit_confirm_request = true
