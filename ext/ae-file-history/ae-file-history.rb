@@ -104,9 +104,6 @@ class FilesHistrory < ArcadiaExt
     Tk::BWidget::DynamicHelp::add(@cb_sync, 
       'text'=>'Link open editors with content in the Navigator')
 
-
-
-
     do_check = proc {
       if @cb_sync.cget('onvalue')==@cb_sync.cget('variable').value.to_i
         sync_on
@@ -118,29 +115,15 @@ class FilesHistrory < ArcadiaExt
     @cb_sync.command(do_check)
     
     do_select_item = proc{|_self|
-      if _self.selection_get[0].length >0
-        _selected = ""
-        if String.method_defined?(:lines)
-      	   selection_lines = _self.selection_get[0].lines
-        else
-      	   selection_lines = _self.selection_get[0].split("\n")
-        end
-       	selection_lines.each{|_block|
-        	 _selected = _selected + _block.to_s + "\s" 
-       	}
-       	_selected = _selected.strip
-      else
-        _selected = _self.selection_get[0]
-      end
+      _selected = self.selected
       _dir, _file = _selected.sub("%%%",":").split('@@@')
       if _file
         _file = File.expand_path( _file  , _dir ) 
-	    else
-	      _file = Tk.getOpenFile('initialdir'=>_dir)
+#	    else
+#	      _file = Tk.getOpenFile('initialdir'=>_dir)
 	    end
 	    if _file && _file.strip.length > 0 
-	      Arcadia.process_event(OpenBufferEvent.new(self,'file'=>_file))
-        #EditorContract.instance.open_file(self,'file'=>_file)
+	      Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>_file))
       end
     }
     
@@ -154,7 +137,7 @@ class FilesHistrory < ArcadiaExt
     @font =  Arcadia.conf('treeitem.font')
     @font_b = "#{Arcadia.conf('treeitem.font')} bold"
 
-	  @htree = Tk::BWidget::Tree.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
+	  @htree = BWidgetTreePatched.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
       showlines false
       deltay 18
       opencmd proc{|node| do_open_folder.call(node)} 
@@ -171,8 +154,29 @@ class FilesHistrory < ArcadiaExt
 #      command _scrollcommand
 #    }.pack('side'=>'right', 'fill'=>'y')
 #    @htree.yscrollcommand proc{|first,last| _scrollbar.set(first,last)}
+
+    do_double_click = proc{
+        _selected = @htree.selection_get[0]
+        _dir, _file = _selected.sub("%%%",":").split('@@@')
+        if _dir && _file.nil? && File.ftype(node2file(_dir)) == 'directory'
+	        _file = Tk.getOpenFile('initialdir'=>node2file(_dir))
+      	    if _file && _file.strip.length > 0 
+      	       Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>_file))
+           end
+#          if !_selected.nil? && @htree.open?(node2file(_selected))
+#            @htree.close_tree(node2file(_selected))
+#          elsif !_selected.nil?
+#            @htree.open_tree(node2file(_selected),false) 
+#            do_open_folder.call(_selected)
+#          end
+        end
+    }
     
-	  self.build_tree
+    @htree.textbind_append('Double-1',do_double_click)
+    
+    self.build_tree
+    self.pop_up_menu_tree
+
 	end
 
 	def on_after_build(_event)
@@ -202,6 +206,44 @@ class FilesHistrory < ArcadiaExt
 #      add_to_tree(_event.file)
 #    end
 #  end
+
+  def node2file(_node)
+    if _node[0..0]=='{' && _node[-1..-1]=='}'
+      return _node[1..-2]
+    else
+      return _node
+    end
+  end
+
+  def file2node(_file)
+    if _file.include?("\s") && _file[0..0]!='{'
+      return "{#{_file}}"
+    else
+      return _file
+    end
+  end  
+
+
+  def selected
+    if @htree.selection_get[0]
+      if @htree.selection_get[0].length >0
+       	_selected = ""
+        if String.method_defined?(:lines)
+      	   selection_lines = @htree.selection_get[0].lines
+        else
+      	   selection_lines = @htree.selection_get[0].split("\n")
+        end
+        selection_lines.each{|_block|
+          _selected = _selected + _block.to_s + "\s" 
+        }
+        _selected = _selected.strip
+      else
+        _selected = @htree.selection_get[0]
+      end
+    end
+    return _selected
+  end
+
 
   def select_file_without_event(_file)
     _d, _f = File.split(File.expand_path(_file))
@@ -298,6 +340,63 @@ class FilesHistrory < ArcadiaExt
 
 	  build_tree_from_node(root)
   end
+
+  def pop_up_menu_tree
+    @pop_up_tree = TkMenu.new(
+      :parent=>@htree,
+      :tearoff=>0,
+      :title => 'Menu tree'
+    )
+    @pop_up_tree.configure(Arcadia.style('menu'))
+    #----- search submenu
+    sub_ref_search = TkMenu.new(
+      :parent=>@pop_up,
+      :tearoff=>0,
+      :title => 'Ref'
+    )
+    sub_ref_search.configure(Arcadia.style('menu'))
+    sub_ref_search.insert('end',
+      :command,
+      :label=>'Find in files...',
+      :hidemargin => false,
+      :command=> proc{
+        _target = self.selected
+        _dir, _file = _target.sub("%%%",":").split('@@@')
+        if _dir
+          Arcadia.process_event(SearchInFilesEvent.new(self,'dir'=>_dir))
+        end
+      }
+    )
+    
+    sub_ref_search.insert('end',
+      :command,
+      :label=>'Act in files...',
+      :hidemargin => false,
+      :command=> proc{
+        _target = self.selected
+        _dir, _file = _target.sub("%%%",":").split('@@@')
+        if _dir
+          Arcadia.process_event(AckInFilesEvent.new(self,'dir'=>_dir))
+        end
+      }
+    )
+    @pop_up_tree.insert('end',
+      :cascade,
+      :label=>'Search from here',
+      :menu=>sub_ref_search,
+      :hidemargin => false
+    )
+    
+    
+    @htree.areabind_append("Button-3",
+      proc{|x,y|
+        _x = TkWinfo.pointerx(@htree)
+        _y = TkWinfo.pointery(@htree)
+        @pop_up_tree.popup(_x,_y)
+      },
+    "%x %y")
+  end
+
 
   def add_to_tree(_file)
 	 _d, _f = File.split(File.expand_path(_file))

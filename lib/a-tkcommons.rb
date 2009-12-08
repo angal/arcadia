@@ -6,7 +6,7 @@
 require "lib/a-commons"
 require "tk/menu"
 
-class MyBwTree < Tk::BWidget::Tree
+class BWidgetTreePatched < Tk::BWidget::Tree
 
   def open?(node)
     bool(self.itemcget(tagid(node), 'open'))

@@ -19,6 +19,9 @@ class SearchInFilesListener
 
   def on_before_search_in_files(_event)
     if _event.what.nil?
+      if _event.dir
+        @find.e_dir.text(_event.dir)
+      end
       @find.show
     end
   end

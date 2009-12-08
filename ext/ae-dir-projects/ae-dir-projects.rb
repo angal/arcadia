@@ -102,14 +102,14 @@ class DirProjects < ArcadiaExt
           _sync_val = @sync
           @sync = false
           begin
-  	        Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>node2file(_selected)))
+  	         Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>node2file(_selected)))
   	       ensure
             @sync = _sync_val
   	       end
-        elsif !_selected.nil? && @htree.open?(node2file(_selected))
-          @htree.close_tree(node2file(_selected))
-        elsif !_selected.nil?
-          @htree.open_tree(node2file(_selected),false) 
+#        elsif !_selected.nil? && @htree.open?(node2file(_selected))
+#          @htree.close_tree(node2file(_selected))
+#        elsif !_selected.nil?
+#          @htree.open_tree(node2file(_selected),false) 
         end
       else
         shure_delete_node(_selected)
@@ -170,14 +170,25 @@ class DirProjects < ArcadiaExt
     _wrapper.show_v_scroll
     _wrapper.show_h_scroll
     self.pop_up_menu_tree
-    @image_kdir = TkPhotoImage.new('dat' => BOOK_GIF)
+    @image_kdir = TkPhotoImage.new('dat' => ICON_FOLDER_OPEN_GIF)
     @image_kdir_closed = TkPhotoImage.new('dat' => FOLDER_GIF)
-#    @image_kfile_rb = TkPhotoImage.new('dat' => RUBY_DOCUMENT_GIF)
-#    @image_kfile = TkPhotoImage.new('dat' => DOCUMENT_GIF)
 	  self.load_projects
     @htree.areabind_append('KeyPress',proc{|k| 
         key_press(k)
     },"%K")
+
+    do_double_click = proc{
+        _selected = @htree.selection_get[0]
+        if File.ftype(node2file(_selected)) == 'directory'
+          if !_selected.nil? && @htree.open?(node2file(_selected))
+            @htree.close_tree(node2file(_selected))
+          elsif !_selected.nil?
+            @htree.open_tree(node2file(_selected),false) 
+          end
+        end
+    }
+    
+    @htree.textbind_append('Double-1',do_double_click)
 	end
 	
 	def key_press(_keysym)
@@ -299,7 +310,6 @@ class DirProjects < ArcadiaExt
       :hidemargin => false,
       :command=> proc{
         _selected = self.selected
-        p _selected
         if _selected
           do_new_folder(_selected)
         end
@@ -360,6 +370,47 @@ class DirProjects < ArcadiaExt
       :cascade,
       :label=>'Refactor',
       :menu=>sub_ref,
+      :hidemargin => false
+    )
+    
+    
+    #-----------------
+    #----- search submenu
+    sub_ref_search = TkMenu.new(
+      :parent=>@pop_up,
+      :tearoff=>0,
+      :title => 'Ref'
+    )
+    sub_ref_search.configure(Arcadia.style('menu'))
+    sub_ref_search.insert('end',
+      :command,
+      :label=>'Find in files...',
+      :hidemargin => false,
+      :command=> proc{
+        _target = self.selected
+        if _target
+          _target = File.dirname(_target) if File.ftype(_target) == 'file'
+          Arcadia.process_event(SearchInFilesEvent.new(self,'dir'=>_target))
+        end
+      }
+    )
+    
+    sub_ref_search.insert('end',
+      :command,
+      :label=>'Act in files...',
+      :hidemargin => false,
+      :command=> proc{
+        _target = self.selected
+        if _target
+          _target = File.dirname(_target) if File.ftype(_target) == 'file'
+          Arcadia.process_event(AckInFilesEvent.new(self,'dir'=>_target))
+        end
+      }
+    )
+    @pop_up_tree.insert('end',
+      :cascade,
+      :label=>'Search from here',
+      :menu=>sub_ref_search,
       :hidemargin => false
     )
     

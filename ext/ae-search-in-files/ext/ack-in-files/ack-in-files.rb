@@ -16,9 +16,7 @@ class AckInFilesListener <  SearchInFilesListener
   end
 
   def on_before_ack_in_files(_event)
-    if _event.what.nil?
-      @find.show
-    end
+    on_before_search_in_files(_event)
   end
   
    def do_find # overwrite
