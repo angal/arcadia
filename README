@@ -2,7 +2,7 @@
 version 0.8.0
 
 by Antonio Galeone
-on Nov 22, 2009
+on Dec 11, 2009
 
 
 == About
@@ -20,26 +20,31 @@ Some of Arcadia ruby ide project features include:
 [New extensions]
   ack in files: 
      - similar to "search in files" using ack utility
+     
 [Improvements]
+	commons: 
+	  - porting ruby 1.9
+	  - bug-fixing
 	core:
-     - remenber window size/position, show/hide toolbar preferences and layout from previous run  
-	ae-editor:
-     - remember the last file your were editing, with editing location, on startup
-     - added new hightlight engine based on coderay, others kind of file are now
-       supported (erb,rhtml,java)
-     - added auto completion of current word based on words within the current window 
-       also; then added escape key short cut.
-	ae-file-history :
+	  - remenber window size/position, show/hide toolbar preferences and layout from previous run  
+	editor:
+	  - remember the last file your were editing, with editing location, on startup
+	  - added new hightlight engine based on coderay, others kind of file are now supported (erb,rhtml,java)
+	  - added auto completion of current word based on words within the current window 
+	    also; then added escape key short cut.
+	  - added outline syncronization
 
-	ae-search-in-files : 
-
-	ae-editor :
-      
-  commons : 
-
-
-
-
+== Dependencies
+  - rubygems
+  - ruby-tk
+  - tcl/tk
+  - ack
+  - gem coderay
+  - gem ruby-debug (ruby-debug19 on ruby 1.9)
+  - gem whichr
+  - gem win32-process (only on windows)
+  - gem ruby-wmi (only on windows)
+  
 == How to install
 There are two way:
 1. exec as root on command line "gem install arcadia"
@@ -79,6 +84,8 @@ These are same editor short-cut:
 - Ctrl-c  => copy selected text
 - Ctrl-v  => paste copied text
 - Ctrl-x  => cut selected text
+- Ctrl-g  => show go to line dialog
+- Ctrl-o  => shoe open file dialog
 - Ctrl-z  => undo
 - Ctrl-f  => copy the selected text on input combobox of find dialog and moves focus
 - Ctrl-s  => save
@@ -128,10 +135,8 @@ under ~/.arcadia  directory. The format of property definition are:
 <OPERATING SYSTEM IDENTIFY::>PROPERTY_NAME=PROPERTY_VALUE
 
 
-== Requirement
-I include into distribution also the BWidget lib (under tcl directory) so
-are require realy only the standard tcl tk lib (tested on tcl tk 8.4 & tcl tk 8.5).
-I have tested arcadia with ruby 1.8.4, 1.8.5, 1.8.6, 1.8.7 on 
+I have tested arcadia with ruby 1.8.4, 1.8.5, 1.8.6, 1.8.7, 1.9.1 on 
+
 * Archlinux
 * Ubuntu
 * FreeBsd6.x, FreeBsd7.x, 
