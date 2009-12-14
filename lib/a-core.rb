@@ -224,11 +224,13 @@ class Arcadia < TkApplication
                 EventWatcherForGem.new(eval(event_str),args)
               }
             else
+              @splash.withdraw  if @splash
               _event = Arcadia.process_event(NeedRubyGemWizardEvent.new(self, args))
               ret = ret &&  Arcadia.gem_available?(gem)
 #              if _event && _event.results
 #                ret = ret && _event.results[0].installed
 #              end
+              @splash.deiconify  if @splash
             end
             break if !ret
           end
