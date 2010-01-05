@@ -836,7 +836,7 @@ class AgEditorOutline
     build_tree_from_node(@ss.root, _label_sel)
     if @selected
       @tree_exp.selection_add(@selected.rif)
-      @tree_exp.open_tree(@selected.parent.rif)
+      @tree_exp.open_tree(@selected.parent.rif) if @selected.parent.rif != 'root'
       @tree_exp.see(@selected.rif)
     end
   end
@@ -2744,7 +2744,6 @@ class AgEditor
             'title' => '(Arcadia) Libs', 'parent' => @text,
             'message' => msg) == 'yes'
             reload
-            
           else
             @file_last_access_time = ftime
           end
