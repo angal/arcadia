@@ -658,6 +658,8 @@ class Application
     # read in the settings'
     publish('conf', properties_file2hash(self['applicationParams'].config_file)) if self['applicationParams'].config_file
     publish('origin_conf', Hash.new.update(self['conf'])) if self['conf']
+    publish('local_conf', Hash.new)
+    publish('conf_without_local', Hash.new.update(self['conf'])) if self['conf']
     publish('pers', properties_file2hash(self['applicationParams'].persistent_file)) if self['applicationParams'].persistent_file
     yield(self) if block_given?
   end
@@ -694,11 +696,11 @@ class Application
     @@conf_groups[_group]
   end
 
-  def Application.del_conf_group(_group)
+  def Application.del_conf_group(_conf_hash, _group)
       glen=_group.length
-      @@instance['conf'].keys.sort.each{|k|
+      _conf_hash.keys.sort.each{|k|
         if k[0..glen] == "#{_group}."
-          @@instance['conf'].delete(k)
+          _conf_hash.delete(k)
         end
       }
   end
@@ -733,10 +735,10 @@ class Application
               p = self['conf']
               if p
                 p.keys.sort.each{|key|
-                  if self['origin_conf'][key] == self['conf'][key]
-                    f.syswrite('#'+key+'='+self['conf'][key]+"\n") # write it as a comment since it isn't a real change
-                  else
-                    f.syswrite(key+'='+self['conf'][key]+"\n")
+                  if self['conf_without_local'][key] == self['conf'][key] || self['local_conf'][key].nil?
+                    f.syswrite("# #{key}=#{self['origin_conf'][key]}\n") # write it as a comment since it isn't a real change
+                  elsif self['local_conf'][key]
+                    f.syswrite("#{key}=#{self['local_conf'][key]}\n")
                   end
                 }
               end
@@ -751,7 +753,8 @@ class Application
   # this method load config file from local directory for personalizations
   def load_local_config(_create_if_not_exist=true)
       if FileTest.exist?(local_file_config)
-        self['conf'].update(self.properties_file2hash(local_file_config))
+        self['local_conf']= self.properties_file2hash(local_file_config)
+        self['conf'].update(self['local_conf'])
       elsif _create_if_not_exist
         if FileTest.writable?(local_dir)
           f = File.new(local_file_config, "w")

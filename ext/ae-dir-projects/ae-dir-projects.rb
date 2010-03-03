@@ -729,7 +729,8 @@ class DirProjects < ArcadiaExt
   def add_node(_parent, _node, _kind)
     return if @htree.exist?(_node)
     @node_parent[_node] = _parent
-    _name = _node.split(File::SEPARATOR)[-1]
+#    _name = _node.split(File::SEPARATOR)[-1]
+    _name = File.basename(_node)
     _drawcross = 'auto'
     if _kind == "project" || _kind == "directory"
       num = Dir.entries(_node).length-2

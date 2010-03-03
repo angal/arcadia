@@ -189,6 +189,7 @@ class Arcadia < TkApplication
        end	 	
     		 self['conf'].update(conf_hash2)	
     		 self['origin_conf'].update(conf_hash2)	
+    		 self['conf_without_local'].update(conf_hash2)	
     		 load_exts_conf_from("#{ext_dir}/ext",name)
   		}
   end
@@ -431,7 +432,7 @@ class Arcadia < TkApplication
     self.load_local_config
     self.load_theme(self['conf']['theme'])
     self.resolve_properties_link(self['conf'],self['conf'])
-    self.resolve_properties_link(self['origin_conf'],self['origin_conf'])
+    self.resolve_properties_link(self['conf_without_local'],self['conf_without_local'])
   end
 
   def set_sysdefaultproperty
@@ -585,8 +586,8 @@ class Arcadia < TkApplication
   end
 
   def save_layout
-    self['conf']['geometry']= TkWinfo.geometry(@root)
-    Arcadia.del_conf_group('layout')
+    self['local_conf']['geometry']= TkWinfo.geometry(@root)
+    Arcadia.del_conf_group(self['local_conf'],'layout')
     # resizing
     @exts_i.each{|e|
       found = false
@@ -597,7 +598,7 @@ class Arcadia < TkApplication
       end
       frs.each_index{|i|
         if e.maximized?(i)
-          self['conf']['layout.maximized']="#{e.conf('name')},#{i}"
+          self['local_conf']['layout.maximized']="#{e.conf('name')},#{i}"
           e.resize(i)
           found=true
           break
@@ -612,9 +613,9 @@ class Arcadia < TkApplication
       header << i.to_s
       header << ',' if i < splits.length-1
     }
-    self['conf']['layout.split']= header
+    self['local_conf']['layout.split']= header
     splits.each_with_index{|sp,i|
-      self['conf']["layout.split.#{i}"]=sp
+      self['local_conf']["layout.split.#{i}"]=sp
     }
     # domains
     @exts_i.each{|e|
@@ -647,15 +648,15 @@ class Arcadia < TkApplication
         end
       }
       if str_frames.length > 0
-        self['conf']["#{e.conf('name')}.frames"]=str_frames
+        self['local_conf']["#{e.conf('name')}.frames"]=str_frames
  #     p "#{e.conf('name')}.frames=#{str_frames}"
       end
     }
     # toolbar
     if @is_toolbar_show
-      self['conf']['user_toolbar_show']='yes'
+      self['local_conf']['user_toolbar_show']='yes'
     else
-      self['conf']['user_toolbar_show']='no'
+      self['local_conf']['user_toolbar_show']='no'
     end
     
   end
