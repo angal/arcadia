@@ -732,13 +732,13 @@ class Application
           f = File.new(local_file_config, "w")
           begin
             if f
-              p = self['conf']
-              if p
-                p.keys.sort.each{|key|
-                  if self['conf_without_local'][key] == self['conf'][key] || self['local_conf'][key].nil?
+              properties = self['conf']
+              if properties
+                properties.keys.sort.each{|key|
+                  if self['conf_without_local'][key] == self['conf'][key] || (self['origin_conf'][key] && self['origin_conf'][key].include?('>>>')) # || self['local_conf'][key].nil?
                     f.syswrite("# #{key}=#{self['origin_conf'][key]}\n") # write it as a comment since it isn't a real change
-                  elsif self['local_conf'][key]
-                    f.syswrite("#{key}=#{self['local_conf'][key]}\n")
+                  elsif self['conf'][key]
+                    f.syswrite("#{key}=#{self['conf'][key]}\n")
                   end
                 }
               end
@@ -781,7 +781,9 @@ class Application
   def load_theme(_name=nil)
     _theme_file = "conf/theme-#{_name}.conf" if !_name.nil?
     if _theme_file && File.exist?(_theme_file)
-      self['conf'].update(self.properties_file2hash(_theme_file))
+      self['conf_theme'] = self.properties_file2hash(_theme_file)
+      self['conf'].update(self['conf_theme'])
+      self['conf_without_local'].update(self['conf_theme'])
       _theme_res_file = "conf/theme-#{_name}.res.rb"
       if _theme_res_file && File.exist?(_theme_res_file)
         begin
