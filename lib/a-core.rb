@@ -21,13 +21,12 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.8.0',
+        '0.8.1',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
     )
     load_config
-    set_sysdefaultproperty
     ArcadiaDialogManager.new(self)
     ArcadiaActionDispatcher.new(self)
     ArcadiaGemsWizard.new(self)
@@ -385,6 +384,7 @@ class Arcadia < TkApplication
           suf1 = suf+'.'+group
           begin
             property = self['conf'][suf1]
+            #next if property.nil?
             c = property.split('c')
             if c && c.length == 2
               pt = c[0].split('.')
@@ -432,11 +432,12 @@ class Arcadia < TkApplication
     self.load_exts_conf
     self.load_local_config
     self.load_theme(self['conf']['theme'])
+    self.load_sysdefaultproperty
     self.resolve_properties_link(self['conf'],self['conf'])
     self.resolve_properties_link(self['conf_without_local'],self['conf_without_local'])
   end
 
-  def set_sysdefaultproperty
+  def load_sysdefaultproperty
     Tk.tk_call "eval","option add *background #{self['conf']['background']}"
     Tk.tk_call "eval","option add *foreground #{self['conf']['foreground']}"
     #Tk.tk_call "eval","option add *font #{self['conf']['font']}"
@@ -488,16 +489,44 @@ class Arcadia < TkApplication
     load_user_control(@main_menu)
     load_user_control(@main_toolbar)
     #Extension control
+    load_key_binding
     @exts.each{|ext|
       @splash.next_step("... load #{ext} user controls ")  if @splash
       load_user_control(@main_menu, ext)
       load_user_control(@main_toolbar, ext)
+      load_key_binding(ext)
     }
     load_user_control(@main_menu,"","e")
     load_user_control(@main_toolbar,"","e")
     #@layout.build_invert_menu
   end
 
+  def load_key_binding(_ext='')
+    return unless _ext && ext_active?(_ext)
+    if _ext.length > 0 && self[_ext]
+      _self_on_eval = self[_ext]
+      suf = "#{_ext}.keybinding"
+    else
+      _self_on_eval = self
+      suf = "keybinding"
+    end
+    keybs=Arcadia.conf_group(suf)
+    keybs.each{|k,v|
+      value = v.strip
+      key_dits = k.split('[')
+      next if k.length == 0
+      key_event=key_dits[0]
+      if key_dits[1]
+        key_sym=key_dits[1][0..-2]
+      end
+      @root.bind_append(key_event){|e|
+        if key_sym == e.keysym
+          Arcadia.process_event(_self_on_eval.instance_eval(value))
+        end
+      }
+    }
+  end
+  
   def load_user_control(_user_control, _ext='', _pre='')
     return unless _ext && ext_active?(_ext)
     
@@ -586,8 +615,8 @@ class Arcadia < TkApplication
   end
 
   def save_layout
-    self['local_conf']['geometry']= TkWinfo.geometry(@root)
-    Arcadia.del_conf_group(self['local_conf'],'layout')
+    self['conf']['geometry']= TkWinfo.geometry(@root)
+    Arcadia.del_conf_group(self['conf'],'layout')
     # resizing
     @exts_i.each{|e|
       found = false
@@ -598,7 +627,7 @@ class Arcadia < TkApplication
       end
       frs.each_index{|i|
         if e.maximized?(i)
-          self['local_conf']['layout.maximized']="#{e.conf('name')},#{i}"
+          self['conf']['layout.maximized']="#{e.conf('name')},#{i}"
           e.resize(i)
           found=true
           break
@@ -613,9 +642,9 @@ class Arcadia < TkApplication
       header << i.to_s
       header << ',' if i < splits.length-1
     }
-    self['local_conf']['layout.split']= header
+    self['conf']['layout.split']= header
     splits.each_with_index{|sp,i|
-      self['local_conf']["layout.split.#{i}"]=sp
+      self['conf']["layout.split.#{i}"]=sp
     }
     # domains
     @exts_i.each{|e|
@@ -648,17 +677,16 @@ class Arcadia < TkApplication
         end
       }
       if str_frames.length > 0
-        self['local_conf']["#{e.conf('name')}.frames"]=str_frames
+        self['conf']["#{e.conf('name')}.frames"]=str_frames
  #     p "#{e.conf('name')}.frames=#{str_frames}"
       end
     }
     # toolbar
     if @is_toolbar_show
-      self['local_conf']['user_toolbar_show']='yes'
+      self['conf']['user_toolbar_show']='yes'
     else
-      self['local_conf']['user_toolbar_show']='no'
+      self['conf']['user_toolbar_show']='no'
     end
-    
   end
   
   def do_finalize
@@ -1092,6 +1120,10 @@ class ArcadiaMainMenu < ArcadiaUserControl
       ['Cut', proc{Arcadia.process_event(CutTextEvent.new(self))}, 2],
       ['Copy', proc{Arcadia.process_event(CopyTextEvent.new(self))}, 0],
       ['Paste', proc{Arcadia.process_event(PasteTextEvent.new(self))}, 0],
+      ['Undo', proc{Arcadia.process_event(UndoTextEvent.new(self))}, 0],
+      ['Redo', proc{Arcadia.process_event(RedoTextEvent.new(self))}, 0],
+      ['Select all', proc{Arcadia.process_event(SelectAllTextEvent.new(self))}, 0],
+      ['Invert selection', proc{Arcadia.process_event(InvertSelectionTextEvent.new(self))}, 0],
       ['Prettify Current', proc{Arcadia.process_event(PrettifyTextEvent.new(self))}, 0]]
       
       menu_spec_search = [['Search', 0],
@@ -1186,7 +1218,7 @@ class ArcadiaAboutSplash < TkToplevel
       place('width' => '120','x' => 150,'y' => 65,'height' => 19)
     }
     @tkLabel21 = TkLabel.new(self){
-      text  'by Antonio Galeone - 2004/2009'
+      text  'by Antonio Galeone - 2004/2010'
       background  _bgcolor
       foreground  '#ffffff'
       font Arcadia.instance['conf']['splash.credits.font']
@@ -2938,6 +2970,14 @@ class FocusEventManager
         do_copy(_event.focus_widget)
       when PasteTextEvent
         do_paste(_event.focus_widget)
+      when UndoTextEvent
+        do_undo(_event.focus_widget)
+      when RedoTextEvent
+        do_redo(_event.focus_widget)
+      when SelectAllTextEvent
+        do_select_all(_event.focus_widget)
+      when InvertSelectionTextEvent
+        do_invert_selection(_event.focus_widget)
     end
   end
   
@@ -2951,6 +2991,34 @@ class FocusEventManager
 
   def do_paste(_focused_widget)
     _focused_widget.text_paste if _focused_widget.respond_to?(:text_paste)
+  end
+
+  def do_undo(_focused_widget)
+    begin
+      _focused_widget.edit_undo if _focused_widget.respond_to?(:edit_undo)
+    rescue RuntimeError => e
+      throw e unless e.to_s.include? "nothing to undo" # this is ok--we've done undo back to the beginning
+    end
+  end
+
+  def do_redo(_focused_widget)
+    begin
+      _focused_widget.edit_redo if _focused_widget.respond_to?(:edit_redo)
+    rescue RuntimeError => e
+      throw e unless e.to_s.include? "nothing to redo" # this is ok--we've done redo back to the beginning
+    end
+  end
+
+  def do_select_all(_focused_widget)
+    _focused_widget.tag_add('sel','1.0','end') if _focused_widget.respond_to?(:tag_add)
+  end
+
+  def do_invert_selection(_focused_widget)
+    if _focused_widget.respond_to?(:tag_ranges)
+      r = _focused_widget.tag_ranges('sel')
+      _focused_widget.tag_add('sel','1.0','end') if _focused_widget.respond_to?(:tag_add)
+      _focused_widget.tag_remove('sel',r[0][0],r[0][1]) if _focused_widget.respond_to?(:tag_remove) && r && r[0]
+    end
   end
   
 end

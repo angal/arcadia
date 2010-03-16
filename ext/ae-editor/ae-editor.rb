@@ -1330,18 +1330,26 @@ class AgEditor
     activate_complete_code_key_binding if @is_ruby
     @text.bind_append("Control-KeyPress"){|e|
       case e.keysym
-#      when 'space'
-#        @do_complete = true
-#        complete_code.call
       when 'z'
-        #_b = @text.index('insert').split('.')[0].to_i
         begin
           @text.edit_undo
         rescue RuntimeError => e
           throw e unless e.to_s.include? "nothing to undo" # this is ok--we've done undo back to the beginning
           break
         end
-        #_e = @text.index('insert').split('.')[0].to_i
+        if @highlighting
+          _b = @text.index('@0,0').split('.')[0].to_i
+          _e = @text.index('@0,'+TkWinfo.height(@text).to_s).split('.')[0].to_i + 1
+          rehighlightlines(_b,_e)
+        end
+        break
+      when 'r'
+        begin
+          @text.edit_redo
+        rescue RuntimeError => e
+          throw e unless e.to_s.include? "nothing to redo" # this is ok--we've done redo back to the beginning
+          break
+        end
         if @highlighting
           _b = @text.index('@0,0').split('.')[0].to_i
           _e = @text.index('@0,'+TkWinfo.height(@text).to_s).split('.')[0].to_i + 1
@@ -1886,7 +1894,7 @@ class AgEditor
   def pop_up_menu
     @pop_up = TkMenu.new(
       :parent=>@text,
-      :tearoff=>0,
+      :tearoff=>1,
       :title => 'Menu'
     )
     @pop_up.configure(Arcadia.style('menu'))
@@ -1992,6 +2000,26 @@ class AgEditor
         @text.insert('insert',Tk.chooseColor)
       }
     )
+
+    @pop_up.insert('end',
+      :command,
+      :label=>'View color from data',
+      :hidemargin => false,
+      :command=> proc{
+        _r = @text.tag_ranges('sel')
+        if _r.length>0
+          _data=@text.get(_r[0][0],_r[0][1])
+          if _data.length > 0
+            _b = TkButton.new(@text, 
+              'command'=>proc{_b.destroy},
+              'bg'=>_data,
+              'relief'=>'groove')
+            TkTextWindow.new(@text, _r[0][1], 'window'=> _b)
+          end
+        end
+      }
+    )
+
     @pop_up.insert('end',
       :command,
       :label=>'Font',
@@ -2003,7 +2031,7 @@ class AgEditor
     
     @pop_up.insert('end',
       :command,
-      :label=>'Data image from file',
+      :label=>'Data from file',
       :hidemargin => false,
       :command=>       proc{
         file = Arcadia.open_file_dialog
@@ -2038,6 +2066,7 @@ class AgEditor
         end
       }
     )
+
 
     @pop_up.insert('end',
       :command,
@@ -2211,7 +2240,8 @@ class AgEditor
       proc{|x,y|
         _x = TkWinfo.pointerx(@text)
         _y = TkWinfo.pointery(@text)
-        @pop_up.entryconfigure(0, 'label'=>File.basename(@file)) if @file
+        @pop_up.entryconfigure(1, 'label'=>File.basename(@file)) if @file
+        #@pop_up.entryconfigure(0, 'label'=>File.basename(@file)) if @file
         @pop_up.popup(_x,_y)
       },
     "%x %y")
@@ -3472,11 +3502,6 @@ class AgMultiEditor < ArcadiaExt
   def close_raised
     _e = @tabs_editor[@main_frame.enb.raise]
     close_editor(_e) if _e
-  
-    #_page = @main_frame.enb.raise
-    #_editor = @tabs_editor[_page]
-    #_row = _editor.text_insert_index.split('.')[0].strip.to_i
-    #close_editor(_editor)
   end
 
   def breakpoint_add(_file,_line)

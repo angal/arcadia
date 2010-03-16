@@ -242,6 +242,10 @@ end
 class CutTextEvent < FocusEvent; end
 class CopyTextEvent < FocusEvent; end
 class PasteTextEvent < FocusEvent; end
+class UndoTextEvent < FocusEvent; end
+class RedoTextEvent < FocusEvent; end
+class SelectAllTextEvent < FocusEvent; end
+class InvertSelectionTextEvent < FocusEvent; end
 
 #class VirtualKeyboardEvent  < ArcadiaEvent
 #end
