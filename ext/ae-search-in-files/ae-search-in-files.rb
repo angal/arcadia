@@ -177,8 +177,8 @@ class SearchOutput
 #    @found_color='#3f941b'
 #    @not_found_color= 'red'
 #    @item_color='#6fc875'
-    @found_color=Arcadia.conf('hightlight.5.foreground')
-    @not_found_color= Arcadia.conf('hightlight.6.foreground')
+    @found_color=Arcadia.conf('activeforeground')
+    @not_found_color= Arcadia.conf('hightlight.comment.foreground')
     @item_color=Arcadia.conf('treeitem.fill')
   end  
   

@@ -9,20 +9,12 @@ re.link=>>>
 re_op.to_line_end=comment
 re_op.only_first=operator
 
-#hightlight.comment.foreground=#007F00
-#hightlight.key.foreground=#9c342c
-#hightlight.key.style=bold
-#hightlight.value.foreground=#69a0b6
-#hightlight.value.style=bold
-#hightlight.operator.foreground=red
-#hightlight.operator.style=bold
-
-re.hightlight.comment.foreground=>>>hightlight.11.foreground
-re.hightlight.key.foreground=>>>hightlight.5.foreground
+re.hightlight.comment.foreground=>>>hightlight.comment.foreground
+re.hightlight.key.foreground=>>>hightlight.symbol.foreground
 re.hightlight.key.style=bold
-re.hightlight.value.foreground=>>>hightlight.6.foreground
+re.hightlight.value.foreground=>>>hightlight.constant.foreground
 re.hightlight.value.style=bold
-re.hightlight.operator.foreground=>>>hightlight.14.foreground
+re.hightlight.operator.foreground=>>>hightlight.operator.foreground
 re.hightlight.operator.style=bold
-re.hightlight.link.foreground=>>>hightlight.12.foreground
+re.hightlight.link.foreground=>>>hightlight.string.foreground
 re.hightlight.link.style=bold
