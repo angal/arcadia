@@ -46,6 +46,7 @@ class Arcadia < TkApplication
       iconphoto(TkPhotoImage.new('dat'=>ARCADIA_RING_GIF))
     }
     
+    
     @on_event = Hash.new
 
     @main_menu_bar = TkMenubar.new(
@@ -550,26 +551,25 @@ class Arcadia < TkApplication
         begin
           context_path = self['conf']["#{suf1}.context_path"]
           context_underline = self['conf']["#{suf1}.context_underline"]
-#          property = proc{|_str, _suf| self['conf']["#{_suf}.#{_str}"]} 
-#          property_to_eval = proc{|_str, _suf| 
-#            p = self['conf']["#{_suf}.#{_str}"]
-#            _self_on_eval.instance_eval(p) if p 
-#          } 
           items = self['conf'][suf1].split(',')
           items.each{|item|
             suf2 = suf1+'.'+item
             disabled = !self['conf']["#{suf2}.disabled"].nil?
             iprops=Arcadia.conf_group(suf2)
             item_args = Hash.new
+            
             iprops.each{|k,v|
-              value = v.strip
-              if value[0..0]=='!'
-                item_args[k]=_self_on_eval.instance_eval(value[1..-1])  
-              else
-                item_args[k]=value
-              end
+              item_args[k]= make_value(_self_on_eval, v)
             }
-          #  item_args['caption'] = item if item_args['caption'].nil?
+
+#            iprops.each{|k,v|
+#              value = v.strip
+#              if value[0..0]=='!'
+#                item_args[k]=_self_on_eval.instance_eval(value[1..-1])  
+#              else
+#                item_args[k]=value
+#              end
+#            }
             item_args['name'] = item if item_args['name'].nil?
             item_args['context'] = group
             item_args['context_path'] = context_path
@@ -582,7 +582,7 @@ class Arcadia < TkApplication
           msg = "Loading #{groups} ->#{items} (#{$!.class.to_s} : #{$!.to_s} at : #{$@.to_s})"
           if Arcadia.dialog(self, 
             'type'=>'ok_cancel', 
-            'title' => '(Arcadia) Toolbar', 
+            'title' => "(Arcadia) #{_user_control.class::SUF}", 
             'msg'=>msg,
             'level'=>'error')=='cancel'
             raise

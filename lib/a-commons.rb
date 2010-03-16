@@ -541,7 +541,6 @@ module Configurable
     end
     Hash.new.update(@@conf_groups[_group])
   end
-  
 
   def resolve_link(_value, _hash_source, _link_symbol='>>>', _add_symbol='+++')
       if _value.length > 0 
@@ -563,9 +562,9 @@ module Configurable
     _hash_target.each{|k,value|
       loop_level = 0
       if value.length > 0
-	v, vadd = value.split(_add_symbol)
+        v, vadd = value.split(_add_symbol)
       else
-	v= value
+        v= value
       end
 #      p "value=#{value} class=#{value.class}"
 #      p "v=#{v} class=#{v.class}"
@@ -595,6 +594,14 @@ module Configurable
       end
       _hash_target.delete(k)
     end
+  end
+  
+  def make_value(_self_context=self, _value)
+    value = _value.strip
+    if value[0..0]=='!'
+      value=_self_context.instance_eval(value[1..-1])  
+    end
+    value
   end
   
 end
