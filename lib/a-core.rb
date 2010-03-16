@@ -2978,6 +2978,10 @@ class FocusEventManager
         do_select_all(_event.focus_widget)
       when InvertSelectionTextEvent
         do_invert_selection(_event.focus_widget)
+      when UpperCaseTextEvent
+        do_upper_case(_event.focus_widget)
+      when LowerCaseTextEvent
+        do_lower_case(_event.focus_widget)
     end
   end
   
@@ -3020,5 +3024,25 @@ class FocusEventManager
       _focused_widget.tag_remove('sel',r[0][0],r[0][1]) if _focused_widget.respond_to?(:tag_remove) && r && r[0]
     end
   end
+
+  def do_upper_case_all(_focused_widget)
+    _replace_sel(_focused_widget, :upcase)
+  end
+
+  def do_lower_case_all(_focused_widget)
+    _replace_sel(_focused_widget, :downcase)
+  end
   
+  def _replace_sel(_focused_widget, _method)
+    if _focused_widget.respond_to?(:tag_ranges)
+      r = _focused_widget.tag_ranges('sel')
+      if _focused_widget.respond_to?(:get) && r && r[0]
+        target_text = _focused_widget.get(r[0][0],r[0][1])
+        if target_text
+          _focused_widget.delete(r[0][0],r[0][1])
+          _focused_widget.insert(r[0][0],target_text.send(_method))
+        end
+      end
+    end
+  end
 end

@@ -246,6 +246,8 @@ class UndoTextEvent < FocusEvent; end
 class RedoTextEvent < FocusEvent; end
 class SelectAllTextEvent < FocusEvent; end
 class InvertSelectionTextEvent < FocusEvent; end
+class UpperCaseTextEvent < FocusEvent; end
+class LowerCaseTextEvent < FocusEvent; end
 
 #class VirtualKeyboardEvent  < ArcadiaEvent
 #end
