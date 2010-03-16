@@ -3025,11 +3025,11 @@ class FocusEventManager
     end
   end
 
-  def do_upper_case_all(_focused_widget)
+  def do_upper_case(_focused_widget)
     _replace_sel(_focused_widget, :upcase)
   end
 
-  def do_lower_case_all(_focused_widget)
+  def do_lower_case(_focused_widget)
     _replace_sel(_focused_widget, :downcase)
   end
   
