@@ -2427,7 +2427,7 @@ class AGTkToplevel < AGTkContainer
     if ans =='yes'
       form2code
     elsif ans =='no'
-        keep_me
+      keep_me
     end
   end
   

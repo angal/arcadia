@@ -27,6 +27,9 @@ class Arcadia < TkApplication
       )
     )
     load_config
+    if self['conf']['encoding']
+      Tk.encoding=self['conf']['encoding']
+    end
     ArcadiaDialogManager.new(self)
     ArcadiaActionDispatcher.new(self)
     ArcadiaGemsWizard.new(self)

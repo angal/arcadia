@@ -24,7 +24,7 @@ class OutputView
       pack('side' =>'top', 'anchor'=>'n',:padx=>0, :pady=>0)
     }
     
-    @text = TkScrollText.new(right_frame,
+    @text = TkArcadiaText.new(right_frame,
       {'wrap'=>  'none'}.update(Arcadia.style('edit'))
     )
     @text.show

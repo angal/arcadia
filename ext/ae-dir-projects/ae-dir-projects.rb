@@ -455,6 +455,7 @@ class DirProjects < ArcadiaExt
         end
       }
     )
+
     @htree.areabind_append("Button-3",
       proc{|x,y|
         _x = TkWinfo.pointerx(@htree)

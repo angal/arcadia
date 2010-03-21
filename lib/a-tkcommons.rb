@@ -810,6 +810,9 @@ class TkBaseTitledFrame < TkFrame
     @bmaxmin = add_button('[ ]',proc{resize}, W_MAX_GIF)
   end
 
+  def visible?
+    TkWinfo.mapped?(self)
+  end
 end
 
 
@@ -1309,6 +1312,17 @@ class TkScrollText < TkText
     @h_scroll_on = false  
   end
 
+end
+
+class TkArcadiaText < TkScrollText
+  def initialize(parent=nil, keys={})
+    super(parent, keys)
+    self.bind_append("<Copy>"){Arcadia.process_event(CopyTextEvent.new(self));break}
+    self.bind_append("<Cut>"){Arcadia.process_event(CutTextEvent.new(self));break}
+    self.bind_append("<Paste>"){Arcadia.process_event(PasteTextEvent.new(self));break}
+    self.bind_append("<Undo>"){Arcadia.process_event(UndoTextEvent.new(self));break}
+    self.bind_append("<Redo>"){Arcadia.process_event(RedoTextEvent.new(self));break}
+  end
 end
 
 class TkScrollWidget
