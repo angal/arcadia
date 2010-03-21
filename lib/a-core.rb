@@ -503,8 +503,12 @@ class Arcadia < TkApplication
 
   def load_key_binding(_ext='')
     return unless _ext && ext_active?(_ext)
-    if _ext.length > 0 && self[_ext]
-      _self_on_eval = self[_ext]
+    if _ext.length > 0 
+      if self[_ext]
+        _self_on_eval = self[_ext]
+      else
+        _self_on_eval = self
+      end
       suf = "#{_ext}.keybinding"
     else
       _self_on_eval = self
