@@ -370,6 +370,9 @@ class SafeCompleteCode
       # 1) includiano i require
       elsif line.strip.length>7 && (line.strip[0..7]=="require " || line.strip[0..7]=="require(")
         @modified_source = "#{@modified_source}#{line}\n"
+        if line.strip[8..-1].include?("tk")
+          @modified_source = "#{@modified_source}Tk.root.destroy if Tk && Tk.root\n"
+        end
         #@modified_row = @modified_row+1
         #Arcadia.console(self, 'msg'=>"per require @modified_row=#{@modified_row}")
       # 2) includiano la riga da evaluare con un $SAFE 3
@@ -906,7 +909,7 @@ class AgEditor
   
 
   def initialize_text(_frame)
-    @text = TkScrollText.new(_frame, Arcadia.style('text')){|j|
+    @text = TkArcadiaText.new(_frame, Arcadia.style('text')){|j|
       wrap  'none'
       undo true
 #      insertofftime 200
@@ -1328,34 +1331,35 @@ class AgEditor
   #
   def activate_key_binding
     activate_complete_code_key_binding if @is_ruby
+
     @text.bind_append("Control-KeyPress"){|e|
       case e.keysym
-      when 'z'
-        begin
-          @text.edit_undo
-        rescue RuntimeError => e
-          throw e unless e.to_s.include? "nothing to undo" # this is ok--we've done undo back to the beginning
-          break
-        end
-        if @highlighting
-          _b = @text.index('@0,0').split('.')[0].to_i
-          _e = @text.index('@0,'+TkWinfo.height(@text).to_s).split('.')[0].to_i + 1
-          rehighlightlines(_b,_e)
-        end
-        break
-      when 'r'
-        begin
-          @text.edit_redo
-        rescue RuntimeError => e
-          throw e unless e.to_s.include? "nothing to redo" # this is ok--we've done redo back to the beginning
-          break
-        end
-        if @highlighting
-          _b = @text.index('@0,0').split('.')[0].to_i
-          _e = @text.index('@0,'+TkWinfo.height(@text).to_s).split('.')[0].to_i + 1
-          rehighlightlines(_b,_e)
-        end
-        break
+#      when 'z'
+#        begin
+#          @text.edit_undo
+#        rescue RuntimeError => e
+#          throw e unless e.to_s.include? "nothing to undo" # this is ok--we've done undo back to the beginning
+#          break
+#        end
+#        if @highlighting
+#          _b = @text.index('@0,0').split('.')[0].to_i
+#          _e = @text.index('@0,'+TkWinfo.height(@text).to_s).split('.')[0].to_i + 1
+#          rehighlightlines(_b,_e)
+#        end
+#        break
+#      when 'r'
+#        begin
+#          @text.edit_redo
+#        rescue RuntimeError => e
+#          throw e unless e.to_s.include? "nothing to redo" # this is ok--we've done redo back to the beginning
+#          break
+#        end
+#        if @highlighting
+#          _b = @text.index('@0,0').split('.')[0].to_i
+#          _e = @text.index('@0,'+TkWinfo.height(@text).to_s).split('.')[0].to_i + 1
+#          rehighlightlines(_b,_e)
+#        end
+#        break
       when 'o'  
         if @file
           _dir = File.dirname(@file)
@@ -1364,23 +1368,20 @@ class AgEditor
         end
         Arcadia.process_event(OpenBufferEvent.new(self,'file'=>Tk.getOpenFile('initialdir'=>_dir)))
         break
-      when 'c'
-        @text.text_copy
-        break
-      when 'x'
-        @text.text_cut
-        break
-      when 'v'
-        _b = @text.index('insert').split('.')[0].to_i
-        @text.text_paste
-        _e = @text.index('insert').split('.')[0].to_i
-        if @highlighting
-          rehighlightlines(_b,_e)
-#          for j in _b..._e
-#            rehighlightline(j)
-#          end
-        end
-        break
+#      when 'c'
+#        @text.text_copy
+#        break
+#      when 'x'
+#        @text.text_cut
+#        break
+#      when 'v'
+#        _b = @text.index('insert').split('.')[0].to_i
+#        @text.text_paste
+#        _e = @text.index('insert').split('.')[0].to_i
+#        if @highlighting
+#          rehighlightlines(_b,_e)
+#        end
+#        break
       end
       case e.keysym
       when 's'
@@ -1585,7 +1586,6 @@ class AgEditor
     @text.bind_remove('Control-KeyPress')
     @text.bind_remove('Control-Shift-KeyPress')
     @text.bind_remove('Shift-KeyPress')
-
   end
   
   def do_enter
@@ -2561,7 +2561,7 @@ class AgEditor
         else
           real_line_end = line_end
         end
-
+        #@fm1
         _tags = Array.new
         for j in line_begin...real_line_end
           nline = j.to_s.rjust(line_end.to_s.length+2)
@@ -2763,6 +2763,30 @@ class AgEditor
     end
   end
 
+  def modified_by_others?
+    ret = false 
+    if @file_last_access_time && @file 
+      if File.exist?(@file)
+        ftime = File.mtime(@file)
+        ret = @file_last_access_time != ftime
+      else
+        ret = true
+      end
+    end
+    ret
+  end
+
+  def reset_file_last_access_time
+    if @file
+      if File.exist?(@file)
+        @file_last_access_time = File.mtime(@file)
+      else
+        @file_last_access_time = nil
+        @file = nil
+      end
+    end
+  end
+  
   def check_file_last_access_time
     if @file
       file_exist = File.exist?(@file)
@@ -2770,9 +2794,10 @@ class AgEditor
         ftime = File.mtime(@file)
         if @file_last_access_time != ftime
           msg = 'File "'+@file+'" is changed! Reload?'
-          if Tk.messageBox('icon' => 'error', 'type' => 'yesno',
+          ans = Tk.messageBox('icon' => 'error', 'type' => 'yesno',
             'title' => '(Arcadia) Libs', 'parent' => @text,
-            'message' => msg) == 'yes'
+            'message' => msg)
+          if ans == 'yes'
             reload
           else
             @file_last_access_time = ftime
@@ -3144,7 +3169,7 @@ class AgMultiEditor < ArcadiaExt
 
   def on_after_focus(_event)
     if raised && _event.focus_widget == raised.text
-      if [CutTextEvent, PasteTextEvent].include?(_event.class)
+      if [CutTextEvent, PasteTextEvent, UndoTextEvent, RedoTextEvent].include?(_event.class)
         if raised.highlighting
           line_begin_index = raised.text.index('@0,0')
           line_begin = line_begin_index.split('.')[0].to_i
@@ -3890,6 +3915,21 @@ class AgMultiEditor < ArcadiaExt
         ret = !_editor.modified?
       elsif r=="cancel"
         ret = false
+      end
+    elsif _editor.modified_by_others?
+      filename = page_name(_editor.page_frame)
+      message = @main_frame.enb.itemcget(filename, 'text')+"\n modified by other process. Continue closing?"
+      r=Arcadia.dialog(self,
+          'type'=>'yes_no', 
+          'level'=>'warning',
+          'title'=> 'Continue closing', 
+          'msg'=>message)
+      if r=="yes"
+        _editor.reset_file_last_access_time
+        ret = !_editor.modified_by_others?
+      else
+        ret = false
+        #raise_file(filename) 
       end
     end
     ret

@@ -42,14 +42,16 @@ class SearchInFilesListener
     enter_proc = proc {|e|
       case e.keysym
       when 'Return'
-        update_all_combo    
-        do_find
+        if @find.visible?
+          update_all_combo    
+          do_find
+        end
         Tk.callback_break
       end
     }
     
     for method in [:e_what_entry, :e_filter_entry, :e_dir_entry] do
-      @find.send(method).bind_append('KeyRelease') { |*args| enter_proc.call *args } # ltodo why can't we pass it in like &enter_proc?
+      @find.send(method).bind_append('KeyPress') { |*args| enter_proc.call *args } # ltodo why can't we pass it in like &enter_proc?
     end
     @find.title(title)
   end

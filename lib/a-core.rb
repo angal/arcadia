@@ -27,6 +27,9 @@ class Arcadia < TkApplication
       )
     )
     load_config
+    if self['conf']['encoding']
+      Tk.encoding=self['conf']['encoding']
+    end
     ArcadiaDialogManager.new(self)
     ArcadiaActionDispatcher.new(self)
     ArcadiaGemsWizard.new(self)
@@ -3029,11 +3032,11 @@ class FocusEventManager
     end
   end
 
-  def do_upper_case_all(_focused_widget)
+  def do_upper_case(_focused_widget)
     _replace_sel(_focused_widget, :upcase)
   end
 
-  def do_lower_case_all(_focused_widget)
+  def do_lower_case(_focused_widget)
     _replace_sel(_focused_widget, :downcase)
   end
   
