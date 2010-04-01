@@ -485,6 +485,20 @@ class AGTkVSplittedFrames < AGTkSplittedFrames
     @right_frame_obj.amove(_x + _w,0)
   end
 
+  def move_splitter(_gapx=0,_gapy=0)
+    @splitter_frame_obj.amove(_gapx,_gapy)
+    do_resize
+  end
+
+  def resize_left(_new_width)
+    @left_frame_obj.width = _new_width
+    @left_frame_obj.go(_new_width,0)
+    @left_frame_obj.amove(0,0)
+    @splitter_frame_obj.amove(_new_width,0)
+    @right_frame_obj.width = - _new_width - @slen
+    @right_frame_obj.amove(_new_width + @slen,0)
+  end
+
   def hide_left
     if (@state=='left')
       _w = @last

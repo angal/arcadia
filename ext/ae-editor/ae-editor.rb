@@ -2596,11 +2596,37 @@ class AgEditor
         end
       end
       refresh_outline if Tk.focus==@text
+      resize_line_num(line_end)
 #      if TkWinfo.mapped?(@text_line_num)
-#        x,y,w,h = @text.bbox("#{(line_end).to_s}.3");
-#        @fm1.splitter_frame.go(w,0)
-#        @fm1.do_resize
+#        line_end_chars  = line_end.to_s.length  
+#        if @last_line_end_chars != line_end_chars
+#          rx_e, ry_e, widht_e, heigth_e = @text_line_num.bbox("0.1 lineend - 1chars");
+#          if rx_e && widht_e && line_end_chars >0 
+#            actual_widht = rx_e + widht_e
+#            need_widht = (line_end_chars+1)*widht_e
+#            delta = actual_widht - need_widht
+#            @fm1.resize_left(need_widht)
+#          end
+#          @last_line_end_chars = line_end_chars
+#        end
 #      end
+  end
+
+  def resize_line_num(_line_end=nil)
+    if TkWinfo.mapped?(@text_line_num)
+      _line_end=@text.index('@0,'+TkWinfo.height(@text).to_s).split('.')[0].to_i + 1 if _line_end.nil?
+      line_end_chars  = _line_end.to_s.length  
+      if @last_line_end_chars != line_end_chars
+        rx_e, ry_e, widht_e, heigth_e = @text_line_num.bbox("0.1 lineend - 1chars");
+        if rx_e && widht_e && line_end_chars >0 
+          actual_widht = rx_e + widht_e
+          need_widht = (line_end_chars+1)*widht_e
+          delta = actual_widht - need_widht
+          @fm1.resize_left(need_widht)
+        end
+        @last_line_end_chars = line_end_chars
+      end
+    end
   end
 
   def highlightlines(_row_begin, _row_end, _check_mod = false)
