@@ -1,8 +1,8 @@
 = Arcadia Ruby Ide
-version 0.8.0
+version 0.8.1
 
 by Antonio Galeone
-on Dec 11, 2009
+on Apr 10, 2010
 
 
 == About
@@ -16,23 +16,18 @@ Some of Arcadia ruby ide project features include:
 * Working on any platform where ruby and tcl-tk work.
 * Highly extensibility architecture.
 
-== In this release 0.8.0
-[New extensions]
-  ack in files: 
-     - similar to "search in files" using ack utility
-     
+== In this release 0.8.1
+    
 [Improvements]
 	commons: 
-	  - porting ruby 1.9
 	  - bug-fixing
-	core:
-	  - remenber window size/position, show/hide toolbar preferences and layout from previous run  
+	  - hide splash on gems wizard
+	  - added keybinding configurazion support 
+	  - added new event :  RedoTextEvent, SelectAllTextEvent, InvertSelectionTextEvent, UpperCaseTextEvent, LowerCaseTextEvent
+	    and Edit menu items : 'Redo','Select all','Invert selection','Uppercase', 'Lowercase'
+
 	editor:
-	  - remember the last file your were editing, with editing location, on startup
-	  - added new hightlight engine based on coderay, others kind of file are now supported (erb,rhtml,java)
-	  - added auto completion of current word based on words within the current window 
-	    also; then added escape key short cut.
-	  - added outline syncronization
+	  - added dynamic resizing of line numbers frame 
 
 == Dependencies
   - rubygems

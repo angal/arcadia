@@ -1131,6 +1131,8 @@ class ArcadiaMainMenu < ArcadiaUserControl
       ['Redo', proc{Arcadia.process_event(RedoTextEvent.new(self))}, 0],
       ['Select all', proc{Arcadia.process_event(SelectAllTextEvent.new(self))}, 0],
       ['Invert selection', proc{Arcadia.process_event(InvertSelectionTextEvent.new(self))}, 0],
+      ['Uppercase', proc{Arcadia.process_event(UpperCaseTextEvent.new(self))}, 0],
+      ['Lowercase', proc{Arcadia.process_event(LowerCaseTextEvent.new(self))}, 0],
       ['Prettify Current', proc{Arcadia.process_event(PrettifyTextEvent.new(self))}, 0]]
       
       menu_spec_search = [['Search', 0],
