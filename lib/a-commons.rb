@@ -596,7 +596,7 @@ module Configurable
     end
   end
   
-  def make_value(_self_context=self, _value)
+  def make_value(_self_context=self, _value='')
     value = _value.strip
     if value[0..0]=='!'
       value=_self_context.instance_eval(value[1..-1])  
