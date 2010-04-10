@@ -899,7 +899,7 @@ class AgEditor
   
   def xy_insert
     _index_now = @text.index('insert')
-    _rx, _ry, _widht, _heigth = @text.bbox(_index_now);
+    _rx, _ry, _width, _heigth = @text.bbox(_index_now);
     _x = _rx + TkWinfo.rootx(@text)  
     _y = _ry + TkWinfo.rooty(@text)  + @font_metrics[2][1]
     _xroot = _x - TkWinfo.rootx(Arcadia.instance.layout.root)  
@@ -1063,7 +1063,7 @@ class AgEditor
         extra_len = 0
       end
       if _candidates.length >= 1 
-          _rx, _ry, _widht, heigth = @text.bbox(_begin_index);
+          _rx, _ry, _width, heigth = @text.bbox(_begin_index);
           _x = _rx + TkWinfo.rootx(@text)  
           _y = _ry + TkWinfo.rooty(@text)  + @font_metrics[2][1]
           _xroot = _x - TkWinfo.rootx(Arcadia.instance.layout.root)  
@@ -2554,7 +2554,7 @@ class AgEditor
         @text_line_num.delete('1.0','end')
         
 
-        _rx, _ry, _widht, _heigth = @text.bbox(line_begin_index);
+        _rx, _ry, _width, _heigth = @text.bbox(line_begin_index);
         
         if _ry && _ry < 0 
           real_line_end = line_end + 1
@@ -2572,10 +2572,9 @@ class AgEditor
           else
             _tags << 'normal_case'
           end
-          
           if wrap_on
-            w_rx_b, w_ry_b, w_widht_b, w_heigth_b = @text.bbox("#{(j).to_s}.0");
-            w_rx_e, w_ry_e, w_widht_e, w_heigth_e = @text.bbox("#{(j).to_s}.0 lineend");
+            w_rx_b, w_ry_b, w_width_b, w_heigth_b = @text.bbox("#{(j).to_s}.0");
+            w_rx_e, w_ry_e, w_width_e, w_heigth_e = @text.bbox("#{(j).to_s}.0 lineend");
             if w_ry_e && w_ry_b 
               delta = w_ry_e - w_ry_b
               if delta > 1   
@@ -2585,7 +2584,6 @@ class AgEditor
               end
             end
           end
-
           @text_line_num.insert(_index, "#{nline}\n",_tags)
           if b.include?(j.to_s)
             add_tag_breakpoint(j)
@@ -2597,19 +2595,6 @@ class AgEditor
       end
       refresh_outline if Tk.focus==@text
       resize_line_num(line_end)
-#      if TkWinfo.mapped?(@text_line_num)
-#        line_end_chars  = line_end.to_s.length  
-#        if @last_line_end_chars != line_end_chars
-#          rx_e, ry_e, widht_e, heigth_e = @text_line_num.bbox("0.1 lineend - 1chars");
-#          if rx_e && widht_e && line_end_chars >0 
-#            actual_widht = rx_e + widht_e
-#            need_widht = (line_end_chars+1)*widht_e
-#            delta = actual_widht - need_widht
-#            @fm1.resize_left(need_widht)
-#          end
-#          @last_line_end_chars = line_end_chars
-#        end
-#      end
   end
 
   def resize_line_num(_line_end=nil)
@@ -2617,14 +2602,18 @@ class AgEditor
       _line_end=@text.index('@0,'+TkWinfo.height(@text).to_s).split('.')[0].to_i + 1 if _line_end.nil?
       line_end_chars  = _line_end.to_s.length  
       if @last_line_end_chars != line_end_chars
-        rx_e, ry_e, widht_e, heigth_e = @text_line_num.bbox("0.1 lineend - 1chars");
-        if rx_e && widht_e && line_end_chars >0 
-          actual_widht = rx_e + widht_e
-          need_widht = (line_end_chars+1)*widht_e
-          delta = actual_widht - need_widht
-          @fm1.resize_left(need_widht)
+        if @line_num_rx_e.nil?
+          @line_num_rx_e, @line_num_ry_e, @line_num_width_e, @line_num_heigth_e = @text_line_num.bbox("0.1 lineend - 1chars");
         end
-        @last_line_end_chars = line_end_chars
+        if @line_num_rx_e && @line_num_width_e && line_end_chars >0 
+          actual_width = @line_num_rx_e + @line_num_width_e
+          need_width = (line_end_chars+1)*@line_num_width_e
+          delta = actual_width - need_width
+          @fm1.resize_left(need_width)
+          @last_line_end_chars = line_end_chars
+        else
+          @last_line_end_chars = -1
+        end
       end
     end
   end
