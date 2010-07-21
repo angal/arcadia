@@ -180,6 +180,11 @@ class MsgEvent < ArcadiaEvent
    attr_accessor :msg, :level
 end
 
+class SubProcessEvent < ArcadiaEvent
+   attr_accessor :abort_action, :alive_check, :name, :timeout, :timecheck
+end
+
+
 #class DebugMsgEvent < MsgEvent
 #end
 #

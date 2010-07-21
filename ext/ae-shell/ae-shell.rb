@@ -6,6 +6,7 @@
 require "tk"
 #require "base/a-utils"
 
+
 class Shell < ArcadiaExt
 
   def on_before_build(_event)
@@ -64,10 +65,19 @@ class Shell < ArcadiaExt
           output_file_name = "out_#{@@next_number += 1}_#{Process.pid}.txt"
           output = File.open(output_file_name, 'wb')
           child = Process.create :command_line => _cmd_,  :startup_info => {:stdout => output, :stderr => output}
+          #----
+          abort_action = proc{
+            Process.kill(9,child.process_id)
+          }
+          alive_check = proc{
+            WMI::Win32_Process.find(:first, :conditions => {:ProcessId => child.process_id})
+          }
+          Arcadia.process_event(SubProcessEvent.new(self,'name'=>_filename,'abort_action'=>abort_action, 'alive_check'=>alive_check))
+          #----
           timer=nil
           procy = proc {
             still_alive = WMI::Win32_Process.find(:first, :conditions => {:ProcessId => child.process_id})
-            if(!still_alive)
+            if !still_alive #&& File.exists?(output_file_name)
               output.close
               timer.stop
               File.open(output_file_name, 'r') do |f|
@@ -87,11 +97,33 @@ class Shell < ArcadiaExt
           _cmd_ = "|#{_cmd_} 2>&1"
           Thread.new {
             begin
+              th = Thread.current
+              fi = nil
+              abort_action = proc{
+                Kernel.system("kill -9 #{fi.pid}  #{fi.pid + 2}") if fi
+                #th.exit if th && th.alive?
+              }
+                
+              alive_check = proc{
+                num = `ps aux|grep #{_filename}|wc -l`
+                #prs = `ps aux|grep #{_cmd_}|awk '{print $3}'`.split
+                #p "NUM of #{_filename}=#{num}"
+                num.to_i > 2 #&& prs.include?(fi.pid)
+                
+              }
+              
+              #Arcadia.console(self,'msg'=>"#{th}", 'level'=>'debug', 'abort_action'=>abort_action)
               open(_cmd_, "r"){|f|
+                fi = f
+    	           Arcadia.process_event(SubProcessEvent.new(self,'name'=>_filename,'abort_action'=>abort_action, 'alive_check'=>alive_check))
                 _readed = f.read
-                Arcadia.console(self,'msg'=>_readed, 'level'=>'debug')
+                output_dump="End running #{_filename}:\n#{_readed}"
+                Arcadia.console(self,'msg'=>output_dump, 'level'=>'debug')
                 _event.add_result(self, 'output'=>_readed)
               }
+              if _event.persistent == false && _filename[-2..-1] == '~~'
+                File.delete(_filename) if File.exist?(_filename)
+              end
             rescue Exception => e
               Arcadia.console(self,'msg'=>e.to_s, 'level'=>'debug')
             end

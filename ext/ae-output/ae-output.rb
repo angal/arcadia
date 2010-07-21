@@ -44,7 +44,7 @@ class OutputView
     )
     @text.tag_configure('error_msg',
      #  'background' => '#f6c9f6',
-       'foreground' => 'red',
+       'foreground' => parent.conf('hightlight.tag.foreground'),
        'borderwidth'=>1,
        'relief'=> 'flat'
     )
@@ -228,6 +228,7 @@ class Output < ArcadiaExt
 	end
 
   def file_binding(_file, _line, _ibegin, _iend)
+      _line = '0' if _line.nil? || _line.strip.length == 0
       tag_name = "tag_#{@j}"
       @main_frame.text.tag_configure(tag_name,
         'foreground' => '#800000',

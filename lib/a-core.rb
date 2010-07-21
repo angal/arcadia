@@ -25,7 +25,7 @@ class Arcadia < TkApplication
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
-    )
+    ) 
     load_config
     if self['conf']['encoding']
       Tk.encoding=self['conf']['encoding']
@@ -435,9 +435,9 @@ class Arcadia < TkApplication
     self.load_exts_conf
     self.load_local_config
     self.load_theme(self['conf']['theme'])
-    self.load_sysdefaultproperty
     self.resolve_properties_link(self['conf'],self['conf'])
     self.resolve_properties_link(self['conf_without_local'],self['conf_without_local'])
+    self.load_sysdefaultproperty
   end
 
   def load_sysdefaultproperty
@@ -613,6 +613,7 @@ class Arcadia < TkApplication
     if q1 && can_exit?
       do_finalize
       @root.destroy
+      Tk.exit
     end
   end
 

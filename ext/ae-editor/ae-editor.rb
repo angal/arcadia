@@ -1418,21 +1418,22 @@ class AgEditor
           @text.insert(_row.to_s+'.0',suf)
         end
       when 'U'
-        _r = @text.tag_ranges('sel')
-        _row_begin = _r[0][0].split('.')[0].to_i
-        _row_end = _r[_r.length - 1][1].split('.')[0].to_i
-        n_space = $arcadia['conf']['editor.tab-replace-width-space'].to_i
-        if n_space > 0
-          suf = "\s"*n_space
-        else
-          suf = "\t"
-        end
-        _l_suf = 	suf.length.to_s
-        for _row in _row_begin..._row_end
-          if @text.get(_row.to_s+'.0',_row.to_s+'.'+_l_suf) == suf
-            @text.delete(_row.to_s+'.0',_row.to_s+'.'+_l_suf)
-          end
-        end
+        decrease_indent
+#        _r = @text.tag_ranges('sel')
+#        _row_begin = _r[0][0].split('.')[0].to_i
+#        _row_end = _r[_r.length - 1][1].split('.')[0].to_i
+#        n_space = $arcadia['conf']['editor.tab-replace-width-space'].to_i
+#        if n_space > 0
+#          suf = "\s"*n_space
+#        else
+#          suf = "\t"
+#        end
+#        _l_suf = 	suf.length.to_s
+#        for _row in _row_begin..._row_end
+#          if @text.get(_row.to_s+'.0',_row.to_s+'.'+_l_suf) == suf
+#            @text.delete(_row.to_s+'.0',_row.to_s+'.'+_l_suf)
+#          end
+#        end
       when 'C'
         _r = @text.tag_ranges('sel')
         _row_begin = _r[0][0].split('.')[0].to_i
@@ -1563,6 +1564,24 @@ class AgEditor
         end
       end
     }
+  end
+
+  def decrease_indent
+    _r = @text.tag_ranges('sel')
+    _row_begin = _r[0][0].split('.')[0].to_i
+    _row_end = _r[_r.length - 1][1].split('.')[0].to_i
+    n_space = $arcadia['conf']['editor.tab-replace-width-space'].to_i
+    if n_space > 0
+      suf = "\s"*n_space
+      else
+        suf = "\t"
+      end
+      _l_suf = 	suf.length.to_s
+      for _row in _row_begin..._row_end
+        if @text.get(_row.to_s+'.0',_row.to_s+'.'+_l_suf) == suf
+          @text.delete(_row.to_s+'.0',_row.to_s+'.'+_l_suf)
+        end
+      end
   end
 
   # show the "find in file" dialog
@@ -2572,6 +2591,7 @@ class AgEditor
           else
             _tags << 'normal_case'
           end
+          
           if wrap_on
             w_rx_b, w_ry_b, w_width_b, w_heigth_b = @text.bbox("#{(j).to_s}.0");
             w_rx_e, w_ry_e, w_width_e, w_heigth_e = @text.bbox("#{(j).to_s}.0 lineend");
@@ -2584,6 +2604,7 @@ class AgEditor
               end
             end
           end
+
           @text_line_num.insert(_index, "#{nline}\n",_tags)
           if b.include?(j.to_s)
             add_tag_breakpoint(j)
@@ -2594,12 +2615,15 @@ class AgEditor
         end
       end
       refresh_outline if Tk.focus==@text
-      resize_line_num(line_end)
+      resize_line_num
   end
 
-  def resize_line_num(_line_end=nil)
+  def resize_line_num
     if TkWinfo.mapped?(@text_line_num)
-      _line_end=@text.index('@0,'+TkWinfo.height(@text).to_s).split('.')[0].to_i + 1 if _line_end.nil?
+      if @last_line_end_chars.nil?
+        @last_line_end_chars = 0
+      end
+      _line_end=row('end')
       line_end_chars  = _line_end.to_s.length  
       if @last_line_end_chars != line_end_chars
         if @line_num_rx_e.nil?
