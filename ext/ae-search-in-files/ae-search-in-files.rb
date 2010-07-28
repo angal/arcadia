@@ -89,9 +89,8 @@ class SearchInFilesListener
     @find.hide
     if !defined?(@search_output)
       @search_output = SearchOutput.new(@service)
-    else
-      @service.frame.show
     end
+    @service.frame.show_anyway
     begin
     
       MonitorLastUsedDir.set_last @find.e_dir.text # save it away TODO make it into a message

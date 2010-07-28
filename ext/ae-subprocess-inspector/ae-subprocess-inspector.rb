@@ -6,7 +6,7 @@ class SubProcessInspector < ArcadiaExt
   end
   
   def on_sub_process(_event)
-    self.frame.show
+    self.frame.show_anyway
     @processs << SubProcessWidget.new(self, _event)
   end
   

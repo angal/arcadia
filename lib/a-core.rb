@@ -2127,7 +2127,6 @@ class ArcadiaLayout
       end
 
       if other_root_splitted_adapter
-        p "primo quadrante"
         other_root_splitted_adapter.detach_frame
         splitted_adapter.detach_frame
         splitted_adapter.destroy
@@ -2183,7 +2182,6 @@ class ArcadiaLayout
          # @domains[_row.to_i+1][_col.to_i] = nil
         end
       else
-        p "secondo quadrante"
         source_save = Hash.new
         source_save.update(@panels[source_domain]['sons']) if @panels[source_domain]
         source_save.each{|name,ffw|
@@ -2243,7 +2241,6 @@ class ArcadiaLayout
       end
 
       if other_root_splitted_adapter
-        p "terzo quadrante"
         other_root_splitted_adapter.detach_frame
         splitted_adapter.detach_frame
         splitted_adapter.destroy
@@ -2253,7 +2250,6 @@ class ArcadiaLayout
        # @domains[_row.to_i][_col.to_i] = nil
         @panels.delete(_domain)
       else
-        p "quarto quadrante"
         source_save = Hash.new
         source_save.update(@panels[other_dom]['sons'])
         source_save.each{|name,ffw|
@@ -2633,6 +2629,10 @@ class ArcadiaLayout
 
   end
 
+  def registered_panel?(_ffw)
+    _ffw.domain.nil? || _ffw.domain.length == 0 ?false:registed?(_ffw.domain, _ffw.name)
+  end
+
   def register_panel(_ffw, _adapter=nil)
     _domain_name = _ffw.domain
     _name = _ffw.name
@@ -2676,7 +2676,7 @@ class ArcadiaLayout
             'raisecmd'=>proc{
   					    pan['root'].title(api.title)
   					    pan['root'].top_text('') 
-         	         Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>pan['sons'][api.name].extension, 'frame_name'=>pan['sons'][api.name].name))
+         	         Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>pan['sons'][api.name].extension_name, 'frame_name'=>pan['sons'][api.name].name))
 #               changed
 #               notify_observers('RAISE', api.name)
             }
@@ -2696,7 +2696,7 @@ class ArcadiaLayout
         		'text'=>_title, 
           'raisecmd'=>proc{
 					  pan['root'].title(_title)            
-      	     Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>_ffw.extension, 'frame_name'=>_ffw.name))
+      	     Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>_ffw.extension_name, 'frame_name'=>_ffw.name))
 #            changed
 #            notify_observers('RAISE', _name)
           }

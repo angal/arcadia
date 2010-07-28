@@ -67,12 +67,14 @@ class FixedFrameWrapper < AbstractFrameWrapper
   attr_accessor :domain
   attr_reader :name
   attr_reader :title
-  attr_reader :extension
-  def initialize(_extension, _domain, _name, _title='')
+  attr_reader :extension_name
+  def initialize(_extension, _domain, _name, _title='', _index=0)
     @extension = _extension
+    @extension_name = _extension.name
     @domain =_domain
     @name = _name
     @title = _title
+    @index = _index
     fixed_frame_forge
   end
   
@@ -95,6 +97,16 @@ class FixedFrameWrapper < AbstractFrameWrapper
   def show
     fixed_frame_forge
     Arcadia.layout.raise_panel(@domain, @name)
+  end
+
+  def show_anyway
+    self.show
+    if !Arcadia.layout.registered_panel?(self)
+      if domain.nil?
+        self.domain = @extension.frame_domain_default(@index)
+      end
+      Arcadia.layout.register_panel(self, self.hinner_frame)
+    end
   end
   
   def hide
@@ -188,6 +200,7 @@ end
 
 class ArcadiaExt
   attr_reader :arcadia
+  attr_reader :name
   def initialize(_arcadia, _name=nil)
     @arcadia = _arcadia
     @arcadia.register(self)
@@ -226,11 +239,37 @@ class ArcadiaExt
 	  if @frames[_n] == nil && @frames_points[_n] && create_if_not_exist
 	    (@frames_labels[_n].nil?)? _label = @name : _label = @frames_labels[_n]
 	    (@frames_names[_n].nil?)? _name = @name : _name = @frames_names[_n]
-	    @frames[_n] = FixedFrameWrapper.new(@name, @frames_points[_n], _name, _label)
+	    @frames[_n] = FixedFrameWrapper.new(self, @frames_points[_n], _name, _label, _n)
 	  end
     return @frames[_n]
   end
   
+  def frame_domain(_n=0)
+    if conf('frames')
+       frs = conf('frames').split(',') 
+    else 
+      frs = Array.new
+    end
+    ret = nil
+    if frs.length > _n
+      ret = frs[_n]
+    end
+    ret
+  end
+
+  def frame_domain_default(_n=0)
+    if conf_default('frames')
+       frs = conf_default('frames').split(',') 
+    else 
+      frs = Array.new
+    end
+    ret = nil
+    if frs.length > _n
+      ret = frs[_n]
+    end
+    ret
+  end
+
   def float_frame(_n=0, _args=nil)
 	  if @float_frames[_n].nil? 
 	    (@float_labels[_n].nil?)? _label = @name : _label = @float_labels[_n]
@@ -243,6 +282,16 @@ class ArcadiaExt
 	  @arcadia['conf'][@name+'.'+_property]
   end
 
+  def conf_default(_property)
+	  @arcadia['conf_without_local'][@name+'.'+_property]
+  end
+
+  def restore_default_conf(_property)
+    if  @arcadia['conf'][@name+'.'+_property] && @arcadia['conf_without_local'][@name+'.'+_property]
+      @arcadia['conf'][@name+'.'+_property] = @arcadia['conf_without_local'][@name+'.'+_property]
+    end
+  end
+  
 #  def conf_global(_property)
 #	  @arcadia['conf'][_property]
 #  end
