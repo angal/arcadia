@@ -27,9 +27,7 @@ class OutputView
     @text = TkArcadiaText.new(right_frame,
       {'wrap'=>  'none'}.update(Arcadia.style('edit'))
     )
-    @text.show
-    @text.show_v_scroll
-    @text.show_h_scroll
+    @text.extend(TkScrollableWidget).show
 
     @text.tag_configure('simple_msg',
     #   'background' => '#d9d994',
@@ -44,19 +42,19 @@ class OutputView
     )
     @text.tag_configure('error_msg',
      #  'background' => '#f6c9f6',
-       'foreground' => parent.conf('hightlight.tag.foreground'),
+       'foreground' => Arcadia.conf('hightlight.string.foreground'),
        'borderwidth'=>1,
        'relief'=> 'flat'
     )
-
     @text.tag_configure('bord_msg',
        #'foreground' => '#b9b8b9'
-       'foreground' => '#7c9b10'
+       'foreground' => Arcadia.conf('hightlight.comment.foreground')
     )
     @text.tag_configure('sel', 
-      'background'=>parent.conf('hightlight.sel.color.background'),
-      'foreground'=>parent.conf('hightlight.sel.color.foreground')
+      'background'=>Arcadia.conf('hightlight.sel.background'),
+      'foreground'=>Arcadia.conf('hightlight.sel.foreground')
     )
+
     pop_up_menu
   end
 
@@ -126,7 +124,6 @@ class OutputView
       ensure
         f.close unless f.nil?
       end
-      #EditorContract.instance.file_saved(self,'file' =>@file)
     end
   end
 
@@ -162,45 +159,66 @@ class Output < ArcadiaExt
 	end
   
    def on_msg(_event)
-	  self.frame.show
-     _txt = "\n+--- "+format_time(_event.time)+" ---+\n"+_event.msg.strip+"\n"
-     _index_begin = @main_frame.text.index('end')
-     @main_frame.text.insert(_index_begin,_txt)
-     _index_end = @main_frame.text.index('end')
-     case _event.level
-       when 'debug'
-       		@main_frame.text.tag_remove('simple_msg',_index_begin, _index_end+ '  lineend')
-       		@main_frame.text.tag_remove('error_msg',_index_begin, _index_end+ '  lineend')
-       		@main_frame.text.tag_add('debug_msg',_index_begin, _index_end+ '  lineend')
-       		parse_debug(_index_begin.split('.')[0].to_i) 
-       when 'error'
-       		@main_frame.text.tag_remove('simple_msg',_index_begin, _index_end+ '  lineend')
-       		@main_frame.text.tag_remove('debug_msg',_index_begin, _index_end+ '  lineend')
-       		@main_frame.text.tag_add('error_msg',_index_begin, _index_end+ '  lineend')
-       		parse_debug(_index_begin.split('.')[0].to_i) 
-       else
-       		@main_frame.text.tag_remove('error_msg',_index_begin, _index_end+ '  lineend')
-       		@main_frame.text.tag_remove('debug_msg',_index_begin, _index_end+ '  lineend')
-       		@main_frame.text.tag_add('simple_msg',_index_begin, _index_end+ '  lineend')
+     self.frame.show
+     if _event.mark
+       _index_begin = "#{@main_frame.text.index(_event.mark)} + 1 lines + 1 chars"
+#       _b = Tk::BWidget::Button.new(@main_frame.text, 
+#         'helptext'=>Time.now.strftime("-> %d-%b-%Y %H:%M:%S"),
+#         'background'=>Arcadia.style('edit')['background'], 
+#         'borderwidth'=>0,
+#         'image'=> TkPhotoImage.new('data' => ITEM_LOG_GIF),
+#         'relief'=>'flat')
+#       TkTextWindow.new(@main_frame.text, _index_begin, 'window'=> _b)
+#       TkTextImage.new(@main_frame.text, _index_begin, 'padx'=>0, 'pady'=>0, 'image'=> TkPhotoImage.new('data' => ITEM_LOG_GIF))
+     else
+       @main_frame.text.insert("end","\n")
+       _index_begin = @main_frame.text.index('end')
+       TkTextImage.new(@main_frame.text, _index_begin, 'padx'=>0, 'pady'=>0, 'image'=> TkPhotoImage.new('data' => ITEM_START_LOG_GIF))
+       @main_frame.text.insert("end"," +--- #{format_time(_event.time)} ---+\n", 'bord_msg')
      end
-   		@main_frame.text.tag_add('bord_msg',_index_begin+' linestart', _index_begin+ '  lineend')
-   		@main_frame.text.tag_add('bord_msg',_index_end+' -1 lines linestart', _index_end+ ' -1 lines  lineend')
+     if _event.append
+       _index_begin = "#{@main_frame.text.index(_index_begin)} - 2 lines lineend"
+       _txt = _event.msg
+     elsif _event.msg[-1] == "\n"
+       _txt = _event.msg
+     else
+       _txt = "#{_event.msg}\n"
+     end
+     if _event.level == 'error'
+       TkTextImage.new(@main_frame.text, _index_begin, 'padx'=>0, 'pady'=>0, 'image'=> TkPhotoImage.new('data' => ERROR_9X9_GIF))
+     end
+     @main_frame.text.insert(_index_begin,_txt, "#{_event.level}_msg")
+     _index_end = @main_frame.text.index('end')
+     if ['debug','error'].include?(_event.level)
+       parse_debug(_index_begin.split('.')[0].to_i, _index_end.split('.')[0].to_i)
+   		end
    		@main_frame.text.see(_index_end)
+   		@main_frame.text.mark_unset(_event.mark)
+   		_event.mark="mark-#{_index_end}"
+   		@main_frame.text.mark_set(_event.mark, "#{_index_end} - 1 lines -1 chars")
+#     if _event.instance_of?(MsgRunEvent)
+#       _b = TkButton.new(@main_frame.text, 
+#         'command'=>proc{_event.abort_action.call;_b.destroy},
+#         'image'=> TkPhotoImage.new('data' => CLOSE_GIF),
+#         'relief'=>'groove')
+#       TkTextWindow.new(@main_frame.text, 'end', 'window'=> _b)
+#     end
    end
   
-	def parse_debug(_from_row=0)
-    _row = 0
+	def parse_debug(_from_row=0, _to_row=-1)
+    return if _from_row == _to_row
+    _row = _from_row
     @cursor = @main_frame.text.cget('cursor')
     @j=0
     file_tag=Hash.new
     if String.method_defined?(:lines)
-      lines = @main_frame.text.value.lines
+      lines = @main_frame.text.value.lines.to_a[_from_row.._to_row]
     else
-      lines = @main_frame.text.value
+      lines = @main_frame.text.value.to_a[_from_row.._to_row]
     end
     lines.each{|l|
       _row = _row+1
-      if _row >= _from_row
+      #if _row >= _from_row
         _end = 0
         #m = /([\.\/]*[\/A-Za-z_\-\.]*[\.\/\w\d]*\.rb):(\d*)/.match(l)
         re = Regexp.new('([\w\:]*[\.\/]*[\/A-Za-z_\-\.]*[\.\/\w\d]*):(\d*)')
@@ -223,7 +241,7 @@ class Output < ArcadiaExt
          end
       	  m = re.match(_txt)
        end
-     end
+     #end
     }
 	end
 
@@ -231,7 +249,7 @@ class Output < ArcadiaExt
       _line = '0' if _line.nil? || _line.strip.length == 0
       tag_name = "tag_#{@j}"
       @main_frame.text.tag_configure(tag_name,
-        'foreground' => '#800000',
+        'foreground' => Arcadia.conf('hightlight.link.foreground'),
         'borderwidth'=>0,
         'relief'=>'flat',
         'underline'=>true

@@ -177,11 +177,11 @@ end
 #  +---------------------------------------------+
 
 class MsgEvent < ArcadiaEvent
-   attr_accessor :msg, :level
+   attr_accessor :msg, :level, :mark, :append
 end
 
 class SubProcessEvent < ArcadiaEvent
-   attr_accessor :abort_action, :alive_check, :name, :timeout, :timecheck
+   attr_accessor :abort_action, :alive_check, :name, :pid, :timeout, :timecheck
 end
 
 
@@ -226,6 +226,18 @@ class RunRubyFileEvent < ArcadiaEvent
   end
   attr_accessor :file
   attr_accessor :persistent
+end
+
+class RunCmdEvent < ArcadiaEvent
+  class Result < Result
+    attr_accessor :output
+  end
+  attr_accessor :file
+  attr_accessor :dir
+  attr_accessor :cmd
+  attr_accessor :title
+  attr_accessor :persistent
+  attr_accessor :runner_name
 end
 
 class InputEvent < ArcadiaEvent

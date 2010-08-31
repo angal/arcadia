@@ -532,7 +532,8 @@ class AGTkVSplittedFrames < AGTkSplittedFrames
     end
     @right_frame_obj.width = - _w - @slen
     @right_frame_obj.amove(_w + @slen,0)
-    @right_frame_obj.obj.unplace if @state=='left'
+    @right_frame_obj.obj.place_forget if @state=='left'
+    #.unplace if @state=='left'
     @splitter_frame_obj.amove(_w,0)
     @left_frame_obj.width = _w
     @left_frame_obj.go(_w,0)
@@ -811,6 +812,7 @@ class TkBaseTitledFrame < TkFrame
       if _image
         image TkPhotoImage.new('dat' => _image)
       end
+      padx 0
       pack('side'=> _side,'anchor'=> 'e')
     }
     @menu_buttons[_name]
@@ -1107,6 +1109,13 @@ class TkFloatTitledFrame < TkBaseTitledFrame
     start_moving(frame, self)
     start_resizing(@resizing_label, self)
     @grabbed = false
+#    frame.bind_append('KeyPress'){|e|
+#      case e.keysym
+#        when 'Escape'
+#          p "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+#          hide
+#      end
+#    }
   end
 
   def title(_text)
@@ -1238,97 +1247,89 @@ class TclTkInfo
   end
 end
 
+#require 'tkextlib/tile'
+#Tk.tk_call "eval","ttk::setTheme clam"
+#Tk::Tile::Style.theme_use('clam')
 
-class TkScrollText < TkText
-  def initialize(parent=nil, keys={})
-    super(parent, keys)
-    @scroll_width = 15
-    @v_scroll_on = false
-    @h_scroll_on = false
-    @v_scroll = TkScrollbar.new(parent,{
-      'orient'=>'vertical'}.update(Arcadia.style('scrollbar'))
-    )
-    @v_scroll.command(proc{|*args|
-      self.yview *args
-    })
-    self.yscrollcommand(proc{|first,last| 
-      self.do_yscrollcommand(first,last)
-    })
+class TkWidgetFactory
+  def initialize
+    if Arcadia.conf('tile.theme')
+      @use_tile = true
+      begin
+        require 'tkextlib/tile'
+        if Tk::Tile::Style.theme_names.include?(Arcadia.conf('tile.theme'))
+          Tk::Tile::Style.theme_use(Arcadia.conf('tile.theme'))
+        else
+          @use_tile = false
+        end
+      rescue
+        @use_tile = false
+      end
+      initialize_tile_widgets if @use_tile
+    end
+  end
+  
+  def initialize_tile_widgets
+    #TScrollbar
+    Tk::Tile::Style.configure("Arcadia.TScrollbar", Arcadia.style('scrollbar'))
+    Tk::Tile::Style.map("Arcadia.TScrollbar", 
+                      :background=>[:pressed, '#694418', :disabled, '#333333', :active, Arcadia.style('scrollbar')['activebackground']], 
+                      :arrowcolor=>[:pressed, '#FEF7CB', :disabled, Arcadia.style('scrollbar')['background'], :active, Arcadia.style('scrollbar')['activebackground']],  
+                      :relief=>[:pressed, :sunken])
+
+    Tk::Tile::Style.layout(Tk::Tile.style('Vertical', "Arcadia.TScrollbar"), 
+       ["Scrollbar.trough",{:sticky=>"nsew", :children=>[
+         "Scrollbar.uparrow",{:side=>:top, :sticky=>"we"}, 
+         "Scrollbar.downarrow", {:side=>:bottom, :sticky=>"we"}, 
+         "Scrollbar.thumb", {:sticky=>"nswe",:side=>:top, :border =>1, :expand=>true}]}]) 
+
+    Tk::Tile::Style.layout(Tk::Tile.style('Horizontal', "Arcadia.TScrollbar"), 
+       ['Scrollbar.trough', {:children=>[
+         'Scrollbar.leftarrow',   {:side=>:left}, 
+         'Scrollbar.rightarrow', {:side=>:right}, 
+         'Scrollbar.thumb',  {:side=>:left, :expand=>true}]}])
+
+    #TFrame    
+    #Tk::Tile::Style.configure(Tk::Tile::TFrame, Arcadia.style('panel'))
+
+    #TPaned    
+    #Tk::Tile::Style.configure(Tk::Tile::TPaned, Arcadia.style('panel'))
     
-    @h_scroll = TkScrollbar.new(parent,{
-      'orient'=>'horizontal'}.update(Arcadia.style('scrollbar'))
-    )
-    @h_scroll.command(proc{|*args|
-      self.xview *args
-    })
-    self.xscrollcommand(proc{|first,last| 
-      self.do_xscrollcommand(first,last)
-    })
-  end
-  def add_yscrollcommand(cmd=Proc.new)
-    @v_scroll_command = cmd
-  end   
-  def do_yscrollcommand(first,last)
-    #p "do_yscrollcommand first=#{first} last=#{last}"
-    @v_scroll.set(first,last)
-    @v_scroll_command.call(first,last) if !@v_scroll_command.nil?
-  end
-  def add_xscrollcommand(cmd=Proc.new)
-    @h_scroll_command = cmd
-  end   
-  def do_xscrollcommand(first,last)
-    #p "do_xscrollcommand first=#{first} last=#{last}"
-    @h_scroll.set(first,last)
-    @h_scroll_command.call(first,last) if !@h_scroll_command.nil?
+    #TEntry
+    #Tk::Tile::Style.configure(Tk::Tile::TEntry, Arcadia.style('edit'))
+
+    #TCombobox
+    #Tk::Tile::Style.configure(Tk::Tile::TCombobox, Arcadia.style('combobox'))
+  
+    #TLabel
+    #Tk::Tile::Style.configure(Tk::Tile::TLabel, Arcadia.style('label'))
+
+
+    #Treeview
+    #Tk::Tile::Style.configure(Tk::Tile::Treeview, Arcadia.style('treepanel'))
+
+
+    #TMenubutton
+    #Tk::Tile::Style.configure(Tk::Tile::TMenubutton, Arcadia.style('menu'))
+
+    #TButton
+    #Tk::Tile::Style.configure(Tk::Tile::TButton, Arcadia.style('button'))
   end
   
-  def show(_x=0,_y=0,_border_mode='outside')
-    @x=_x
-    @y=_y
-    place(
-      'x'=>@x,
-      'y'=>@y,
-      'width' => -@x,
-      'height' => -@y,
-      'relheight'=>1,
-      'relwidth'=>1,
-      'bordermode'=>_border_mode
-   )
-   if @v_scroll_on
-     show_v_scroll
-   end
-   if @h_scroll_on
-     show_h_scroll
-   end
+  def scrollbar(_parent,_args=nil, &b)
+    if @use_tile
+      return Tk::Tile::Scrollbar.new(_parent,{:style=>"Arcadia.TScrollbar"}.update(_args), &b)
+    else
+      return TkScollbar.new(_parent,Arcadia.style('scrollbar').update(_args), &b)
+    end
+    
   end
   
-  def show_v_scroll
-    self.place('width' => -@scroll_width-@x)
-    @v_scroll.pack('side' => 'right', 'fill' => 'y')
-    @v_scroll_on = true
-  end
-
-  def show_h_scroll
-    self.place('height' => -@scroll_width-@y)
-    @h_scroll.pack('side' => 'bottom', 'fill' => 'x')
-    @h_scroll_on = true
-  end
-
-  def hide_v_scroll
-    self.place('width' => 0)
-    @v_scroll.unpack
-    @v_scroll_on = false
-  end
-
-  def hide_h_scroll
-    self.place('height' => 0)
-    @h_scroll.unpack
-    @h_scroll_on = false  
-  end
-
 end
 
-class TkArcadiaText < TkScrollText
+
+
+class TkArcadiaText < TkText
   def initialize(parent=nil, keys={})
     super(parent, keys)
     self.bind_append("<Copy>"){Arcadia.process_event(CopyTextEvent.new(self));break}
@@ -1339,32 +1340,28 @@ class TkArcadiaText < TkScrollText
   end
 end
 
-class TkScrollWidget
-  def initialize(widget)
-    @widget = widget
+
+#
+module TkScrollableWidget
+
+  def self.extended(_widget)
+    _widget.__initialize_scrolling(_widget)
+  end
+
+  def self.included(_widget)
+    _widget.__initialize_scrolling(_widget)
+  end
+  
+  def __initialize_scrolling(_widget=self)
+    @widget = _widget
     @parent = TkWinfo.parent(@widget)
-    @scroll_width = 15
+    @scroll_width = Arcadia.style('scrollbar')['width'].to_i
+    @x=0
+    @y=0
     @v_scroll_on = false
     @h_scroll_on = false
-    @v_scroll = TkScrollbar.new(@parent,{
-      'orient'=>'vertical'}.update(Arcadia.style('scrollbar'))
-    )
-    @v_scroll.command(proc{|*args|
-      @widget.yview *args
-    })
-    @widget.yscrollcommand(proc{|first,last| 
-      do_yscrollcommand(first,last)
-    })
-    
-    @h_scroll = TkScrollbar.new(@parent,{
-      'orient'=>'horizontal'}.update(Arcadia.style('scrollbar'))
-    )
-    @h_scroll.command(proc{|*args|
-      @widget.xview *args
-    })
-    @widget.xscrollcommand(proc{|first,last| 
-      do_xscrollcommand(first,last)
-    })
+    @v_scroll = Arcadia.wf.scrollbar(@parent,{'orient'=>'vertical'})
+    @h_scroll = Arcadia.wf.scrollbar(@parent,{'orient'=>'horizontal'})
   end
 
   def destroy
@@ -1377,8 +1374,17 @@ class TkScrollWidget
   end   
   
   def do_yscrollcommand(first,last)
-    @v_scroll.set(first,last)
-    @v_scroll_command.call(first,last) if !@v_scroll_command.nil?
+    if first != nil && last != nil
+      delta = last.to_f - first.to_f
+      if delta < 1 && delta > 0 && last != @last_y_last
+        show_v_scroll
+        @v_scroll.set(first,last)
+      elsif delta == 1 || delta == 0
+        hide_v_scroll
+      end
+      @v_scroll_command.call(first,last) if !@v_scroll_command.nil?
+      @last_y_last = last if last.to_f < 1
+    end
   end
   
   def add_xscrollcommand(cmd=Proc.new)
@@ -1386,8 +1392,17 @@ class TkScrollWidget
   end   
   
   def do_xscrollcommand(first,last)
-    @h_scroll.set(first,last)
-    @h_scroll_command.call(first,last) if !@h_scroll_command.nil?
+    if first != nil && last != nil
+      delta = last.to_f - first.to_f
+      if delta < 1 && delta > 0  && last != @last_x_last
+        show_h_scroll
+        @h_scroll.set(first,last)
+      elsif  delta == 1 || delta == 0
+        hide_h_scroll
+      end
+      @h_scroll_command.call(first,last) if !@h_scroll_command.nil?
+      @last_x_last = last if last.to_f < 1
+    end
   end
   
   def show(_x=0,_y=0,_border_mode='outside')
@@ -1401,55 +1416,85 @@ class TkScrollWidget
       'relheight'=>1,
       'relwidth'=>1,
       'bordermode'=>_border_mode
-   )
-   if @v_scroll_on
-     show_v_scroll
-   end
-   if @h_scroll_on
-     show_h_scroll
-   end
+    )
+    if @v_scroll_on
+      show_v_scroll(true)
+    end
+    if @h_scroll_on
+      show_h_scroll(true)
+    end
+    arm_scroll_binding
   end
 
   def hide
+    disarm_scroll_binding
     @widget.unplace
     @v_scroll.unpack
     @h_scroll.unpack
   end
   
-  def show_v_scroll
-    @widget.place('width' => -@scroll_width-@x)
-    @v_scroll.pack('side' => 'right', 'fill' => 'y')
-    @v_scroll_on = true
+  def arm_scroll_binding
+    @widget.yscrollcommand(proc{|first,last| 
+      do_yscrollcommand(first,last)
+    })
+    @v_scroll.command(proc{|*args|
+      @widget.yview *args
+    })
+    @widget.xscrollcommand(proc{|first,last| 
+      do_xscrollcommand(first,last)
+    })
+    @h_scroll.command(proc{|*args|
+      @widget.xview *args
+    })
   end
 
-  def show_h_scroll
-    @widget.place('height' => -@scroll_width-@y)
-    @h_scroll.pack('side' => 'bottom', 'fill' => 'x')
-    @h_scroll_on = true
+  def disarm_scroll_binding
+    @widget.yscrollcommand(proc{})
+    @widget.xscrollcommand(proc{})
+    @v_scroll.command(proc{})
+    @h_scroll.command(proc{})
+  end
+  
+  def show_v_scroll(_force=false)
+    if _force || !@v_scroll_on
+      @widget.place('width' => -@scroll_width-@x)
+      @v_scroll.pack('side' => 'right', 'fill' => 'y')
+      @v_scroll_on = true
+    end
+  end
+
+  def show_h_scroll(_force=false)
+    if _force || !@h_scroll_on
+      @widget.place('height' => -@scroll_width-@y)
+      @h_scroll.pack('side' => 'bottom', 'fill' => 'x')
+      @h_scroll_on = true
+    end
   end
 
   def hide_v_scroll
-    @widget.place('width' => 0)
-    @v_scroll.unpack
-    @v_scroll_on = false
+    if @v_scroll_on
+      @widget.place('width' => 0)
+      @v_scroll.unpack
+      @v_scroll_on = false
+    end
   end
 
   def hide_h_scroll
-    @widget.place('height' => 0)
-    @h_scroll.unpack
-    @h_scroll_on = false  
+    if @h_scroll_on
+      @widget.place('height' => 0)
+      @h_scroll.unpack
+      @h_scroll_on = false
+    end  
   end
 
 end
+
 
 class KeyTest < TkFloatTitledFrame
   attr_reader :ttest
   def initialize(_parent=nil)
     _parent = Arcadia.instance.layout.root if _parent.nil?
     super(_parent)
-
-    #Tk.tk_call('wm', 'title', self, '...hello' )
-    #Tk.tk_call('wm', 'geometry', self, '638x117+200+257' )
 
     @ttest = TkText.new(self.frame){
       background  '#FFF454'
@@ -1458,10 +1503,7 @@ class KeyTest < TkFloatTitledFrame
       @ttest.insert('end'," "+e.keysym+" ")
       break
     }
-    _wrapper = TkScrollWidget.new(@ttest)
-    _wrapper.show
-    _wrapper.show_v_scroll
-    _wrapper.show_h_scroll
+    @ttest.extend(TkScrollableWidget).show
     place('x'=>100,'y'=>100,'height'=> 220,'width'=> 500)
   end
 end

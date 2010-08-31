@@ -360,7 +360,7 @@ class Event
     if _args 
       _args.each do |key, value|
         #self.send(key, value)
-        self.send(key+'=', value)
+        self.send(key.to_s+'=', value) if self.respond_to?(key.to_s)
       end
     end
     @time = Time.new
@@ -575,20 +575,28 @@ module Configurable
     end
   end
   
-  def Configurable.properties_group(_group, _hash_source)
+#  def one_line_format_as_hash(_line)
+#    ret = Hash.new 
+#  end
+#  
+#  def hash_as_one_line_format(_name, _hash) 
+#  end
+  
+  def Configurable.properties_group(_group, _hash_source, _hash_suff='conf')
+    group_key="#{_hash_suff}.#{_group}"
     @@conf_groups = Hash.new if !defined?(@@conf_groups)
-    if @@conf_groups[_group].nil?
-      @@conf_groups[_group] = Hash.new
+    if @@conf_groups[group_key].nil?
+      @@conf_groups[group_key] = Hash.new
       glen=_group.length
       _hash_source.keys.sort.each{|k|
         if k[0..glen] == "#{_group}."
-          @@conf_groups[_group][k[glen+1..-1]]=_hash_source[k]
-        elsif @@conf_groups[_group].length > 0
+          @@conf_groups[group_key][k[glen+1..-1]]=_hash_source[k]
+        elsif @@conf_groups[group_key].length > 0
           break
         end
       }
     end
-    Hash.new.update(@@conf_groups[_group])
+    Hash.new.update(@@conf_groups[group_key])
   end
 
   def resolve_link(_value, _hash_source, _link_symbol='>>>', _add_symbol='+++')
@@ -736,15 +744,16 @@ class Application
     "[Platform = #{RUBY_PLATFORM}]\n[Ruby version = #{RUBY_VERSION}]"
   end
   
-  def Application.conf_group(_group)
+  def Application.conf_group(_group, _suff = 'conf')
+    group_key="#{_hash_suff}.#{_group}"
     @@conf_groups = Hash.new if !defined?(@@conf_groups)
-    if @@conf_groups[_group].nil?
-      @@conf_groups[_group] = Hash.new
+    if @@conf_groups[group_key].nil?
+      @@conf_groups[group_key] = Hash.new
       glen=_group.length
       @@instance['conf'].keys.sort.each{|k|
         if k[0..glen] == "#{_group}."
-          @@conf_groups[_group][k[glen+1..-1]]=@@instance['conf'][k]
-        elsif @@conf_groups[_group].length > 0
+          @@conf_groups[group_key][k[glen+1..-1]]=@@instance['conf'][k]
+        elsif @@conf_groups[group_key].length > 0
           break
         end
       }

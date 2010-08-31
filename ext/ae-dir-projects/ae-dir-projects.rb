@@ -69,6 +69,14 @@ class DirProjects < ArcadiaExt
       'helptext'=>'Open dir as Project',
       'image'=> TkPhotoImage.new('dat' => OPEN_GIF)})
     )
+
+    @button_box.add(Arcadia.style('toolbarbutton').update({
+      'name'=>'parent_folder',
+      'anchor' => 'nw',
+      'command'=>proc{self.do_goto_parent_folder},
+      'helptext'=>'Go to parent folder',
+      'image'=> TkPhotoImage.new('dat' => PARENTFOLDER_GIF)})
+    )
     #--- button_box
     
     @cb_sync = TkCheckButton.new(self.frame.hinner_frame, Arcadia.style('checkbox')){
@@ -78,7 +86,7 @@ class DirProjects < ArcadiaExt
       offrelief 'raised'
       image TkPhotoImage.new('dat' => SYNCICON20_GIF)
       #pack('anchor'=>'n')
-      place('x' => 0,'y' => 0,'height' => 26)
+      place('x' => 0,'y' => 0,'height' => 26, 'width' => 26)
     }
 
     Tk::BWidget::DynamicHelp::add(@cb_sync, 
@@ -165,10 +173,7 @@ class DirProjects < ArcadiaExt
         _bindinfo_for_event_class(Event_for_Items, [path, 'bindArea'], *args)
       end
     end
-    _wrapper = TkScrollWidget.new(@htree)  
-    _wrapper.show(0,26)
-    _wrapper.show_v_scroll
-    _wrapper.show_h_scroll
+    @htree.extend(TkScrollableWidget).show(0,26)
     self.pop_up_menu_tree
     @image_kdir = TkPhotoImage.new('dat' => ICON_FOLDER_OPEN_GIF)
     @image_kdir_closed = TkPhotoImage.new('dat' => FOLDER_GIF)
@@ -221,10 +226,12 @@ class DirProjects < ArcadiaExt
 
   def do_close_folder(_node, _close=false)
     @opened_folder.delete(_node)
+    @current_opened_folder = nil
     @htree.close_tree(_node) if _close
   end
 
   def do_open_folder(_node, _open=false)
+    #shure_select_node(_node) if self.selected.nil?
     proj  = @projects[_node]
     if proj && !proj.loaded
       n = load_tree_from_dir(_node)
@@ -251,6 +258,7 @@ class DirProjects < ArcadiaExt
       end
     end
     @opened_folder << _node if !@opened_folder.include?(_node)
+    @current_opened_folder = _node
     @htree.open_tree(_node,false)  if _open
   end
 
@@ -463,6 +471,23 @@ class DirProjects < ArcadiaExt
         @pop_up_tree.popup(_x,_y)
       },
     "%x %y")
+  end
+
+  def do_goto_parent_folder
+    if @current_opened_folder && @current_opened_folder != @last_current_opened_folder 
+      shure_select_node(@current_opened_folder)
+      @last_current_opened_folder = @current_opened_folder
+    else
+      _selected = self.selected
+      if _selected && @htree.exist?(_selected)
+        _parent = @htree.parent(_selected)
+        if _parent && _parent != 'root'
+          shure_select_node(_parent)
+        else
+          do_close_folder(_selected,true)  
+        end
+      end 
+    end 
   end
 
   def selected

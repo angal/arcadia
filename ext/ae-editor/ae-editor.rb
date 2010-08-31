@@ -546,7 +546,7 @@ end
 #end
 
 
-class TkTextListBox < TkScrollText
+class TkTextListBox < TkText
   def initialize(parent=nil, keys={})
     super(parent, keys)
     wrap  'none'
@@ -638,7 +638,7 @@ class AgEditorOutlineToolbar
       indicatoron 0
       offrelief 'raised'
       image TkPhotoImage.new('dat' => SYNCICON20_GIF)
-      place('x' => 0,'y' => 0,'height' => 26)
+      place('x' => 0,'y' => 0,'height' => 26, 'width' => 26)
     }
     Tk::BWidget::DynamicHelp::add(@cb_sync, 
       'text'=>'Link open editors with content in the Navigator')
@@ -762,25 +762,25 @@ class AgEditorOutline
       dragenabled true
       selectcommand proc{ _tree_goto.call(self) } 
     }
-    @tree_scroll_wrapper = TkScrollWidget.new(@tree_exp)
+    @tree_exp.extend(TkScrollableWidget)
     self.show
-    @tree_scroll_wrapper.show_v_scroll
-    @tree_scroll_wrapper.show_h_scroll
     pop_up_menu_tree
   end
 
   def destroy
-    @tree_scroll_wrapper.destroy
+    #@tree_scroll_wrapper.destroy
     @tree_exp.destroy
   end
   
   def show
-    @tree_scroll_wrapper.show(0,26)
+    #@tree_scroll_wrapper.show(0,26)
+    @tree_exp.show(0,26)
     Tk.update
   end
 
   def hide
-    @tree_scroll_wrapper.hide
+    @tree_exp.hide
+    #@tree_scroll_wrapper.hide
   end
 
   def build_tree_from_node(_node, _label_match=nil)
@@ -936,9 +936,7 @@ class AgEditor
     #@text.tag_configure('debug', 'background' =>'#b9c6d9', 'borderwidth'=>1 ,'relief'=>'raise')
     @buffer = text_value
     pop_up_menu
-    @text.show
-    @text.show_v_scroll
-    @text.show_h_scroll
+    @text.extend(TkScrollableWidget).show
     @text_cursor = @text.cget('cursor')
   end
 
@@ -1181,8 +1179,7 @@ class AgEditor
           _buffer = @text.get(_begin_index, 'insert')
           _buffer_ini_length = _buffer.length
           @raised_listbox_frame.place('x'=>_xroot,'y'=>_yroot, 'width'=>_width, 'height'=>_height)
-          @raised_listbox.show(0,0,'inside')
-          @raised_listbox.show_v_scroll
+          @raised_listbox.extend(TkScrollableWidget).show(0,0,'inside') 
           @raised_listbox.focus
           #@raised_listbox.activate(0)
           @raised_listbox.select(1)
@@ -2016,7 +2013,8 @@ class AgEditor
       :label=>'Color',
       :hidemargin => false,
       :command=> proc{
-        @text.insert('insert',Tk.chooseColor)
+        #@text.insert('insert',Tk.chooseColor)
+        @text.insert('insert',Tk::BWidget::SelectColor::Dialog.new.create)
       }
     )
 
@@ -2506,6 +2504,10 @@ class AgEditor
       @controller.change_tab_set_modify(@page_frame)
     end
   end
+  
+  def tab_title
+    @controller.tab_title(@page_frame)
+  end
 
   def reset_modify
     @controller.change_tab_reset_modify(@page_frame)
@@ -2905,13 +2907,6 @@ class AgEditor
     @outline = nil
   end
   
-  def file_extension(_filename=nil)
-    if _filename
-      _m = /(.*\.)(.*$)/.match(File.basename(_filename))
-    end
-    _ret = (_m && _m.length > 1)?_m[2]: nil
-  end
-
   def load_file(_filename = nil)
     #if filename is nil then open a new tab
     @loading=true
@@ -3154,24 +3149,83 @@ class AgMultiEditor < ArcadiaExt
     Arcadia.attach_listener(self, BufferEvent)
     Arcadia.attach_listener(self, DebugEvent)
     Arcadia.attach_listener(self, RunRubyFileEvent)
-   # Arcadia.attach_listener(self, StartDebugEvent)
+    Arcadia.attach_listener(self, RunCmdEvent)
+  # Arcadia.attach_listener(self, StartDebugEvent)
     Arcadia.attach_listener(self, FocusEvent)
   end
   
   
-  def on_before_run_ruby_file(_event)
+#  def on_before_run_ruby_file(_event)
+#    _filename = _event.file
+#    if _filename.nil?
+#      current_editor = self.raised
+#       if current_editor
+#         if current_editor.file
+#           _event.file = current_editor.file
+#           _event.persistent = true
+#         else
+#           _event.file = current_editor.create_temp_file
+#         end
+#       end
+#    end
+#  end
+  
+  def on_before_run_cmd(_event)
     _filename = _event.file
-    if _filename.nil?
+    _event.persistent = true
+    if _filename.nil? || _filename == "*CURR"
       current_editor = self.raised
-       if current_editor
-         if current_editor.file
-           _event.file = current_editor.file
-           _event.persistent = true
-         else
-           _event.file = current_editor.create_temp_file
-         end
-       end
+      if current_editor
+        if current_editor.file
+          _event.file = current_editor.file
+        else
+          _event.persistent = false
+          _event.file = current_editor.create_temp_file
+          _event.title = current_editor.tab_title
+        end
+      end
+      # here insert persistent entry of runner instance
+      bn = File.basename(_event.file) 
+      if _event.persistent && _event.runner_name && Arcadia.persistent("runners.#{bn}").nil?
+        entry_hash = Hash.new
+        entry_hash[:runner]= _event.runner_name
+        entry_hash[:file]= _event.file
+        entry_hash[:dir]= _event.dir if _event.dir
+        entry_hash[:title]= "#{bn}"
+        Arcadia.persistent("runners.#{bn}", entry_hash.to_s)
+      end
     end
+   
+    if _event.file  == "*LAST"
+      _event.file = Arcadia.persistent('run.file.last')
+      _event.cmd = Arcadia.persistent('run.cmd.last')
+    else
+      if _event.dir.nil?
+        _event.dir = File.dirname(_event.file)
+      end
+      
+      if _event.cmd.nil?
+        runner = Arcadia.runner(_event.file)
+        if runner
+          _event.cmd = runner[:cmd]
+        else
+          _event.cmd = _event.file
+        end        
+      end
+      if _event.file && _event.cmd.include?('<<FILE>>')
+        _event.cmd = _event.cmd.gsub('<<FILE>>',_event.file)
+      end
+      if _event.dir && _event.cmd.include?('<<DIR>>')
+        _event.cmd = _event.cmd.gsub('<<DIR>>',_event.dir)
+      end
+      if _event.file && _event.cmd.include?('<<FILE_BASENAME_WITHOUT_EXT>>')
+        _event.cmd = _event.cmd.gsub('<<FILE_BASENAME_WITHOUT_EXT>>',File.basename(_event.file).split('.')[0])
+      end
+      if _event.file && _event.cmd.include?('<<FILE_BASENAME>>')
+        _event.cmd = _event.cmd.gsub('<<FILE_BASENAME>>',File.basename(_event.file))
+      end
+    end 
+    _event.title = _event.file if _event.title.nil?
   end
   
 #  def on_before_start_debug(_event)
@@ -3712,6 +3766,10 @@ class AgMultiEditor < ArcadiaExt
     change_tab_title(_tab, _new_name)
   end
 
+  def tab_title(_tab)
+    @main_frame.enb.itemcget(page_name(_tab), 'text')
+  end
+
   def page_name(_page_frame)
     TkWinfo.appname(_page_frame).sub('f','')
   end
@@ -3910,7 +3968,7 @@ class AgMultiEditor < ArcadiaExt
         'raisecmd'=>proc{do_buffer_raise(_buffer_name, _title)}
       )
       _e = AgEditor.new(self, _tab)
-      ext = _e.file_extension(_title)
+      ext = Arcadia.file_extension(_title)
       ext='rb' if ext.nil?
       _e.init_editing(ext, w1)
       _e.text.set_focus

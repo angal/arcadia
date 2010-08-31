@@ -144,16 +144,7 @@ class FilesHistrory < ArcadiaExt
       selectcommand proc{ do_select_item.call(self) } 
 #      place('relwidth' => 1,'relheight' => '1', 'x' => '0','y' => '22', 'height' => -22)
     }
-    _wrapper = TkScrollWidget.new(@htree)  
-    _wrapper.show(0,26)
-    _wrapper.show_v_scroll
-    _wrapper.show_h_scroll
-#    _scrollcommand = proc{|*args| @htree.yview(*args)}
-#    _scrollbar = TkScrollbar.new(self.frame.hinner_frame, Arcadia.style('scrollbar')){|s|
-#      width 8
-#      command _scrollcommand
-#    }.pack('side'=>'right', 'fill'=>'y')
-#    @htree.yscrollcommand proc{|first,last| _scrollbar.set(first,last)}
+    @htree.extend(TkScrollableWidget).show(0,26)
 
     do_double_click = proc{
         _selected = @htree.selection_get[0]

@@ -18,11 +18,11 @@ re.comment=#
 re_op.to_line_end=comment
 
 # override global classes
-hightlight.sel.foreground=>>>hightlight.1.foreground
-hightlight.sel.background=>>>hightlight.1.background
-hightlight.sel.borderwidth=>>>hightlight.1.borderwidth
-hightlight.sel.relief=>>>hightlight.1.relief
-hightlight.selected.background=>>>hightlight.2.background
+#hightlight.sel.foreground=>>>hightlight.1.foreground
+#hightlight.sel.background=>>>hightlight.1.background
+#hightlight.sel.borderwidth=>>>hightlight.1.borderwidth
+#hightlight.sel.relief=>>>hightlight.1.relief
+#hightlight.selected.background=>>>hightlight.2.background
 hightlight.tabs.foreground=>>>hightlight.3.foreground
 hightlight.tabs.background=>>>hightlight.3.background
 hightlight.tabs.borderwidth=>>>hightlight.3.borderwidth

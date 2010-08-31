@@ -1,0 +1,3 @@
+language=tcl
+scanner=coderay
+@include=coderay.tokens

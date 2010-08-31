@@ -44,20 +44,27 @@ class SubProcessWidget < TkFrame
     @parent = _parent
     @event = _event
     @progress  = TkVariable.new
-    Tk::BWidget::ProgressBar.new(self, 
-      :width=>150, 
-      :height=>15,
-      :background=>'black',
-      :troughcolor=>'yellow',
-      :foreground=>'red',
+    @pb = Tk::BWidget::ProgressBar.new(self, 
+      :width=>2, 
+      :height=>18,
+      :background=>'white',
+      :troughcolor=>'white',
+      :foreground=>'blue',
       :variable=>@progress,
-      :borderwidth=>0,
-      #:type=>'infinite',
+      :borderwidth=>2,
+      :type=>'infinite',
       :relief=>'flat',
-      :maximum=>500).pack('side' =>'left')
-      #.place('relwidth' => '1','x' => 25,'height' => 2)
+      :maximum=>500).place('width'=>-30,'relwidth' => '1','x' => 0,'y' => 2,'height' => 18)
+      #.pack('side' =>'left','fill'=>'x')
+
+      icon_button = TkButton.new(@pb){
+        background 'white'
+        relief 'flat'
+        image Arcadia.file_icon(_event.name)
+      }.pack
+      
       b_command = proc{
-        message = "Really kill #{_event.name}?"
+        message = "Really kill pid #{_event.pid} #{_event.name} ?"
         r=Arcadia.dialog(self,
             'type'=>'yes_no', 
             'level'=>'warning',
@@ -71,9 +78,10 @@ class SubProcessWidget < TkFrame
       
     _b = Tk::BWidget::Button.new(self, 
          'command'=>b_command,
-         'helptext'=>_event.name,
-         'image'=> TkPhotoImage.new('data' => CLOSE_GIF),
-         'relief'=>'groove').pack('side' =>'left','padx'=>5)
+         'helptext'=>"#{_event.name} [pid #{_event.pid}]",
+         'image'=> TkPhotoImage.new('data' => PROCESS_KILL_GIF),
+         'relief'=>'flat').pack('side' =>'right','padx'=>0)
+         #.pack('side' =>'left','padx'=>5)
          #.place('x' => 2, 'width'=>20)
     pack('side' =>'top','anchor'=>'nw','fill'=>'x','padx'=>5, 'pady'=>5)
       #place('relwidth' => '1')

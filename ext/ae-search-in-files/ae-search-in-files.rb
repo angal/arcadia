@@ -148,21 +148,7 @@ class SearchOutput
       selectcommand _open_file 
       deltay 15
     }.place('x' => '25','y' => '0','relwidth' => '1', 'relheight' => '1', 'width' => '-40', 'height'=>'-15')
-    #---- y scrollbar
-    _yscrollcommand = proc{|*args| @tree.yview(*args)}
-    _yscrollbar = TkScrollbar.new(@ext.frame.hinner_frame, Arcadia.style('scrollbar')){|s|
-      #width 8
-      command _yscrollcommand
-    }.pack('side'=>'right', 'fill'=>'y')
-    @tree.yscrollcommand proc{|first,last| _yscrollbar.set(first,last)}
-    #---- x scrollbar
-    _xscrollcommand = proc{|*args| @tree.xview(*args)}
-    _xscrollbar = TkScrollbar.new(@ext.frame.hinner_frame, Arcadia.style('scrollbar')){|s|
-      #width 8
-      orient 'horizontal'
-      command _xscrollcommand
-    }.pack('side'=>'bottom', 'fill'=>'x')
-    @tree.xscrollcommand proc{|first,last| _xscrollbar.set(first,last)}
+    @tree.extend(TkScrollableWidget).show
     
     _proc_clear = proc{clear_tree}
     

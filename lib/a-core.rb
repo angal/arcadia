@@ -17,11 +17,12 @@ require "observer"
 class Arcadia < TkApplication
   include Observable
   attr_reader :layout
+  attr_reader :wf
   def initialize
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.8.1',
+        '0.9.0',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -30,6 +31,12 @@ class Arcadia < TkApplication
     if self['conf']['encoding']
       Tk.encoding=self['conf']['encoding']
     end
+#    @use_splash = self['conf']['splash.show']=='yes'
+#    @splash = ArcadiaAboutSplash.new if @use_splash
+#    @splash.set_progress(50) if @splash
+#    @splash.deiconify if @splash
+#    Tk.update
+    @wf = TkWidgetFactory.new
     ArcadiaDialogManager.new(self)
     ArcadiaActionDispatcher.new(self)
     ArcadiaGemsWizard.new(self)
@@ -441,6 +448,12 @@ class Arcadia < TkApplication
   end
 
   def load_sysdefaultproperty
+#    colors = Hash.new
+#    colors['background']=self['conf']['background']
+#    colors['foreground']=self['conf']['foreground']
+#    
+#    TkPalette.set(colors)
+  
     Tk.tk_call "eval","option add *background #{self['conf']['background']}"
     Tk.tk_call "eval","option add *foreground #{self['conf']['foreground']}"
     #Tk.tk_call "eval","option add *font #{self['conf']['font']}"
@@ -489,8 +502,8 @@ class Arcadia < TkApplication
     
     #load user controls
     #Arcadia control
-    load_user_control(@main_menu)
     load_user_control(@main_toolbar)
+    load_user_control(@main_menu)
     #Extension control
     load_key_binding
     @exts.each{|ext|
@@ -501,7 +514,91 @@ class Arcadia < TkApplication
     }
     load_user_control(@main_menu,"","e")
     load_user_control(@main_toolbar,"","e")
+    load_runners
     #@layout.build_invert_menu
+  end
+  
+  def load_runners
+    self['runners'] = Hash.new
+    self['runners_by_ext'] = Hash.new
+    mr = Arcadia.menu_root('runcurr')
+    return if mr.nil?
+
+    insert_runner_item = proc{|name, run|
+      if run[:file_exts]
+        run[:file_exts].split(',').each{|ext|
+          self['runners_by_ext'][ext.strip.sub('.','')]=run
+        }
+      end
+      if run[:runner] && self['runners'][run[:runner]]
+        run = Hash.new.update(self['runners'][run[:runner]]).update(run)
+        #self['runners'][name]=run
+      end
+      _run_title = run[:title]
+      run[:title] = nil
+      run[:runner_name] = name
+      _command = proc{
+          _event = Arcadia.process_event(
+            RunCmdEvent.new(self, run)
+          )
+      }
+      mr.insert('0', 
+        :command ,{
+          :image => Arcadia.file_icon(run[:file_exts]),
+          :label => _run_title,
+          :compound => 'left',
+          :command => _command
+        }
+      )
+    }
+
+    insert_runner_instance_item = proc{|name, run|
+      if run[:runner] && self['runners'][run[:runner]]
+        run = Hash.new.update(self['runners'][run[:runner]]).update(run)
+        #self['runners'][name]=run
+      end
+      _run_title = run[:title]
+      run[:title] = nil
+      run[:runner_name] = name
+      _command = proc{
+          _event = Arcadia.process_event(
+            RunCmdEvent.new(self, run)
+          )
+      }
+      mr.insert('0', 
+        :command ,{
+          :image => Arcadia.file_icon(run[:file_exts]),
+          :label => _run_title,
+          :compound => 'left',
+          :command => _command
+        }
+      )
+    }
+
+    # conf runner
+    runs=Arcadia.conf_group('runners')
+    mr.insert('0', :separator) if runs && !runs.empty?
+
+    runs.each{|name, hash_string|
+      self['runners'][name]=eval hash_string
+    }
+    
+    self['runners'].each{|name, run|
+      insert_runner_item.call(name, run)
+    }
+
+    # pers runner instance
+    p Arcadia.pers_group('runners')
+    runs=Arcadia.pers_group('runners')
+    mr.insert('0', :separator) if runs && !runs.empty?
+    pers_runner = Hash.new
+    runs.each{|name, hash_string|
+      pers_runner[name]=eval hash_string
+    }
+    
+    pers_runner.each{|name, run|
+      insert_runner_instance_item.call(name, run)
+    }
   end
 
   def load_key_binding(_ext='')
@@ -557,6 +654,7 @@ class Arcadia < TkApplication
         suf1 = suf+'.'+group
         begin
           context_path = self['conf']["#{suf1}.context_path"]
+          rif = self['conf']["#{suf1}.rif"] == nil ? 'main': self['conf']["#{suf1}.rif"]
           context_underline = self['conf']["#{suf1}.context_underline"]
           items = self['conf'][suf1].split(',')
           items.each{|item|
@@ -569,15 +667,8 @@ class Arcadia < TkApplication
               item_args[k]= make_value(_self_on_eval, v)
             }
 
-#            iprops.each{|k,v|
-#              value = v.strip
-#              if value[0..0]=='!'
-#                item_args[k]=_self_on_eval.instance_eval(value[1..-1])  
-#              else
-#                item_args[k]=value
-#              end
-#            }
             item_args['name'] = item if item_args['name'].nil?
+            item_args['rif'] = rif
             item_args['context'] = group
             item_args['context_path'] = context_path
             item_args['context_caption'] = groups_caption[gi] if groups_caption
@@ -602,7 +693,6 @@ class Arcadia < TkApplication
     }
     
   end
-
 
   def do_exit
     q1 = conf('confirm-on-exit')!='yes' || (Arcadia.dialog(self,
@@ -705,7 +795,21 @@ class Arcadia < TkApplication
   end
 
   def Arcadia.console(_sender, _args=Hash.new)
-    process_event(MsgEvent.new(_sender, _args))
+    _event = process_event(MsgEvent.new(_sender, _args))
+    _event.mark
+  end
+
+  def Arcadia.file_extension(_filename=nil)
+    if _filename
+      _m = /(.*\.)(.*$)/.match(File.basename(_filename))
+    end
+    _ret = (_m && _m.length > 1)?_m[2]: nil
+  end
+
+  def  Arcadia.runner(_filename=nil)
+    if @@instance
+      return @@instance['runners_by_ext'][Arcadia.file_extension(_filename)]  
+    end
   end
   
   def Arcadia.dialog(_sender, _args=Hash.new)
@@ -715,6 +819,10 @@ class Arcadia < TkApplication
 
   def Arcadia.style(_class)
     Configurable.properties_group(_class, Arcadia.instance['conf'])
+  end
+
+  def Arcadia.pers_group(_path)
+    Configurable.properties_group(_path, Arcadia.instance['pers'], 'pers')
   end
 
   def Arcadia.conf_group(_path)
@@ -739,6 +847,12 @@ class Arcadia < TkApplication
         return @@instance.layout
 	  end
   end
+
+  def Arcadia.wf
+    if @@instance
+        return @@instance.wf
+	  end
+  end
   
   def Arcadia.open_file_dialog
      Tk.getOpenFile 'initialdir' => MonitorLastUsedDir.get_last_dir
@@ -748,8 +862,19 @@ class Arcadia < TkApplication
     RUBY_PLATFORM =~ /mingw|mswin/
   end
 
+  def Arcadia.menu_root(_menu_root_name, _menu_root=nil)
+    if @@instance['menu_roots'] == nil
+      @@instance['menu_roots'] = Hash.new
+    end
+    if _menu_root != nil
+      @@instance['menu_roots'][_menu_root_name]= _menu_root
+    end
+    @@instance['menu_roots'][_menu_root_name]
+  end
+
   
   def Arcadia.file_icon(_file_name)
+    _file_name = '' if _file_name.nil?
     if @@instance['file_icons'] == nil
       @@instance['file_icons'] = Hash.new 
       @@instance['file_icons']['default']= TkPhotoImage.new('dat' => FILE_ICON_DEFAULT)
@@ -791,6 +916,7 @@ class ArcadiaUserControl
   SUF='user_control'
   class UserItem
     attr_accessor :name
+    attr_accessor :rif
     attr_accessor :context
     attr_accessor :context_caption
     attr_accessor :caption
@@ -802,14 +928,14 @@ class ArcadiaUserControl
       @sender = _sender
       if _args 
         _args.each do |key, value|
-          self.send(key+'=', value)
+          self.send(key+'=', value) if self.respond_to?(key)
         end
       end
       #@item_obj = ?
     end
 
     def method_missing(m, *args)  
-      if @item_obj && m.respond_to?(m)
+      if @item_obj && @item_obj.respond_to?(m)
         @item_obj.send(m, *args)
       end
     end  
@@ -845,6 +971,7 @@ class ArcadiaMainToolbar < ArcadiaUserControl
   SUF='user_toolbar'
   class UserItem < UserItem
     attr_accessor :frame
+    attr_accessor :menu_button
     def initialize(_sender, _args)
       super(_sender, _args)
       _image = TkPhotoImage.new('data' => @image_data) if @image_data
@@ -854,22 +981,24 @@ class ArcadiaMainToolbar < ArcadiaUserControl
       _caption = @caption
       @item_obj = Tk::BWidget::Button.new(_args['frame'], Arcadia.style('toolbarbutton')){
         image  _image if _image
-        #borderwidth 1
-        #font _font if _font
-        #activebackground Arcadia.conf('button.activebackground')
-        #activeforeground Arcadia.conf('button.activeforeground')
-        #background Arcadia.conf('button.background')
-        #foreground Arcadia.conf('button.foreground')
-        #highlightbackground Arcadia.conf('button.highlightbackground')
-        #relief Arcadia.conf('button.relief')
         command _command if _command
-        #relief 'groove'
         width 20
         height 20
         helptext  _hint if _hint
         text _caption if _caption
         pack('side' =>'left', :padx=>2, :pady=>0)
       }
+      if _args['menu_button'] && _args['menu_button'] == 'yes'
+        @menu_button = TkMenuButton.new(_args['frame'], Arcadia.style('toolbarbutton')){|mb|
+          indicatoron false
+          menu TkMenu.new(mb, Arcadia.style('titlemenu'))
+          image TkPhotoImage.new('dat' => MENUBUTTON_ARROW_DOWN_GIF)
+          padx 0
+          pady 0
+          pack('side'=> 'left','anchor'=> 's','pady'=>3)
+        }     
+        Arcadia.menu_root(_args['name'], @menu_button.cget('menu'))  
+      end
       #Tk::BWidget::Separator.new(@frame, :orient=>'vertical').pack('side' =>'left', :padx=>2, :pady=>2, :fill=>'y',:anchor=> 'w')
     end
 
@@ -890,7 +1019,7 @@ class ArcadiaMainToolbar < ArcadiaUserControl
     #@frame.highlightbackground(Arcadia.conf('panel.highlightbackground'))
     @frame.relief(Arcadia.conf('panel.relief'))
  
-     @context_frames = Hash.new  
+    @context_frames = Hash.new  
     @last_context = nil
   end
 
@@ -1091,16 +1220,19 @@ class ArcadiaMainMenu < ArcadiaUserControl
     sub
   end
   
-  def get_menu(_menubar, _context, context_path, context_underline=nil)
+  def make_menu_in_menubar(_menubar, _context, context_path, context_underline=nil)
     context_menu = get_menu_context(_menubar, _context, context_underline)
+    make_menu(context_menu, context_path, context_underline)
+  end
+
+  def make_menu(_menu, context_path, context_underline=nil)
     folders = context_path.split('/')
-    sub = context_menu
+    sub = _menu
     folders.each{|folder|
       sub = get_sub_menu(sub, folder)
     }
     sub
   end
-
 
   def new_item(_sender, _args= nil)
     return if _args.nil?
@@ -1109,7 +1241,22 @@ class ArcadiaMainMenu < ArcadiaUserControl
     else
       conte = _args['context']
     end
-    _args['menu']=get_menu(@menu, conte, _args['context_path'], _args['context_underline'])
+    if _args['rif'] == 'main'
+      _args['menu']=make_menu_in_menubar(@menu, conte, _args['context_path'], _args['context_underline'])
+    else
+      if Arcadia.menu_root(_args['rif'])
+        _args['menu']=make_menu(Arcadia.menu_root(_args['rif']), _args['context_path'], _args['context_underline'])
+      else
+        msg = "During building of menu item \"#{_args['name']}\" rif \"#{_args['rif']}\" not found!"
+        Arcadia.dialog(self, 
+            'type'=>'ok', 
+            'title' => "(Arcadia) #{self.class::SUF}", 
+            'msg'=>msg,
+            'level'=>'error')
+
+        _args['menu']=make_menu_in_menubar(@menu, conte, _args['context_path'], _args['context_underline'])
+      end
+    end
     super(_sender, _args)
   end
 
@@ -1158,7 +1305,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
     @menu.add_menu(menu_spec_tools)
     @menu.add_menu(menu_spec_help)
   
-    #@menu.bind_append("1", proc{
+#    #@menu.bind_append("1", proc{
 #      chs = TkWinfo.children(@menu)
 #      hh = 25
 #      @last_post = nil
@@ -1172,8 +1319,42 @@ class ArcadiaMainMenu < ArcadiaUserControl
 #          @last_post=nil
 #        })
 #      }
+#
+#    #})
 
-    #})
+#      @menu.bind_append("Leave", proc{
+#        if Tk.focus != @last_menu_posted 
+#          @last_post.unpost if @last_post
+#          @last_post=nil
+#        end
+#      })
+#      
+#      chs = TkWinfo.children(@menu)
+#      hh = 25
+#      @last_post = nil
+#      chs.each{|ch|
+#        ch.bind_append("Enter", proc{|x,y,rx,ry|
+#          @last_post.unpost if @last_post && @last_post != ch.menu
+#          ch.menu.post(x-rx,y-ry+hh)
+#          chmenus = TkWinfo.children(ch)
+#          @last_menu_posted = chmenus[0]
+#          @last_menu_posted.set_focus
+#          #@last_post=ch.menu
+#          }, "%X %Y %x %y")
+#        ch.bind_append("Leave", proc{
+#          @last_post.unpost if @last_post
+#          #@last_post=nil
+#          @last_post=ch.menu
+#        })
+#      }
+#      @menu.bind_append("Leave", proc{
+#        if Tk.focus != @last_menu_posted 
+#          @last_post.unpost if @last_post
+#          @last_post=nil
+#        end
+#      })
+      
+
   end
   
 end
@@ -1198,26 +1379,37 @@ class ArcadiaAboutSplash < TkToplevel
       background  _bgcolor
       place('x'=> 20,'y' => 20)
     }
+    
+    
+#    @tkLabel1 = TkLabel.new(self){
+#      text 'Arcadia'  
+#      background  _bgcolor
+#      foreground  '#ffffff'
+#      font Arcadia.conf('splash.title.font')
+#      justify  'left'
+#      place('width' => '190','x' => 110,'y' => 10,'height' => 25)
+#    }
+
     @tkLabel1 = TkLabel.new(self){
-      text  'Arcadia'
+      image  TkPhotoImage.new('format'=>'GIF','data' =>ARCADIA_JAP_GIF)
       background  _bgcolor
-      foreground  '#ffffff'
-      font Arcadia.conf('splash.title.font')
       justify  'left'
-      place('width' => '190','x' => 110,'y' => 10,'height' => 25)
+      place('x' => 90,'y' => 10)
     }
+
     @tkLabelRuby = TkLabel.new(self){
       image TkPhotoImage.new('data' =>RUBY_DOCUMENT_GIF)
       background  _bgcolor
-      place('x'=> 150,'y' => 40)
+      place('x'=> 210,'y' => 12)
     }
+    
     @tkLabel2 = TkLabel.new(self){
-      text  'Ruby ide'
+      text  'Arcadia Ide'
       background  _bgcolor
       foreground  '#ffffff'
       font Arcadia.instance['conf']['splash.subtitle.font']
       justify  'left'
-      place('width' => '90','x' => 170,'y' => 40,'height' => 19)
+      place('x' => 100,'y' => 40,'height' => 19)
     }
     @tkLabelVersion = TkLabel.new(self){
       text  'version: '+$arcadia['applicationParams'].version
@@ -1225,7 +1417,7 @@ class ArcadiaAboutSplash < TkToplevel
       foreground  '#ffffff'
       font Arcadia.instance['conf']['splash.version.font']
       justify  'left'
-      place('width' => '120','x' => 150,'y' => 65,'height' => 19)
+      place('x' => 100,'y' => 65,'height' => 19)
     }
     @tkLabel21 = TkLabel.new(self){
       text  'by Antonio Galeone - 2004/2010'
@@ -1259,7 +1451,7 @@ class ArcadiaAboutSplash < TkToplevel
     @progress  = TkVariable.new
     reset
     _width = 380
-    _height = 240
+    _height = 210
     #_width = 0;_height = 0
     _x = TkWinfo.screenwidth(self)/2 -  _width / 2
     _y = TkWinfo.screenheight(self)/2 -  _height / 2
@@ -1305,7 +1497,6 @@ class ArcadiaAboutSplash < TkToplevel
     @progress.numeric = @max
     labelStep(_txt) if _txt
   end
-  
 end
 
 class ArcadiaActionDispatcher
@@ -1332,9 +1523,10 @@ class ArcadiaSh < TkToplevel
   def initialize
     super
     title 'ArcadiaSh'
+    iconphoto(TkPhotoImage.new('dat'=>ARCADIA_RING_GIF))
     geometry = '800x200+10+10'
     geometry(geometry)
-    @text = TkScrollText.new(self, Arcadia.style('text')){
+    @text = TkText.new(self, Arcadia.style('text')){
       wrap  'none'
       undo true
       insertofftime 200
@@ -1346,9 +1538,7 @@ class ArcadiaSh < TkToplevel
     @text.set_focus
     @text.tag_configure('error', 'foreground' => '#d93421')
     @text.tag_configure('response', 'foreground' => '#2c51d9')
-    @text.show
-    @text.show_v_scroll
-    @text.show_h_scroll
+    @text.extend(TkScrollableWidget).show
     #@input_buffer = ''
     @wait = true
     @result = false
@@ -1509,7 +1699,7 @@ class ArcadiaGemsWizard
     ret = false
     
     sh=ArcadiaSh.new
-    cmd = "gem install #{name}"
+    cmd = "gem install --remote --include-dependencies #{name}"
     cmd="sudo #{cmd}" if !is_windows?
     cmd+=" --source=#{repository}" if repository
     sh.prepare_exec(cmd)    
@@ -2127,6 +2317,7 @@ class ArcadiaLayout
       end
 
       if other_root_splitted_adapter
+        p "primo quadrante"
         other_root_splitted_adapter.detach_frame
         splitted_adapter.detach_frame
         splitted_adapter.destroy
@@ -2182,6 +2373,7 @@ class ArcadiaLayout
          # @domains[_row.to_i+1][_col.to_i] = nil
         end
       else
+        p "secondo quadrante"
         source_save = Hash.new
         source_save.update(@panels[source_domain]['sons']) if @panels[source_domain]
         source_save.each{|name,ffw|
@@ -2241,6 +2433,7 @@ class ArcadiaLayout
       end
 
       if other_root_splitted_adapter
+        p "terzo quadrante"
         other_root_splitted_adapter.detach_frame
         splitted_adapter.detach_frame
         splitted_adapter.destroy
@@ -2250,6 +2443,7 @@ class ArcadiaLayout
        # @domains[_row.to_i][_col.to_i] = nil
         @panels.delete(_domain)
       else
+        p "quarto quadrante"
         source_save = Hash.new
         source_save.update(@panels[other_dom]['sons'])
         source_save.each{|name,ffw|
