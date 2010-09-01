@@ -756,7 +756,7 @@ class AgEditorOutline
         @bar.sync = sync_val
       end
     }
-    @tree_exp = Tk::BWidget::Tree.new(_frame, Arcadia.style('treepanel')){
+    @tree_exp = BWidgetTreePatched.new(_frame, Arcadia.style('treepanel')){
       showlines false
       deltay 18
       dragenabled true
@@ -847,8 +847,10 @@ class AgEditorOutline
   def pop_up_menu_tree
     @pop_up_tree = TkMenu.new(
       :parent=>@tree_exp,
+      :tearoff=>0,
       :title => 'Menu tree'
     )
+    @pop_up_tree.extend(TkAutoPostMenu)
     @pop_up_tree.configure(Arcadia.style('menu'))
     #Arcadia.instance.main_menu.update_style(@pop_up_tree)
     @pop_up_tree.insert('end',
@@ -857,7 +859,7 @@ class AgEditorOutline
       :hidemargin => false,
       :command=> proc{build_tree}
     )
-    @tree_exp.bind_append("Button-3",
+    @tree_exp.areabind_append("Button-3",
       proc{|x,y|
         _x = TkWinfo.pointerx(@tree_exp)
         _y = TkWinfo.pointery(@tree_exp)
@@ -1708,6 +1710,7 @@ class AgEditor
       :tearoff=>0,
       :title => 'Menu'
     )
+    _pop_up.extend(TkAutoPostMenu)
     _pop_up.configure(Arcadia.style('menu'))
     #Arcadia.instance.main_menu.update_style(@pop_up)
     _title_item = _pop_up.insert('end',
@@ -1910,9 +1913,10 @@ class AgEditor
   def pop_up_menu
     @pop_up = TkMenu.new(
       :parent=>@text,
-      :tearoff=>1,
+      :tearoff=>0,
       :title => 'Menu'
     )
+    @pop_up.extend(TkAutoPostMenu)
     @pop_up.configure(Arcadia.style('menu'))
     
     @pop_up.insert('end',
@@ -2120,6 +2124,7 @@ class AgEditor
       :tearoff=>0,
       :title => 'Debug'
     )
+    _sub_debug.extend(TkAutoPostMenu)
     _sub_debug.configure(Arcadia.style('menu'))
     _sub_debug.insert('end',
       :command,
@@ -2151,6 +2156,7 @@ class AgEditor
       :tearoff=>0,
       :title => 'Code'
     )
+    _sub_code.extend(TkAutoPostMenu)
     _sub_code.configure(Arcadia.style('menu'))
     _sub_code.insert('end',
       :command,
@@ -3335,6 +3341,7 @@ class AgMultiEditor < ArcadiaExt
       :tearoff=>0,
       :title => 'Menu'
     )
+    @pop_up.extend(TkAutoPostMenu)
     @pop_up.configure(Arcadia.style('menu'))
     #Arcadia.instance.main_menu.update_style(@pop_up)
 

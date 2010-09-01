@@ -64,6 +64,7 @@ class OutputView
       :tearoff=>0,
       :title => 'Menu'
     )
+    @pop_up.extend(TkAutoPostMenu)
     @pop_up.configure(Arcadia.style('menu'))
     
     @pop_up.insert('end',

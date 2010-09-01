@@ -297,13 +297,15 @@ class DirProjects < ArcadiaExt
       :tearoff=>0,
       :title => 'Menu tree'
     )
+    @pop_up_tree.extend(TkAutoPostMenu)
     @pop_up_tree.configure(Arcadia.style('menu'))
     #----- new submenu
     sub_new = TkMenu.new(
-      :parent=>@pop_up,
+      :parent=>@pop_up_tree,
       :tearoff=>0,
       :title => 'New'
     )
+    sub_new.extend(TkAutoPostMenu)
     sub_new.configure(Arcadia.style('menu'))
     sub_new.insert('end',
       :command,
@@ -345,10 +347,11 @@ class DirProjects < ArcadiaExt
     #-----------------
     #----- refactor submenu
     sub_ref = TkMenu.new(
-      :parent=>@pop_up,
+      :parent=>@pop_up_tree,
       :tearoff=>0,
       :title => 'Ref'
     )
+    sub_ref.extend(TkAutoPostMenu)
     sub_ref.configure(Arcadia.style('menu'))
     sub_ref.insert('end',
       :command,
@@ -381,14 +384,14 @@ class DirProjects < ArcadiaExt
       :hidemargin => false
     )
     
-    
     #-----------------
     #----- search submenu
     sub_ref_search = TkMenu.new(
-      :parent=>@pop_up,
+      :parent=>@pop_up_tree,
       :tearoff=>0,
       :title => 'Ref'
     )
+    sub_ref_search.extend(TkAutoPostMenu)
     sub_ref_search.configure(Arcadia.style('menu'))
     sub_ref_search.insert('end',
       :command,

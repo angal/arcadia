@@ -588,7 +588,6 @@ class Arcadia < TkApplication
     }
 
     # pers runner instance
-    p Arcadia.pers_group('runners')
     runs=Arcadia.pers_group('runners')
     mr.insert('0', :separator) if runs && !runs.empty?
     pers_runner = Hash.new
@@ -1209,6 +1208,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
         :tearoff=>0
       )
       sub.configure(Arcadia.style('menu'))
+      sub.extend(TkAutoPostMenu)
       #update_style(sub)
       menu_context.insert('end',
         :cascade,
@@ -1329,6 +1329,8 @@ class ArcadiaMainMenu < ArcadiaUserControl
 #        end
 #      })
 #      
+
+
 #      chs = TkWinfo.children(@menu)
 #      hh = 25
 #      @last_post = nil
@@ -1353,7 +1355,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
 #          @last_post=nil
 #        end
 #      })
-      
+     @menu.extend(TkAutoPostMenu)      
 
   end
   

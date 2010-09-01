@@ -123,6 +123,7 @@ class Breakpoints < ArcadiaExt
       :tearoff=>0,
       :title => 'Menu'
     )
+    _pop_up.extend(TkAutoPostMenu)
     _pop_up.configure(Arcadia.style('menu'))
     _title_item = _pop_up.insert('end',
       :command,

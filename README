@@ -1,39 +1,38 @@
-= Arcadia Ruby Ide
-version 0.8.1
+= Arcadia Ide
+version 0.9.0
 
 by Antonio Galeone
-on Apr 10, 2010
+on Sep 01, 2010
 
 
 == About
 
 Arcadia is a Light Integrated Development Environment (IDE) for Ruby language 
-written in Ruby using the classic tcl/tk GUI toolkit.
+written in classic Ruby using the classic tcl/tk GUI toolkit.
 
-Some of Arcadia ruby ide project features include:
+Some of Arcadia ide project features include:
 * Editor with source browsing, syntax highlighting, code completion
 * Debugging support
 * Working on any platform where ruby and tcl-tk work.
 * Highly extensibility architecture.
 
-== In this release 0.8.1
+== In this release 0.9.0
     
 [Improvements]
 	commons: 
 	  - bug-fixing
-	  - hide splash on gems wizard
-	  - added keybinding configurazion support 
-	  - added new event :  RedoTextEvent, SelectAllTextEvent, InvertSelectionTextEvent, UpperCaseTextEvent, LowerCaseTextEvent
-	    and Edit menu items : 'Redo','Select all','Invert selection','Uppercase', 'Lowercase'
+	  - new default theme = dark
+	  - auto-hide scrollbar and auto post menu
 
-	editor:
-	  - added dynamic resizing of line numbers frame 
+	new features:
+	  - added process monitor (possibility to kill running sub process)
+	  - added first release of a configurable runners management (possibility to choose runner for current file)
 
 == Dependencies
   - rubygems
   - ruby-tk
   - tcl/tk
-  - ack
+  - ack (optional)
   - gem coderay
   - gem ruby-debug (ruby-debug19 on ruby 1.9)
   - gem whichr
@@ -65,10 +64,11 @@ The toolbar button are in order:
   (relatively to edit operation)
 - run current, run last 
   (for execute the raised file in the editor or the last runned file)  
-- debug current, debug last, quit debug panel
-  (for debug need)
+  after "run current" there is a menubutton to choose a configurated runner to apply at current file
 - show rad palette
   (for tk rad need)  
+- debug current, debug last, quit debug panel
+  (for debug need)
 - quit (to exit from arcadia)
 
 ==== Editor

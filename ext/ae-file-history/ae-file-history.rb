@@ -338,13 +338,15 @@ class FilesHistrory < ArcadiaExt
       :tearoff=>0,
       :title => 'Menu tree'
     )
+    @pop_up_tree.extend(TkAutoPostMenu)
     @pop_up_tree.configure(Arcadia.style('menu'))
     #----- search submenu
     sub_ref_search = TkMenu.new(
-      :parent=>@pop_up,
+      :parent=>@pop_up_tree,
       :tearoff=>0,
       :title => 'Ref'
     )
+    sub_ref_search.extend(TkAutoPostMenu)
     sub_ref_search.configure(Arcadia.style('menu'))
     sub_ref_search.insert('end',
       :command,

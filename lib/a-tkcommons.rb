@@ -1341,6 +1341,59 @@ class TkArcadiaText < TkText
 end
 
 
+module TkAutoPostMenu
+
+  def self.extended(_widget)
+    _widget.__initialize_posting(_widget)
+  end
+
+  def self.included(_widget)
+    _widget.__initialize_posting(_widget)
+  end
+  
+  def __initialize_posting(_widget=self)
+    chs = TkWinfo.children(_widget)
+    hh = 22
+    @last_post = nil
+    chs.each{|ch|
+      ch.bind_append("Enter", proc{|x,y,rx,ry|
+        @last_post.unpost if @last_post && @last_post != ch.menu
+        ch.menu.post(x-rx,y-ry+hh)
+        chmenus = TkWinfo.children(ch)
+        @last_menu_posted = chmenus[0]
+        @last_menu_posted.set_focus
+        @last_menu_posted.bind("Enter", proc{
+          @last_menu_posted.bind("Leave", proc{
+            @last_post.unpost if @last_post
+            @last_menu_posted.bind("Enter", proc{})
+            @last_menu_posted.bind("Leave", proc{})
+          })
+        })
+        
+        #@last_post=ch.menu
+        }, "%X %Y %x %y")
+      ch.bind_append("Leave", proc{
+        @last_post.unpost if @last_post
+        if @last_post!=ch.menu
+          @last_post=ch.menu
+        else
+          @last_post=nil
+        end
+        if !Tk.focus.kind_of?(TkMenu)
+          @last_post.unpost
+          @last_post=nil
+        end
+      })
+    }
+    _widget.bind_append("Leave", proc{
+      if Tk.focus != @last_menu_posted 
+        @last_post.unpost if @last_post
+        @last_post=nil
+      end
+    })
+  end
+end
+
 #
 module TkScrollableWidget
 
@@ -1378,7 +1431,7 @@ module TkScrollableWidget
       delta = last.to_f - first.to_f
       if delta < 1 && delta > 0 && last != @last_y_last
         show_v_scroll
-        @v_scroll.set(first,last)
+        @v_scroll.set(first,last) if TkWinfo.mapped?(@v_scroll)
       elsif delta == 1 || delta == 0
         hide_v_scroll
       end
@@ -1396,7 +1449,7 @@ module TkScrollableWidget
       delta = last.to_f - first.to_f
       if delta < 1 && delta > 0  && last != @last_x_last
         show_h_scroll
-        @h_scroll.set(first,last)
+        @h_scroll.set(first,last) if TkWinfo.mapped?(@h_scroll)
       elsif  delta == 1 || delta == 0
         hide_h_scroll
       end
