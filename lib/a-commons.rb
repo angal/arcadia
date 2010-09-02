@@ -849,7 +849,7 @@ class Application
       self['conf_theme'] = self.properties_file2hash(_theme_file)
       self['conf'].update(self['conf_theme'])
       self['conf_without_local'].update(self['conf_theme'])
-      _theme_res_file = "conf/theme-#{_name}.res.rb"
+      _theme_res_file = "#{Dir.pwd}/conf/theme-#{_name}.res.rb"
       if _theme_res_file && File.exist?(_theme_res_file)
         begin
           require _theme_res_file

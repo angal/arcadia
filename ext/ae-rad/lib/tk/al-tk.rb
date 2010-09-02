@@ -4,9 +4,9 @@
 #
 
 require 'tk'
-require 'ext/ae-rad/ae-rad-libs'
-require "lib/a-tkcommons"
-require "ext/ae-rad/lib/tk/al-tk.res"
+require "#{Dir.pwd}/ext/ae-rad/ae-rad-libs"
+require "#{Dir.pwd}/lib/a-tkcommons"
+require "#{Dir.pwd}/ext/ae-rad/lib/tk/al-tk.res"
 
 TkAllPhotoImage = TkPhotoImage
 

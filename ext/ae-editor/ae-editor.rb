@@ -7,9 +7,9 @@
 
 require 'tk'
 require 'tktext'
-require 'lib/a-tkcommons'
+require "#{Dir.pwd}/lib/a-tkcommons"
 #require 'lib/a-commons' 
-require 'lib/a-core'
+require "#{Dir.pwd}/lib/a-core"
 
 class TreeNode
   attr_reader :sons
@@ -3912,9 +3912,11 @@ class AgMultiEditor < ArcadiaExt
   def raise_file(_filename=nil, _pos=nil)
     if _filename && frame_def_visible?
       tab_name=self.tab_file_name(_filename)
-      @main_frame.enb.move(tab_name,_pos) if _pos
-      @main_frame.enb.raise(tab_name)
-      @main_frame.enb.see(tab_name)
+      if  @main_frame.enb.index(tab_name) != -1
+	@main_frame.enb.move(tab_name,_pos) if _pos
+	@main_frame.enb.raise(tab_name)
+	@main_frame.enb.see(tab_name)
+      end
     end    
   end
   

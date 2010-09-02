@@ -6,7 +6,7 @@
 $pwd = Dir.pwd
 Dir.chdir("#{File.dirname(__FILE__)}/..")
 if FileTest.exist?('conf/arcadia.init.rb')
-  require 'conf/arcadia.init'
+  require "#{Dir.pwd}/conf/arcadia.init"
 end
-require "lib/a-core"
+require "#{Dir.pwd}/lib/a-core"
 Arcadia.new.run

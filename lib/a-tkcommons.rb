@@ -3,7 +3,7 @@
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
 
-require "lib/a-commons"
+require "#{Dir.pwd}/lib/a-commons"
 require "tk/menu"
 
 class BWidgetTreePatched < Tk::BWidget::Tree

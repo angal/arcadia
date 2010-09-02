@@ -3,9 +3,9 @@
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
 
-require 'ext/ae-rad/ae-rad-libs'
-require 'ext/ae-rad/ae-rad-palette'
-require 'ext/ae-rad/ae-rad-inspector'
+require "#{Dir.pwd}/ext/ae-rad/ae-rad-libs"
+require "#{Dir.pwd}/ext/ae-rad/ae-rad-palette"
+require "#{Dir.pwd}/ext/ae-rad/ae-rad-inspector"
 
 class Rad < ArcadiaExt
   attr_reader :libs

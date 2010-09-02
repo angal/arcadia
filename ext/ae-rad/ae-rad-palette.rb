@@ -3,8 +3,8 @@
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
 
-require 'ext/ae-rad/ae-rad-libs'
-require 'ext/ae-rad/lib/tk/al-tk'
+require "#{Dir.pwd}/ext/ae-rad/ae-rad-libs"
+require "#{Dir.pwd}/ext/ae-rad/lib/tk/al-tk"
 require 'tk'
 require 'tkmenubar'
 require 'tkextlib/bwidget'

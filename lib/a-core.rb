@@ -8,10 +8,10 @@
 #   &require_omissis=tk/label
 #   &require_omissis=tk/toplevel
 
-require "conf/arcadia.res"
+require "#{Dir.pwd}/conf/arcadia.res"
 require 'tkextlib/bwidget'
-require "lib/a-tkcommons"
-require "lib/a-contracts"
+require "#{Dir.pwd}/lib/a-tkcommons"
+require "#{Dir.pwd}/lib/a-contracts"
 require "observer"
 
 class Arcadia < TkApplication
@@ -310,7 +310,7 @@ class Arcadia < TkApplication
     begin
       source = self['conf'][_extension+'.require']
       if source.strip.length > 0
-	      require source 
+	      require "#{Dir.pwd}/#{source}" 
       end
       @exts_loaded << _extension
     rescue Exception,LoadError

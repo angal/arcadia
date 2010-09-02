@@ -4,7 +4,7 @@
 #
 
 require 'tk'
-require 'lib/a-tkcommons'
+require "#{Dir.pwd}/lib/a-tkcommons"
 require 'tkextlib/bwidget'
 require "observer"
 
