@@ -781,7 +781,8 @@ class RubyDebugServer
     else
        commandLine = "rdebug --host #{_host} --port #{_remote_port} -sw #{_filename}"
     end
-    Arcadia.process_event(SystemExecEvent.new(self, 'command'=>commandLine))
+    #Arcadia.process_event(SystemExecEvent.new(self, 'command'=>commandLine))
+    Arcadia.process_event(RunCmdEvent.new(self, 'cmd'=>commandLine, 'file'=>_filename))
   end
   
   def is_alive?
@@ -816,7 +817,7 @@ class RubyDebugServer
               Arcadia.console(self, 'msg'=>"#{$?.inspect}")
               #Arcadia.new_msg(self,"#{$?.inspect}")    
             else
-              _event = Arcadia.process_event(RunRubyFileEvent.new(self, 'file'=>_filename))
+              _event = Arcadia.process_event(RunCmdEvent.new(self, {'file'=>_filename}))
               Arcadia.console(self, 'msg'=>"#{_event.results[0].output}", 'level'=>'debug')
               #Arcadia.new_debug_msg(self,"#{_event.results[0].output}")    
             end

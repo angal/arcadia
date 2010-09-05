@@ -11,7 +11,7 @@ class Shell < ArcadiaExt
 
   def on_before_build(_event)
     Arcadia.attach_listener(self, SystemExecEvent)
-    Arcadia.attach_listener(self, RunRubyFileEvent)
+    #Arcadia.attach_listener(self, RunRubyFileEvent)
     Arcadia.attach_listener(self, RunCmdEvent)
   end
 

@@ -1659,16 +1659,10 @@ class AgEditor
 
   def run_buffer
     if !@file
-      _file = create_temp_file
-      begin
-        _event = Arcadia.process_event(RunRubyFileEvent.new(self, 'file'=>_file, 'persistent'=>false))
-      ensure
-        _event.add_finalize_callback(proc{File.delete(_file) if File.exist?(_file)})
-       # File.delete(_file) if File.exist?(_file)
-      end
+      Arcadia.process_event(RunCmdEvent.new(self, {'file'=>'*CURR', 'runner_name'=>'ruby_file', 'persistent'=>false}))
     else
       save if !@read_only
-      Arcadia.process_event(RunRubyFileEvent.new(self, 'file'=>@file, 'persistent'=>true))
+      Arcadia.process_event(RunCmdEvent.new(self, {'file'=>@file}))
     end
   end
   
@@ -2545,8 +2539,8 @@ class AgEditor
     @controller.tab_title(@page_frame)
   end
 
-  def reset_modify
-    @controller.change_tab_reset_modify(@page_frame)
+  def reset_modify(_reset_tab=true)
+    @controller.change_tab_reset_modify(@page_frame) if _reset_tab
     @set_mod = false
     @file_last_access_time = File.mtime(@file) if @file
   end
@@ -2795,12 +2789,12 @@ class AgEditor
       f = File.new(@file, "wb")
       begin
         if f
-	  to_write = text_value
-	  if @dos_line_endings
-	    # we stripped these out, previously...
-	    # for now assume they want them all this way, no mixing and matching...
-	    to_write = to_write.gsub("\n", "\r\n")
-	  end
+	        to_write = text_value
+	        if @dos_line_endings
+        	    # we stripped these out, previously...
+        	    # for now assume they want them all this way, no mixing and matching...
+        	    to_write = to_write.gsub("\n", "\r\n")
+        	 end
           f.syswrite(to_write)
           @buffer = text_value
           reset_modify
@@ -2960,7 +2954,7 @@ class AgEditor
 	      }
       end
       set_read_only(!File.stat(_filename).writable?)
-      reset
+      reset(false)
       refresh
     ensure
       @loading=false
@@ -2980,9 +2974,9 @@ class AgEditor
     end
   end
   
-  def reset
+  def reset(_reset_tab=true)
     @buffer = text_value
-    reset_modify
+    reset_modify(_reset_tab)
     @text.edit_reset
   end
   
@@ -3184,7 +3178,7 @@ class AgMultiEditor < ArcadiaExt
     @tabs_editor =Hash.new
     Arcadia.attach_listener(self, BufferEvent)
     Arcadia.attach_listener(self, DebugEvent)
-    Arcadia.attach_listener(self, RunRubyFileEvent)
+  #  Arcadia.attach_listener(self, RunRubyFileEvent)
     Arcadia.attach_listener(self, RunCmdEvent)
   # Arcadia.attach_listener(self, StartDebugEvent)
     Arcadia.attach_listener(self, FocusEvent)
@@ -3228,6 +3222,7 @@ class AgMultiEditor < ArcadiaExt
         entry_hash[:file]= _event.file
         entry_hash[:dir]= _event.dir if _event.dir
         entry_hash[:title]= "#{bn}"
+        
         Arcadia.persistent("runners.#{bn}", entry_hash.to_s)
         # here add new menu' item
         mr = Arcadia.menu_root('runcurr')
@@ -3264,7 +3259,11 @@ class AgMultiEditor < ArcadiaExt
       end
       
       if _event.cmd.nil?
-        runner = Arcadia.runner_for_file(_event.file)
+        if _event.runner_name
+          runner = Arcadia.runner(_event.runner_name)
+        else
+          runner = Arcadia.runner_for_file(_event.file)
+        end
         if runner
           _event.cmd = runner[:cmd]
         else
@@ -3838,10 +3837,10 @@ class AgMultiEditor < ArcadiaExt
   def change_tab_reset_modify(_tab)
     #_new_name = @main_frame.enb.itemcget(@tabs_name[_tab], 'text').gsub!("(...)",'')
     if @main_frame.enb.index(page_name(_tab))
-	_new_name = @main_frame.enb.itemcget(page_name(_tab), 'text').gsub!("(...)",'')
-	if _new_name
-		change_tab_title(_tab, _new_name)
-	end
+	    _new_name = @main_frame.enb.itemcget(page_name(_tab), 'text').gsub!("(...)",'')
+     	if _new_name
+        change_tab_title(_tab, _new_name)
+     	end
     end
   end
 
