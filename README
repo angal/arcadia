@@ -2,7 +2,7 @@
 version 0.9.0
 
 by Antonio Galeone
-on Sep 01, 2010
+on Sep 05, 2010
 
 
 == About
@@ -20,10 +20,9 @@ Some of Arcadia ide project features include:
     
 [Improvements]
 	commons: 
-	  - bug-fixing
+	  - a lot of bug-fixing
 	  - new default theme = dark
 	  - auto-hide scrollbar and auto post menu
-
 	new features:
 	  - added process monitor (possibility to kill running sub process)
 	  - added first release of a configurable runners management (possibility to choose runner for current file)
@@ -82,14 +81,20 @@ These are same editor short-cut:
 - Ctrl-g  => show go to line dialog
 - Ctrl-o  => shoe open file dialog
 - Ctrl-z  => undo
+- Ctrl-r  => redo
 - Ctrl-f  => copy the selected text on input combobox of find dialog and moves focus
 - Ctrl-s  => save
 - Ctrl-space or esc => completion code
-- Ctrl-shift-i => indent the selected block
-- Ctrl-shift-u => unindent the selected block
+- Ctrl-shift-i or Tab => indent the selected block
+- Ctrl-shift-u or Shift-Tab => unindent the selected block
 - Ctrl-shift-c => comment/uncomment the selected code block
-- F5 => execute the file 
+- Alt-shift-a => select all
+- Alt-shift-i => invert selection
+- Alt-shift-u => selected to uppercase
+- Alt-shift-l => selected to lowercase
+- F5 => execute the current file 
 - F3 => find/ find next
+- Ctrl-F3 => Search in files
 
 - Double-Click on line number set or unset a debug breakpoint
 
@@ -130,7 +135,7 @@ under ~/.arcadia  directory. The format of property definition are:
 <OPERATING SYSTEM IDENTIFY::>PROPERTY_NAME=PROPERTY_VALUE
 
 
-I have tested arcadia with ruby 1.8.4, 1.8.5, 1.8.6, 1.8.7, 1.9.1 on 
+I have tested arcadia with ruby 1.8.4, 1.8.5, 1.8.6, 1.8.7, 1.9.1, 1.9.2 on 
 
 * Archlinux
 * Ubuntu
@@ -155,4 +160,5 @@ antonio-galeone@rubyforge.org
 
 For bugs, support request, features request:
 http://groups.google.it/group/arcadia-ruby-ide
-http://rubyforge.org/projects/arcadia
+Repository at:
+http://github.com/angal/arcadia/tree/master

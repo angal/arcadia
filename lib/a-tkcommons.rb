@@ -1110,6 +1110,7 @@ class TkFloatTitledFrame < TkBaseTitledFrame
     start_resizing(@resizing_label, self)
     @grabbed = false
 #    frame.bind_append('KeyPress'){|e|
+#      p e.keysym
 #      case e.keysym
 #        when 'Escape'
 #          p "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
@@ -1431,7 +1432,11 @@ module TkScrollableWidget
       delta = last.to_f - first.to_f
       if delta < 1 && delta > 0 && last != @last_y_last
         show_v_scroll
-        @v_scroll.set(first,last) if TkWinfo.mapped?(@v_scroll)
+	begin
+	  @v_scroll.set(first,last) #if TkWinfo.mapped?(@v_scroll)
+	rescue Exception => e
+     p "#{e.message}"
+	end
       elsif delta == 1 || delta == 0
         hide_v_scroll
       end
@@ -1449,7 +1454,11 @@ module TkScrollableWidget
       delta = last.to_f - first.to_f
       if delta < 1 && delta > 0  && last != @last_x_last
         show_h_scroll
-        @h_scroll.set(first,last) if TkWinfo.mapped?(@h_scroll)
+	begin
+          @h_scroll.set(first,last) #if TkWinfo.mapped?(@h_scroll)
+      	rescue Exception => e
+           p "#{e.message}"
+	end
       elsif  delta == 1 || delta == 0
         hide_h_scroll
       end
@@ -1476,7 +1485,11 @@ module TkScrollableWidget
     if @h_scroll_on
       show_h_scroll(true)
     end
-    arm_scroll_binding
+    begin
+	arm_scroll_binding
+    rescue  Exception => e
+	p "#{e.message}"
+    end
   end
 
   def hide
@@ -1510,33 +1523,50 @@ module TkScrollableWidget
   
   def show_v_scroll(_force=false)
     if _force || !@v_scroll_on
-      @widget.place('width' => -@scroll_width-@x)
-      @v_scroll.pack('side' => 'right', 'fill' => 'y')
-      @v_scroll_on = true
+      begin
+        @widget.place('width' => -@scroll_width-@x)
+        @v_scroll.pack('side' => 'right', 'fill' => 'y')
+        @v_scroll_on = true
+      rescue RuntimeError => e
+        p "RuntimeError : #{e.message}"
+      end
     end
   end
 
   def show_h_scroll(_force=false)
     if _force || !@h_scroll_on
-      @widget.place('height' => -@scroll_width-@y)
-      @h_scroll.pack('side' => 'bottom', 'fill' => 'x')
-      @h_scroll_on = true
+      begin
+        @widget.place('height' => -@scroll_width-@y)
+        @h_scroll.pack('side' => 'bottom', 'fill' => 'x')
+        @h_scroll_on = true
+      rescue RuntimeError => e
+        p "RuntimeError : #{e.message}"
+      end
     end
   end
 
   def hide_v_scroll
     if @v_scroll_on
-      @widget.place('width' => 0)
-      @v_scroll.unpack
-      @v_scroll_on = false
+      begin
+        @widget.place('width' => 0)
+        @v_scroll.unpack
+        @v_scroll_on = false
+      rescue RuntimeError => e
+        p "RuntimeError : #{e.message}"
+      end
+
     end
   end
 
   def hide_h_scroll
     if @h_scroll_on
-      @widget.place('height' => 0)
-      @h_scroll.unpack
-      @h_scroll_on = false
+      begin
+        @widget.place('height' => 0)
+        @h_scroll.unpack
+        @h_scroll_on = false
+      rescue RuntimeError => e
+        p "RuntimeError : #{e.message}"
+      end
     end  
   end
 

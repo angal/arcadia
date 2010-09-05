@@ -581,11 +581,11 @@ module Configurable
 #  
 #  def hash_as_one_line_format(_name, _hash) 
 #  end
-  
-  def Configurable.properties_group(_group, _hash_source, _hash_suff='conf')
+
+  def Configurable.properties_group(_group, _hash_source, _hash_suff='conf', _refresh=false)
     group_key="#{_hash_suff}.#{_group}"
     @@conf_groups = Hash.new if !defined?(@@conf_groups)
-    if @@conf_groups[group_key].nil?
+    if @@conf_groups[group_key].nil? || _refresh
       @@conf_groups[group_key] = Hash.new
       glen=_group.length
       _hash_source.keys.sort.each{|k|

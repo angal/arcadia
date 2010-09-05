@@ -230,24 +230,48 @@ class SafeCompleteCode
     process_source
   end
   
+#  def dot_trip(_var_name)
+#    ret = "_class=#{_var_name}.class.name\n"
+#    ret = ret +" _methods=#{_var_name}.methods\n"
+#    ret = ret +"owner_on = Method.instance_methods.include?('owner')\n"
+#    ret = ret + "_methods.each{|m|\n"
+#    ret = ret + "meth = #{_var_name}.method(m)\n"
+#    ret = ret +"if owner_on\n"
+#    ret = ret +"_owner=meth.owner.name\n"
+#    ret = ret +"else\n"
+#    ret = ret +"meth_insp = meth.inspect\n"
+#    ret = ret +"to_sub ='#<Method:\s'+_class\n"
+#    ret = ret +"_owner=meth_insp.sub(to_sub,'').split('#')[0].strip.sub('(','').sub(')','')\n"
+#    ret = ret +"_owner=_class if _owner.strip.length==0\n"
+#    ret = ret +"end\n"
+#    ret = ret + "if _owner != _class\n"
+#    ret = ret + "print _owner+'#'+m+'#'+meth.arity.to_s+'\n'\n"
+#    ret = ret +"else\n"
+#    ret = ret + "print ''+'#'+m+'#'+meth.arity.to_s+'\n'\n"
+#    ret = ret +"end\n"
+#    ret = ret + "}\n"
+#    ret = ret + "exit\n"
+#    ret
+#  end
+
   def dot_trip(_var_name)
     ret = "_class=#{_var_name}.class.name\n"
-    ret = ret +" _methods=#{_var_name}.methods\n"
+    ret = ret +"_methods=#{_var_name}.methods\n"
     ret = ret +"owner_on = Method.instance_methods.include?('owner')\n"
-    ret = ret + "_methods.each{|m|\n"
-    ret = ret + "meth = #{_var_name}.method(m)\n"
+    ret = ret +"_methods.each{|m|\n"
+    ret = ret +"meth = #{_var_name}.method(m)\n"
     ret = ret +"if owner_on\n"
-    ret = ret +"_owner=meth.owner.name\n"
+    ret = ret +"  _owner=meth.owner.name\n"
     ret = ret +"else\n"
-    ret = ret +"meth_insp = meth.inspect\n"
-    ret = ret +"to_sub ='#<Method:\s'+_class\n"
-    ret = ret +"_owner=meth_insp.sub(to_sub,'').split('#')[0].strip.sub('(','').sub(')','')\n"
-    ret = ret +"_owner=_class if _owner.strip.length==0\n"
+    ret = ret +"  meth_insp = meth.inspect\n"
+    ret = ret +"  to_sub ='#<Method:\s'+_class\n"
+    ret = ret +"  _owner=meth_insp.sub(to_sub,'').split('#')[0].strip.sub('(','').sub(')','')\n"
+    ret = ret +"  _owner=_class if _owner.strip.length==0\n"
     ret = ret +"end\n"
-    ret = ret + "if _owner != _class\n"
-    ret = ret + "print _owner+'#'+m+'#'+meth.arity.to_s+'\n'\n"
+    ret = ret +"if _owner != _class\n"
+    ret = ret +'  print %Q{#{_owner}##{m}##{meth.arity.to_s}\n}'+"\n"
     ret = ret +"else\n"
-    ret = ret + "print ''+'#'+m+'#'+meth.arity.to_s+'\n'\n"
+    ret = ret +'  print %Q{##{m}##{meth.arity.to_s}\n}'+"\n"
     ret = ret +"end\n"
     ret = ret + "}\n"
     ret = ret + "exit\n"
@@ -490,12 +514,11 @@ class SafeCompleteCode
   
   def candidates(_show_error = false)
     temp_file = create_modified_temp_file(@file)
-		begin
-		 Arcadia.is_windows??ruby='rubyw':ruby='ruby'
+    begin
+      Arcadia.is_windows??ruby='rubyw':ruby='ruby'
       _cmp_s = "|#{ruby} '#{temp_file}'"
       _ret = nil
-      open(_cmp_s,"r") do
-        |f|
+      open(_cmp_s,"r") do  |f|
         _ret = f.readlines.collect!{| line | 
           #line.chomp
           line.strip
@@ -509,11 +532,11 @@ class SafeCompleteCode
         }
       end
       _ret.sort
-  		rescue Exception => e
+    rescue Exception => e
       #Arcadia.console(self, 'msg'=>e.to_s, 'level'=>'error')
- 	  ensure
- 	    File.delete(temp_file) if File.exist?(temp_file)
- 	  end
+    ensure
+      File.delete(temp_file) if File.exist?(temp_file)
+    end
   end
 
   def create_modified_temp_file(_base_file=nil)
@@ -550,8 +573,8 @@ class TkTextListBox < TkText
   def initialize(parent=nil, keys={})
     super(parent, keys)
     wrap  'none'
-    tag_configure('selected','background' =>'#bbd9b1','borderwidth'=>1, 'relief'=>'raised')
-    tag_configure('class', 'foreground' => '#3398cb')
+    tag_configure('selected','background' =>Arcadia.conf('hightlight.sel.background'),'borderwidth'=>1, 'relief'=>'raised')
+    tag_configure('class', 'foreground' => Arcadia.conf('hightlight.sel.foreground'))
     @count = 0
     @selected = -1
     self.bind_append('KeyPress'){|e| key_press(e)}
@@ -939,7 +962,11 @@ class AgEditor
     @buffer = text_value
     pop_up_menu
     @text.extend(TkScrollableWidget).show
-    @text_cursor = @text.cget('cursor')
+    begin
+      @text_cursor = @text.cget('cursor')
+    rescue RuntimeError => e
+      p "#{e.message}"
+    end
   end
 
   def create_temp_file
@@ -1080,10 +1107,7 @@ class AgEditor
           })
           
           @raised_listbox = TkTextListBox.new(@raised_listbox_frame, {
-            :takefocus=>true, 
-            :selectbackground=>Arcadia.conf('hightlight.1.background'),
-            :selectforeground=>Arcadia.conf('hightlight.1.foreground')}.update(Arcadia.style('listbox'))
-          )
+            :takefocus=>true}.update(Arcadia.style('listbox')))
           _char_height = @font_metrics[2][1]
           _width = 0
           _docs_entries = Hash.new
@@ -1541,7 +1565,7 @@ class AgEditor
 
     @text.bind_append("Shift-KeyPress"){|e|
       case e.keysym
-      when 'Tab'
+      when 'Tab','ISO_Left_Tab'
         _r = @text.tag_ranges('sel')
         if _r && _r[0]
           _row_begin = _r[0][0].split('.')[0].to_i
@@ -1803,15 +1827,21 @@ class AgEditor
     end
   end
 
-  def reset_highlight
-    @is_line_bold.clear
-    @highlight_zone.clear if @highlighting
+  def reset_highlight(_from_row=nil)
+    if _from_row &&  @highlighting
+      invalidated_begin_zone= zone_of_row(_from_row)
+      @is_line_bold.delete_if {|key, value| key >= invalidated_begin_zone }
+      @highlight_zone.delete_if {|key, value| key >= invalidated_begin_zone }
+    elsif @highlighting
+      @is_line_bold.clear
+      @highlight_zone.clear 
+    end
     @last_line_begin=0
     @last_line_end=0
     @last_zone_begin=0
     @last_zone_end=0
   end
-  
+
   def change_highlight(_ext)
     new_highlight_scanner = @controller.highlight_scanner(_ext)
     if new_highlight_scanner != @highlight_scanner
@@ -3199,6 +3229,29 @@ class AgMultiEditor < ArcadiaExt
         entry_hash[:dir]= _event.dir if _event.dir
         entry_hash[:title]= "#{bn}"
         Arcadia.persistent("runners.#{bn}", entry_hash.to_s)
+        # here add new menu' item
+        mr = Arcadia.menu_root('runcurr')
+        if mr
+          _command = proc{
+              _event = Arcadia.process_event(
+              RunCmdEvent.new(self, entry_hash)
+            )
+          }
+          exts = ''
+          run = Application.runner(entry_hash[:runner])
+          if run
+            file_exts = run[:file_exts]
+          end
+          
+          mr.insert('0', 
+            :command ,{
+              :image => Arcadia.file_icon(file_exts),
+              :label => entry_hash[:title],
+              :compound => 'left',
+              :command => _command
+            }
+          )
+        end
       end
     end
    
@@ -3211,7 +3264,7 @@ class AgMultiEditor < ArcadiaExt
       end
       
       if _event.cmd.nil?
-        runner = Arcadia.runner(_event.file)
+        runner = Arcadia.runner_for_file(_event.file)
         if runner
           _event.cmd = runner[:cmd]
         else
@@ -3273,6 +3326,7 @@ class AgMultiEditor < ArcadiaExt
           line_begin_index = raised.text.index('@0,0')
           line_begin = line_begin_index.split('.')[0].to_i
           line_end = raised.text.index('@0,'+TkWinfo.height(raised.text).to_s).split('.')[0].to_i + 1
+          raised.reset_highlight(line_begin)
           raised.rehighlightlines(line_begin,line_end,true)
         else
           raised.check_modify
@@ -3783,9 +3837,11 @@ class AgMultiEditor < ArcadiaExt
 
   def change_tab_reset_modify(_tab)
     #_new_name = @main_frame.enb.itemcget(@tabs_name[_tab], 'text').gsub!("(...)",'')
-    _new_name = @main_frame.enb.itemcget(page_name(_tab), 'text').gsub!("(...)",'')
-    if _new_name
-      change_tab_title(_tab, _new_name)
+    if @main_frame.enb.index(page_name(_tab))
+	_new_name = @main_frame.enb.itemcget(page_name(_tab), 'text').gsub!("(...)",'')
+	if _new_name
+		change_tab_title(_tab, _new_name)
+	end
     end
   end
 

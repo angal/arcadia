@@ -600,6 +600,16 @@ class Arcadia < TkApplication
     }
   end
 
+  def manage_runners
+    if !@runm
+      @runm = RunnerManager.new(Arcadia.layout.root)
+      @runm.on_close=proc{@runm.hide}
+    end
+    @runm.show
+    @runm.load_items 
+
+  end
+  
   def load_key_binding(_ext='')
     return unless _ext && ext_active?(_ext)
     if _ext.length > 0 
@@ -805,11 +815,18 @@ class Arcadia < TkApplication
     _ret = (_m && _m.length > 1)?_m[2]: nil
   end
 
-  def  Arcadia.runner(_filename=nil)
+  def  Arcadia.runner_for_file(_filename=nil)
     if @@instance
       return @@instance['runners_by_ext'][Arcadia.file_extension(_filename)]  
     end
   end
+
+  def  Arcadia.runner(_name=nil)
+    if @@instance
+      return @@instance['runners'][_name]  
+    end
+  end
+
   
   def Arcadia.dialog(_sender, _args=Hash.new)
     _event = process_event(DialogEvent.new(_sender, _args))  
@@ -820,13 +837,18 @@ class Arcadia < TkApplication
     Configurable.properties_group(_class, Arcadia.instance['conf'])
   end
 
-  def Arcadia.pers_group(_path)
-    Configurable.properties_group(_path, Arcadia.instance['pers'], 'pers')
+  def Arcadia.pers_group(_path, _refresh=false)
+    Configurable.properties_group(_path, Arcadia.instance['pers'], 'pers', _refresh)
   end
 
-  def Arcadia.conf_group(_path)
-    Configurable.properties_group(_path, Arcadia.instance['conf'])
+  def Arcadia.conf_group(_path, _refresh=false)
+    Configurable.properties_group(_path, Arcadia.instance['conf'], 'conf', _refresh)
   end
+  
+  def Application.runner(_name)
+	  @@instance['runners'][_name] if @@instance
+  end
+
   
   def Arcadia.persistent(_property, _value=nil, _immediate=false)
     if @@instance
@@ -837,6 +859,15 @@ class Arcadia < TkApplication
 	    end
 	    if _immediate      
 	      @@instance.append_persistent_property(@@instance['applicationParams'].persistent_file,_property, _value )
+      end
+	  end
+  end
+
+  def Arcadia.unpersistent(_property, _immediate=false)
+    if @@instance
+      @@instance['pers'].delete(_property)
+      if _immediate      
+        # not yet supported
       end
 	  end
   end
@@ -920,6 +951,7 @@ class ArcadiaUserControl
     attr_accessor :context_caption
     attr_accessor :caption
     attr_accessor :hint
+    attr_accessor :action
     attr_accessor :event_class
     attr_accessor :event_args
     attr_accessor :image_data
@@ -930,7 +962,11 @@ class ArcadiaUserControl
           self.send(key+'=', value) if self.respond_to?(key)
         end
       end
-      #@item_obj = ?
+      if @action 
+        @command = proc{Arcadia.process_event(_sender.instance_eval(@action))}
+      elsif @event_class
+        @command = proc{Arcadia.process_event(@event_class.new(_sender, @event_args))}
+      end
     end
 
     def method_missing(m, *args)  
@@ -974,7 +1010,7 @@ class ArcadiaMainToolbar < ArcadiaUserControl
     def initialize(_sender, _args)
       super(_sender, _args)
       _image = TkPhotoImage.new('data' => @image_data) if @image_data
-      _command = proc{Arcadia.process_event(@event_class.new(_sender, @event_args))} if @event_class
+      _command = @command #proc{Arcadia.process_event(@event_class.new(_sender, @event_args))} if @event_class
       _hint = @hint
       _font = @font
       _caption = @caption
@@ -1124,9 +1160,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
     attr_accessor :type
     def initialize(_sender, _args)
       super(_sender, _args)
-      _command = proc{
-        Arcadia.process_event(@event_class.new(_sender, @event_args))
-      } if @event_class
+      _command = @command #proc{ Arcadia.process_event(@event_class.new(_sender, @event_args)) } if @event_class
       #_menu = @menu[@parent]
       item_args = Hash.new
       item_args['image']=TkPhotoImage.new('data' => @image_data) if @image_data
@@ -1359,6 +1393,84 @@ class ArcadiaMainMenu < ArcadiaUserControl
 
   end
   
+end
+
+class RunnerManager < TkFloatTitledFrame
+  class RunnerMangerItem  < TkFrame
+    def initialize(_parent=nil, _runner_hash=nil, *args)
+      super(_parent, Arcadia.style('panel'))
+      @runner_hash = _runner_hash
+      Tk::BWidget::Label.new(self, 
+         'image'=> Arcadia.file_icon(_runner_hash[:file_exts]),
+         'relief'=>'flat').pack('side' =>'left')
+      Tk::BWidget::Label.new(self, 
+         'text'=>_runner_hash[:title],
+         'helptext'=>_runner_hash[:file],
+         'compound'=>:left, 
+         'relief'=>'flat').pack('fill'=>'x','side' =>'left')
+      _close_command = proc{
+        if (Arcadia.dialog(self, 'type'=>'yes_no',
+                        'msg'=>"Do you want delete runner item '#{_runner_hash[:name]}'?",
+                        'title' => '(Arcadia) Manage runners',
+                        'level' => 'question')=='yes')
+        
+          Arcadia.unpersistent("runners.#{_runner_hash[:name]}")
+          mr = Arcadia.menu_root('runcurr')
+          index_to_delete = -1
+          i_end = mr.index('end')
+          if i_end
+            0.upto(i_end){|j|
+              type = mr.menutype(j)
+              if type != 'separator'
+                l = mr.entrycget(j,'label')
+                if l == _runner_hash[:title]
+                  index_to_delete = j
+                  break
+                end
+              end
+            }
+          end
+          if index_to_delete > -1
+            mr.delete(index_to_delete)
+          end
+          self.destroy
+        end
+      }   
+      Tk::BWidget::Button.new(self, 
+         'command'=>_close_command,
+         'helptext'=>@runner_hash[:file],
+         'background'=>'white',
+         'image'=> TkPhotoImage.new('data' => TRASH_GIF),
+         'relief'=>'flat').pack('side' =>'right','padx'=>0)
+      pack('side' =>'top','anchor'=>'nw','fill'=>'x','padx'=>5, 'pady'=>5)
+    end
+      
+  end
+
+  def initialize(_parent)
+    super(_parent)
+    title("Runners manager")
+    @items = Hash.new
+    place('x'=>100,'y'=>100,'height'=> 220,'width'=> 300)
+  end
+  
+  def clear_items
+    @items.each_value{|i| i.destroy }
+    @items.clear
+  end
+  
+  def load_items
+    clear_items
+    runs=Arcadia.pers_group('runners', true)
+    runs.each{|name, hash_string|
+      item_hash = eval hash_string
+      item_hash[:name]=name
+      if item_hash[:runner] && Arcadia.runner(item_hash[:runner])
+        item_hash = Hash.new.update(Arcadia.runner(item_hash[:runner])).update(item_hash)
+      end
+      @items[name]=RunnerMangerItem.new(self.frame, item_hash)
+    }
+  end
 end
 
 class ArcadiaAboutSplash < TkToplevel
