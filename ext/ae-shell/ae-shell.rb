@@ -185,7 +185,7 @@ class Shell < ArcadiaExt
               fi = nil
               fi_pid = nil
               abort_action = proc{
-                unix_child_pids(fi_pid).each {|pid|
+                ArcadiaUtils.unix_child_pids(fi_pid).each {|pid|
                   Process.kill(9,pid.to_i)
                 }
                 Process.kill(9,fi_pid.to_i)
@@ -267,20 +267,20 @@ class Shell < ArcadiaExt
     end
   end
   
-  def unix_child_pids(_ppid)
-    ret = Array.new
-    readed = ''
-    open("|ps -o pid,ppid ax | grep #{_ppid}", "r"){|f|  readed = f.read  }
-    apids = readed.split
-    apids.each_with_index do |v,i|
-      ret << v if i % 2 == 0 && v != _ppid.to_s
-    end
-    subpids = Array.new
-    ret.each{|ccp|
-      subpids.concat(unix_child_pids(ccp))
-    }
-    ret.concat(subpids)
-  end
+#  def unix_child_pids(_ppid)
+#    ret = Array.new
+#    readed = ''
+#    open("|ps -o pid,ppid ax | grep #{_ppid}", "r"){|f|  readed = f.read  }
+#    apids = readed.split
+#    apids.each_with_index do |v,i|
+#      ret << v if i % 2 == 0 && v != _ppid.to_s
+#    end
+#    subpids = Array.new
+#    ret.each{|ccp|
+#      subpids.concat(unix_child_pids(ccp))
+#    }
+#    ret.concat(subpids)
+#  end
   
   def on_system_exec_bo(_event)
     command = "#{_event.command} 2>&1"

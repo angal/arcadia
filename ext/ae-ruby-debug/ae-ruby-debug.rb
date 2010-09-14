@@ -29,51 +29,51 @@ class RubyDebugView
 #      'helptext'=>'step over',
 #      'image'=> TkPhotoImage.new('dat' => D_NEXT_GIF)})
 #    )
-    @debug_button_box.add(
+    @debug_button_box.add(Arcadia.style('toolbarbutton').update({
       'name'=>'debug_over',
-      'background' => 'white',
+    #  'background' => 'white',
       'anchor' => 'nw',
       'command'=>proc{self.debug_send(:step_over)},
       'helptext'=>'step over',
       'image'=> TkPhotoImage.new('dat' => D_NEXT_GIF),
-      'relief'=> _relief
+      'relief'=> _relief })
     )
-    @debug_button_box.add(
+    @debug_button_box.add(Arcadia.style('toolbarbutton').update({
       'name'=>'debug_into',
-      'background' => 'white',
+    #  'background' => 'white',
       'anchor' => 'nw',
       'command'=>proc{self.debug_send(:step_into)},
       'helptext'=>'step into',
       'image'=> TkPhotoImage.new('dat' => D_STEP_INTO_GIF),
-      'relief'=>_relief
+      'relief'=>_relief })
     )
-    @debug_button_box.add(
+    @debug_button_box.add(Arcadia.style('toolbarbutton').update({
       'name'=>'debug_out',
-      'background' => 'white',
+    #  'background' => 'white',
       'anchor' => 'nw',
       'helptext'=>'step out',
       'command'=>proc{self.debug_send(:step_out)},
       'image'=> TkPhotoImage.new('dat' => D_STEP_OUT_GIF),
-      'relief'=>_relief
+      'relief'=>_relief })
     )
-    @debug_button_box.add(
+    @debug_button_box.add(Arcadia.style('toolbarbutton').update({
       'name'=>'debug_resume',
-      'background' => 'white',
+    #  'background' => 'white',
       'anchor' => 'nw',
       'helptext'=>'resume',
       'image'=> TkPhotoImage.new('dat' => D_RESUME_GIF),
       'command'=>proc{self.debug_send(:resume)},
-      'relief'=>_relief
+      'relief'=>_relief })
     )
 
-    @debug_button_box.add(
+    @debug_button_box.add(Arcadia.style('toolbarbutton').update({
       'name'=>'debug_quit',
-      'background' => 'white',
+    #  'background' => 'white',
       'anchor' => 'nw',
       'helptext'=>'quit',
       'image'=> TkPhotoImage.new('dat' => D_QUIT_GIF),
       'command'=>proc{self.debug_send(:quit)},
-      'relief'=>_relief
+      'relief'=>_relief })
     )
     
 #    @debug_button_box.bind_append("KeyPress"){|e|
@@ -196,17 +196,20 @@ class RubyDebugView
     end
         
     @tree_var = Tk::BWidget::Tree.new(_frame, Arcadia.style('treepanel')){
-      showlines true
+      showlines false
       deltay 15
       opencmd _open_proc
     }.place('relwidth' => 1,'relheight' => '1','bordermode' => 'inside')
 
-    _scrollcommand = proc{|*args| @tree_var.yview(*args)}
-    _scrollbar = TkScrollbar.new(_frame, Arcadia.style('scrollbar')){|s|
-      width 8
-      command _scrollcommand
-    }.pack('side'=>'right', 'fill'=>'y')
-    @tree_var.yscrollcommand proc{|first,last| _scrollbar.set(first,last)}
+    @tree_var.extend(TkScrollableWidget)
+
+
+#    _scrollcommand = proc{|*args| @tree_var.yview(*args)}
+#    _scrollbar = TkScrollbar.new(_frame, Arcadia.style('scrollbar')){|s|
+#      width 8
+#      command _scrollcommand
+#    }.pack('side'=>'right', 'fill'=>'y')
+#    @tree_var.yscrollcommand proc{|first,last| _scrollbar.set(first,last)}
 
     @tree_var.textbind("Double-ButtonPress-1", proc{
       _selected = @tree_var.selection_get[0]
@@ -827,6 +830,19 @@ class RubyDebugServer
         end
       else
         @pid = Process.fork do
+#          pid = Process.pid
+#          abort_action = proc{
+#            ArcadiaUtils.unix_child_pids(pid).each {|pid|
+#              Process.kill(9,pid.to_i)
+#            }
+#            Process.kill(9,pid.to_i)
+#          }
+#            
+#          alive_check = proc{
+#            num = `ps -p #{pid}|wc -l`
+#            num.to_i > 1
+#          }
+#          Arcadia.process_event(SubProcessEvent.new(self,'pid'=>pid, 'name'=>"debugging :#{_filename}",'abort_action'=>abort_action, 'alive_check'=>alive_check))
           if Kernel.system(commandLine)
             set_alive(false)
             #p "alive=#{is_alive?}"

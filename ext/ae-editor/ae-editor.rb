@@ -965,7 +965,7 @@ class AgEditor
     begin
       @text_cursor = @text.cget('cursor')
     rescue RuntimeError => e
-      p "#{e.message}"
+      p "RuntimeError : #{e.message}"
     end
   end
 
@@ -1907,7 +1907,11 @@ class AgEditor
     if @lang_hash["#{@lang_hash['scanner']}.hightlight."+_name+'.borderwidth']
       h['borderwidth']=@lang_hash["#{@lang_hash['scanner']}.hightlight."+_name+'.borderwidth']
     end
-    @text.tag_configure(_name, h)
+    begin
+      @text.tag_configure(_name, h)
+    rescue RuntimeError => e
+      p "RuntimeError : #{e.message}"
+    end
   end
 
 
@@ -1931,7 +1935,11 @@ class AgEditor
     if $arcadia['conf']['editor.hightlight.'+_name+'.borderwidth']
       h['borderwidth']=$arcadia['conf']['editor.hightlight.'+_name+'.borderwidth']
     end
-    @text.tag_configure(_name, h)
+    begin
+      @text.tag_configure(_name, h)
+    rescue RuntimeError => e
+      p "RuntimeError : #{e.message}"
+    end
   end
 
   def pop_up_menu
@@ -3891,7 +3899,7 @@ class AgMultiEditor < ArcadiaExt
   
   def open_file_in_debug(_filename=nil, _line=nil)
     #debug_reset
-    if _filename && _line
+    if _filename && _line && File.exists?(_filename)
       @last_index = _line.to_s+'.0'
       _editor_exist = editor_exist?(_filename)
       @last_e = open_file(_filename, @last_index, false, false)
@@ -3903,6 +3911,8 @@ class AgMultiEditor < ArcadiaExt
         #p "add editor for close #{_filename}"
         @last_e.do_line_update
       end
+    else
+      p "file #{_filename} do not exist !"
     end
   end
   

@@ -3364,3 +3364,21 @@ class FocusEventManager
     end
   end
 end
+
+
+class ArcadiaUtils
+  def ArcadiaUtils.unix_child_pids(_ppid)
+    ret = Array.new
+    readed = ''
+    open("|ps -o pid,ppid ax | grep #{_ppid}", "r"){|f|  readed = f.read  }
+    apids = readed.split
+    apids.each_with_index do |v,i|
+      ret << v if i % 2 == 0 && v != _ppid.to_s
+    end
+    subpids = Array.new
+    ret.each{|ccp|
+      subpids.concat(unix_child_pids(ccp))
+    }
+    ret.concat(subpids)
+  end  
+end
