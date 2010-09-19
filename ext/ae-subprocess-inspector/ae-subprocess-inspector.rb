@@ -44,21 +44,15 @@ class SubProcessWidget < TkFrame
     @parent = _parent
     @event = _event
     @progress  = TkVariable.new
-    @pb = Tk::BWidget::ProgressBar.new(self, 
-      :width=>2, 
-      :height=>18,
-      :background=>'white',
-      :troughcolor=>'white',
-      :foreground=>'blue',
-      :variable=>@progress,
-      :borderwidth=>2,
-      :type=>'infinite',
-      :relief=>'flat',
-      :maximum=>500).place('width'=>-30,'relwidth' => '1','x' => 0,'y' => 2,'height' => 18)
+    @pb = Tk::BWidget::ProgressBar.new(
+      self, Arcadia.style('progress').update({
+        :variable=>@progress, 
+        :type=>'infinite', 
+        :maximum=>500})).place('width'=>-30,'relwidth' => '1','x' => 0,'y' => 2,'height' => 18)
       #.pack('side' =>'left','fill'=>'x')
 
       icon_button = TkButton.new(@pb){
-        background 'white'
+        background Arcadia.style('panel')['background']
         relief 'flat'
         image Arcadia.file_icon(_event.name)
       }.pack
@@ -77,7 +71,10 @@ class SubProcessWidget < TkFrame
       
       
     _b = Tk::BWidget::Button.new(self, 
+    #_b = TkButton.new(self, 
          'command'=>b_command,
+         'borderwidth'=>0,
+         'background'=>Arcadia.conf('background'),
          'helptext'=>"#{_event.name} [pid #{_event.pid}]",
          'image'=> TkPhotoImage.new('data' => PROCESS_KILL_GIF),
          'relief'=>'flat').pack('side' =>'right','padx'=>0)

@@ -3,7 +3,7 @@
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
 
-require 'ext/ae-rad/lib/tk/al-tk'
+require "#{Dir.pwd}/ext/ae-rad/lib/tk/al-tk"
 
 class TkLabelWatch < TkLabel
   def show(_format="%I:%M:%S %p")

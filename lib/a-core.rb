@@ -845,7 +845,7 @@ class Arcadia < TkApplication
     Configurable.properties_group(_path, Arcadia.instance['conf'], 'conf', _refresh)
   end
   
-  def Application.runner(_name)
+  def Arcadia.runner(_name)
 	  @@instance['runners'][_name] if @@instance
   end
 
@@ -955,6 +955,7 @@ class ArcadiaUserControl
     attr_accessor :event_class
     attr_accessor :event_args
     attr_accessor :image_data
+    attr_reader :item_obj
     def initialize(_sender, _args)
       @sender = _sender
       if _args 
@@ -1021,8 +1022,13 @@ class ArcadiaMainToolbar < ArcadiaUserControl
         height 20
         helptext  _hint if _hint
         text _caption if _caption
-        pack('side' =>'left', :padx=>2, :pady=>0)
+        
       }
+      if _args['context_path'] && _args['last_item_for_context']
+        @item_obj.pack('after'=>_args['last_item_for_context'].item_obj, 'side' =>'left', :padx=>2, :pady=>0)
+      else
+        @item_obj.pack('side' =>'left', :padx=>2, :pady=>0)
+      end
       if _args['menu_button'] && _args['menu_button'] == 'yes'
         @menu_button = TkMenuButton.new(_args['frame'], Arcadia.style('toolbarbutton')){|mb|
           indicatoron false
@@ -1056,29 +1062,29 @@ class ArcadiaMainToolbar < ArcadiaUserControl
  
     @context_frames = Hash.new  
     @last_context = nil
+    @last_item_for_context = Hash.new
   end
 
   def new_item(_sender, _args= nil)
-     _context = _args['context']
-#    if _context
-#      if @context_frames[_context]
-#      else
-#        @context_frames[_context] = TkLabelFrame.new(@frame){
-#          text  ""
-#          relief 'groove'
-#          pack('side' =>'left', :padx=>0, :pady=>0)
-#        } 
-#      end
-#      _args['frame']=@context_frames[_context]
-#    else
-#      _args['frame']=@frame
-#    end
-    if @last_context && _context != @last_context 
+    _context = _args['context']
+    _context_path = _args['context_path']
+    
+    if @last_context && _context != @last_context && _context_path.nil? 
       new_separator
     end
     @last_context = _context
     _args['frame']=@frame
+    if _context_path && @last_item_for_context[_context_path]
+      _args['last_item_for_context']=@last_item_for_context[_context_path]
+    end
+    
     super(_sender, _args)
+    if _context_path && items[_args['name']]
+      @last_item_for_context[_context_path] = items[_args['name']]
+    end
+    if _context && items[_args['name']]
+      @last_item_for_context[_context] = items[_args['name']]
+    end
   end
 
   def new_separator
@@ -1390,7 +1396,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
 #        end
 #      })
      @menu.extend(TkAutoPostMenu)      
-
+     @menu.event_posting_on
   end
   
 end
@@ -1540,7 +1546,7 @@ class ArcadiaAboutSplash < TkToplevel
       font Arcadia.instance['conf']['splash.credits.font']
       justify  'left'
       anchor 'w'
-      place('width' => '210','x' => 100,'y' => 95,'height' => 25)
+      place('width' => '220','x' => 100,'y' => 95,'height' => 25)
     }
 
     @tkLabelCredits = TkLabel.new(self){

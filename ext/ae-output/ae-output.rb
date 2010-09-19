@@ -54,7 +54,6 @@ class OutputView
       'background'=>Arcadia.conf('hightlight.sel.background'),
       'foreground'=>Arcadia.conf('hightlight.sel.foreground')
     )
-
     pop_up_menu
   end
 

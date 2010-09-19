@@ -1321,7 +1321,7 @@ class TkWidgetFactory
     if @use_tile
       return Tk::Tile::Scrollbar.new(_parent,{:style=>"Arcadia.TScrollbar"}.update(_args), &b)
     else
-      return TkScollbar.new(_parent,Arcadia.style('scrollbar').update(_args), &b)
+      return TkScrollbar.new(_parent,Arcadia.style('scrollbar').update(_args), &b)
     end
     
   end
@@ -1352,46 +1352,121 @@ module TkAutoPostMenu
     _widget.__initialize_posting(_widget)
   end
   
+  def event_posting_on
+    @event_posting_on = true
+    @posting_on = false
+  end
+
+  def event_posting_off
+    @event_posting_on = false
+    @posting_on = true
+  end
+
+  
   def __initialize_posting(_widget=self)
+#    parent = TkWinfo.parent(_widget)
+#    parent.bind_append("Enter", proc{p "Enter parent"})
+#    parent.bind_append("Leave", proc{p "Leave parent"})
+    
     chs = TkWinfo.children(_widget)
     hh = 22
     @last_post = nil
+    @posting_on = true
+    @event_posting_on = false
+    @m_show = Hash.new
     chs.each{|ch|
+      ch.menu.bind_append("Map", proc{ @m_show[ch.menu] = true })
+      ch.menu.bind_append("Unmap", proc{ @m_show[ch.menu] = false })
       ch.bind_append("Enter", proc{|x,y,rx,ry|
-        @last_post.unpost if @last_post && @last_post != ch.menu
-        ch.menu.post(x-rx,y-ry+hh)
-        chmenus = TkWinfo.children(ch)
-        @last_menu_posted = chmenus[0]
-        @last_menu_posted.set_focus
-        @last_menu_posted.bind("Enter", proc{
-          @last_menu_posted.bind("Leave", proc{
-            @last_post.unpost if @last_post
-            @last_menu_posted.bind("Enter", proc{})
-            @last_menu_posted.bind("Leave", proc{})
+        if @posting_on
+          if @last_post && @last_post != ch.menu
+            @last_post.unpost
+            @last_post=nil
+          end
+          if @last_clicked && @last_clicked != ch.menu
+            @last_clicked.unpost
+            @last_clicked = nil
+          end
+          
+          ch.menu.post(x-rx,y-ry+hh)
+
+          #just_posted = TkWinfo.containing(x, y+hh)
+
+          chmenus = TkWinfo.children(ch)
+          @last_menu_posted = chmenus[0]
+          @last_menu_posted.set_focus
+          @last_menu_posted.bind("Enter", proc{
+            @last_menu_posted.bind("Leave", proc{
+              if @posting_on
+              @last_post.unpost if @last_post
+              @last_post = nil
+              @last_menu_posted.bind("Enter", proc{})
+              @last_menu_posted.bind("Leave", proc{})
+              end
+            })
           })
-        })
+          #@last_post = just_posted
+        end
         
         #@last_post=ch.menu
         }, "%X %Y %x %y")
       ch.bind_append("Leave", proc{
-        @last_post.unpost if @last_post
-        if @last_post!=ch.menu
-          @last_post=ch.menu
-        else
-          @last_post=nil
-        end
-        if !Tk.focus.kind_of?(TkMenu)
-          @last_post.unpost
-          @last_post=nil
+        ch.configure("state"=>:normal, "relief"=>:flat)
+        if @posting_on
+          if @last_post
+            _x = TkWinfo.x(@last_post)
+            _y = TkWinfo.y(@last_post)
+            ch.event_generate("KeyPress", :keysym=>"Escape")  #if Tk.focus.kind_of?(TkMenu) &&  Tk.focus != ch.menu 
+            @last_post.post(_x,_y) if @last_clicked && @last_clicked == ch.menu 
+          end
+          if @last_post!=ch.menu
+            @last_post=ch.menu
+          else
+            @last_post=nil
+          end
+          if !Tk.focus.kind_of?(TkMenu)
+            @last_post.unpost if @last_post
+            @last_post=nil
+          end
         end
       })
+      ch.bind_append("1", proc{|x,y,rx,ry|
+        @posting_on=true if @event_posting_on
+        if @last_post && @last_post != ch.menu
+          @last_post.unpost
+          @last_post = nil
+        end
+        @last_post=ch.menu #if ch.state == 'active'
+        ch.configure('state'=>'normal')
+        @last_clicked = ch.menu
+        #@last_post.unpost
+        #@last_post.post(0,0)
+        #@last_post.set_focus
+        
+      }, "%X %Y %x %y")
+      
     }
     _widget.bind_append("Leave", proc{
-      if Tk.focus != @last_menu_posted 
+      if @posting_on  && Tk.focus != @last_menu_posted 
         @last_post.unpost if @last_post
         @last_post=nil
+        @posting_on = false if @event_posting_on
       end
+      TkAfter.new(1000,1, proc{
+        one_post = false
+        @m_show.each{|m,v|
+          one_post = v 
+          break if v 
+        }
+        @posting_on = one_post if @event_posting_on
+      }).start
     })
+    
+    
+    _widget.bind_append("1", proc{
+       @posting_on=true  if @event_posting_on
+     })
+
   end
 end
 

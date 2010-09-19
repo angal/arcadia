@@ -30,16 +30,16 @@ class Rad < ArcadiaExt
     libs.each{|lib|
       if lib
         begin
-          require conf('libraries.'+lib+'.source')
+          require "#{Dir.pwd}/#{conf('libraries.'+lib+'.source')}"
           @libs.add_lib(
           ArcadiaLibs::ArcadiaLibParams.new(
           conf('libraries.'+lib+'.name'),
-          conf('libraries.'+lib+'.source'),
+          "#{Dir.pwd}/#{conf('libraries.'+lib+'.source')}",
           conf('libraries.'+lib+'.require'),
           eval(conf('libraries.'+lib+'.collection.class')))
           )
         rescue Exception
-          msg = "Loading lib "+'"'+lib+'"'+" ("+$!.class.to_s+") "+" : "+$! + " at : "+$@.to_s
+          msg = %Q{Loading lib "#{lib}" ("#{$!.class.to_s}")  : #{$!.to_s} at : #{$@.to_s}}
           if Tk.messageBox('icon' => 'error', 'type' => 'okcancel',
             'title' => '(Rad) Libs', 
             'message' => msg) == 'cancel'

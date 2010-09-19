@@ -1667,7 +1667,7 @@ class AgEditor
   end
   
   def initialize_line_number(_frame)
-    @text_line_num = TkText.new(_frame, Arcadia.style('linepanel')){
+    @text_line_num = TkText.new(_frame, Arcadia.style('textline')){
       wrap  'none'
       #relief 'flat'
       undo false
@@ -1917,30 +1917,48 @@ class AgEditor
 
   def do_tag_configure_global(_name)
     h = Hash.new
-    if $arcadia['conf']['editor.hightlight.'+_name+'.foreground']
-      h['foreground']=$arcadia['conf']['editor.hightlight.'+_name+'.foreground']
+
+    if Arcadia.conf('editor.hightlight.'+_name+'.foreground')
+      h['foreground']=Arcadia.conf('editor.hightlight.'+_name+'.foreground')
+    elsif Arcadia.conf('hightlight.'+_name+'.foreground')
+      h['foreground']=Arcadia.conf('hightlight.'+_name+'.foreground')
     end
-    if $arcadia['conf']['editor.hightlight.'+_name+'.background']
-      h['background']=$arcadia['conf']['editor.hightlight.'+_name+'.background']
+    
+    if Arcadia.conf('editor.hightlight.'+_name+'.background')
+      h['background']=Arcadia.conf('editor.hightlight.'+_name+'.background')
+    elsif Arcadia.conf('hightlight.'+_name+'.background')
+      h['background']=Arcadia.conf('hightlight.'+_name+'.background')
     end
-    if $arcadia['conf']['editor.hightlight.'+_name+'.style']== 'bold'
+
+    if Arcadia.conf('editor.hightlight.'+_name+'.style')== 'bold'
+      h['font']=@font_bold
+      @is_tag_bold[_name]= true
+    elsif Arcadia.conf('hightlight.'+_name+'.style')== 'bold'
       h['font']=@font_bold
       @is_tag_bold[_name]= true
     else
       @is_tag_bold[_name]= false
     end
-    if $arcadia['conf']['editor.hightlight.'+_name+'.relief']
-      h['relief']=$arcadia['conf']['editor.hightlight.'+_name+'.relief']
+
+    if Arcadia.conf('editor.hightlight.'+_name+'.relief')
+      h['relief']=Arcadia.conf('editor.hightlight.'+_name+'.relief')
+    elsif Arcadia.conf('hightlight.'+_name+'.relief')
+      h['relief']=Arcadia.conf('hightlight.'+_name+'.relief')
     end
-    if $arcadia['conf']['editor.hightlight.'+_name+'.borderwidth']
-      h['borderwidth']=$arcadia['conf']['editor.hightlight.'+_name+'.borderwidth']
+    
+    if Arcadia.conf('editor.hightlight.'+_name+'.borderwidth')
+      h['borderwidth']=Arcadia.conf('editor.hightlight.'+_name+'.borderwidth')
+    elsif Arcadia.conf('hightlight.'+_name+'.borderwidth')
+      h['borderwidth']=Arcadia.conf('hightlight.'+_name+'.borderwidth')
     end
+    
     begin
       @text.tag_configure(_name, h)
     rescue RuntimeError => e
       p "RuntimeError : #{e.message}"
     end
   end
+
 
   def pop_up_menu
     @pop_up = TkMenu.new(
@@ -4002,7 +4020,12 @@ class AgMultiEditor < ArcadiaExt
         open_buffer(_tab_name, _basefilename,0)
       end
       @tabs_editor[_tab_name].reset_highlight
-      @tabs_editor[_tab_name].load_file(_filename)
+      begin
+        @tabs_editor[_tab_name].load_file(_filename)
+      rescue RuntimeError => e
+        p "RuntimeError : #{e.message}"
+        close_editor(@tabs_editor[_tab_name])
+      end
     end
     
     if _text_index != nil && _text_index != '1.0'

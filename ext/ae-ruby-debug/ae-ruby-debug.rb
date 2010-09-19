@@ -93,48 +93,34 @@ class RubyDebugView
       background Arcadia.conf('panel.background')
     }.place('height'=> _y)
     
-    @debug_frame = TkFrame.new(@frame, Arcadia.style('panel')){ 
-        border  2
-        place(
-          'y'=>_y,
-          'height'=> -_y,
-          'relheight'=> 1,
-          'relwidth'=> 1
-        )
-    }
+#    @debug_frame = TkFrame.new(@frame, Arcadia.style('panel')){ 
+#        border  2
+#        place(
+#          'y'=>_y,
+#          'height'=> -_y,
+#          'relheight'=> 1,
+#          'relwidth'=> 1
+#        )
+#    }
     
     self.build_buttons_set
     
-#    sf = AGTkOSplittedFrames.new(@debug_frame,@debug_frame,70)
-
-    #-------------------------------------------------
     build_process_panel(@frame_server)
-#    build_process_panel(sf.top_frame)
-    #-------------------------------------------------
 
-    @enb = Tk::BWidget::NoteBook.new(@debug_frame, Arcadia.style('tabpanel')){
-      tabbevelsize 0
-      internalborderwidth 2
-      place('relwidth' => 1,'relheight' => '1')
-    }
-    _tab_var = @enb.insert('end', 'vars' ,
-      'text'=> 'Variables',
-      'raisecmd'=>proc{}
-    )
-#    _tab_breakpoint = @enb.insert('end', 'Breakpoint' ,
-#      'text'=> 'Breakpoints',
-#      'raisecmd'=>proc{}
-#    )
-
-#    _tab_catchpoint = @enb.insert('end', 'catchpoint' ,
-#      'text'=> 'catchpoint',
+#    @enb = Tk::BWidget::NoteBook.new(@debug_frame, Arcadia.style('tabpanel')){
+#      tabbevelsize 0
+#      internalborderwidth 2
+#      place('relwidth' => 1,'relheight' => '1')
+#    }
+#
+#    _tab_var = @enb.insert('end', 'vars' ,
+#      'text'=> 'Variables',
 #      'raisecmd'=>proc{}
 #    )
     
-    build_var_panel(_tab_var)
-    #build_break_panel(_tab_breakpoint)
+    build_var_panel(@frame)
     @stack_nodes = Array.new
-    @enb.raise('vars')
+#    @enb.raise('vars')
 
   end
 
@@ -199,9 +185,11 @@ class RubyDebugView
       showlines false
       deltay 15
       opencmd _open_proc
-    }.place('relwidth' => 1,'relheight' => '1','bordermode' => 'inside')
+    }
+    
+    #.place('relwidth' => 1,'relheight' => '1','bordermode' => 'inside')
 
-    @tree_var.extend(TkScrollableWidget)
+    @tree_var.extend(TkScrollableWidget).show(0,26)
 
 
 #    _scrollcommand = proc{|*args| @tree_var.yview(*args)}
@@ -1312,9 +1300,9 @@ class RubyDebugClient
     begin
       #variables = read[1..-2].split(', ').collect!{|x| x[1..-2]}
       to_eval = read("eval #{_type}")
-      #Arcadia.new_msg(self,"to_eval="+to_eval.to_s)
+      #Arcadia.console(self,'msg'=>"to_eval=#{to_eval.to_s}")
       variables = eval(to_eval)
-      #Arcadia.new_msg(self,"variables="+variables.to_s)
+      #Arcadia.console(self,'msg'=>"variables=#{variables.to_s}")
     rescue Exception => e
       variables = []
       #p "on command eval #{_type}:#{e.inspect}"
@@ -1323,12 +1311,12 @@ class RubyDebugClient
     variables = [] if variables.nil?
     variable_values = Hash.new
     variables.each do |var|
-      next if var=='$;'
+      next if var.to_s=='$;'
 #      command("eval #{var}.to_s + '|||' + #{var}.class.to_s")
 #      _str = eval(read)
 #      _value, _class = _str.split('|||')
 #      variable_values[var] = Var.new(_value, _class)
-      variable_values[var] = debug_eval(var)
+      variable_values[var.to_s] = debug_eval(var.to_s)
     end
     return variable_values
   end
@@ -1402,10 +1390,9 @@ class RubyDebug < ArcadiaExt
   attr_reader :rdc
   def on_before_build(_event)
     if RubyWhich.new.which("rdebug") != []
-      #ArcadiaContractListener.new(self, EditorContract, :do_editor_event)
-      Arcadia.attach_listener(self, BufferEvent)
       @breakpoints = Hash.new
       @static_breakpoints = Array.new
+      Arcadia.attach_listener(self, BufferEvent)
     else
       Arcadia.console(self, 'msg'=>"Warning: Extension ae-ruby-debug depend upon rdebug command (install it or update system path!)", 'level'=>'error')
       #Arcadia.new_error_msg(self, "Warning: Extension ae-ruby-debug depend upon rdebug command (install it or update system path!)")
@@ -1512,7 +1499,7 @@ class RubyDebug < ArcadiaExt
   end
 
   def breakpoint_free_live
-    @breakpoints.clear
+    @breakpoints.clear if @breakpoints
     #@rdv.break_list_free if @rdv
   end
   
