@@ -61,6 +61,8 @@ class LayoutRaisingFrameEvent < ArcadiaEvent
   attr_accessor :frame_name
 end
 
+class LayoutChangedFrameEvent < ArcadiaEvent
+end
 
 #  +---------------------------------------------+
 #         Buffer event

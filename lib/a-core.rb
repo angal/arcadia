@@ -22,7 +22,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.9.0',
+        '0.9.1',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -682,7 +682,7 @@ class Arcadia < TkApplication
             item_args['context_path'] = context_path
             item_args['context_caption'] = groups_caption[gi] if groups_caption
             item_args['context_underline'] = context_underline.strip.to_i if context_underline
-            i = _user_control.new_item(self, item_args)
+            i = _user_control.new_item(_self_on_eval, item_args)
             i.enable=false if disabled
           }
         rescue Exception
@@ -712,6 +712,8 @@ class Arcadia < TkApplication
     if q1 && can_exit?
       do_finalize
       @root.destroy
+#      Tk.mainloop_exist?
+#      Tk.destroy
       Tk.exit
     end
   end
@@ -3350,11 +3352,19 @@ class FocusEventManager
   end
 
   def do_upper_case(_focused_widget)
-    _replace_sel(_focused_widget, :upcase)
+    if _focused_widget.respond_to?(:do_upper_case)
+      _focused_widget.do_upper_case
+    else
+      _replace_sel(_focused_widget, :upcase)
+    end
   end
 
   def do_lower_case(_focused_widget)
-    _replace_sel(_focused_widget, :downcase)
+    if _focused_widget.respond_to?(:do_lower_case)
+      _focused_widget.do_lower_case
+    else
+      _replace_sel(_focused_widget, :downcase)
+    end
   end
   
   def _replace_sel(_focused_widget, _method)

@@ -88,11 +88,16 @@ class FixedFrameWrapper < AbstractFrameWrapper
     @fixed_frame
   end
   
-  def top_text(_top_text=nil)
+  def root
     fixed_frame_forge
-    Arcadia.layout.domain(@domain)['root'].top_text(_top_text)
-    #@arcadia.layout.domain_for_frame(@domain, @name)['root'].top_text(_title)
+    Arcadia.layout.domain(@domain)['root']
   end
+  
+#  def top_text(_top_text=nil)
+#    fixed_frame_forge
+#    Arcadia.layout.domain(@domain)['root'].top_text(_top_text)
+#    #@arcadia.layout.domain_for_frame(@domain, @name)['root'].top_text(_title)
+#  end
 
   def show
     fixed_frame_forge
