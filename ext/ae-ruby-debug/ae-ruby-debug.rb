@@ -232,8 +232,11 @@ class RubyDebugView
         @b_local_onoff.image(_i_on)
         command_enabled(false)
         Thread.new{
-          update_variables('local_var', @controller.rdc.variables('local_variables')) #if @tree_var.open?('local_var')
-          command_enabled(true)
+          begin
+            update_variables('local_var', @controller.rdc.variables('local_variables')) #if @tree_var.open?('local_var')
+          ensure
+            command_enabled(true)
+          end
         }
       elsif @local_state == B_STATE_FREEZE
         @b_local_onoff.image(_i_freeze)
@@ -276,8 +279,11 @@ class RubyDebugView
         @b_instance_onoff.image(_i_on)
         command_enabled(false)
         Thread.new{
-          update_variables('instance_var', @controller.rdc.variables('instance_variables')) #if @tree_var.open?('local_var')
-          command_enabled(true)
+          begin
+            update_variables('instance_var', @controller.rdc.variables('instance_variables')) #if @tree_var.open?('local_var')
+          ensure
+            command_enabled(true)
+          end
         }
       elsif @instance_state == B_STATE_FREEZE
         @b_instance_onoff.image(_i_freeze)
@@ -319,8 +325,11 @@ class RubyDebugView
         @b_class_onoff.image(_i_on)
         command_enabled(false)
         Thread.new{
-          update_variables('class_var', @controller.rdc.variables('self.class.class_variables')) #if @tree_var.open?('local_var')
-          command_enabled(true)
+          begin
+            update_variables('class_var', @controller.rdc.variables('self.class.class_variables')) #if @tree_var.open?('local_var')
+          ensure
+            command_enabled(true)
+          end
         }
       elsif @class_state == B_STATE_FREEZE
         @b_class_onoff.image(_i_freeze)
@@ -363,8 +372,11 @@ class RubyDebugView
         @b_global_onoff.image(_i_on)
         command_enabled(false)
         Thread.new{
-          update_variables('global_var', @controller.rdc.variables('global_variables')) #if @tree_var.open?('local_var')
-          command_enabled(true)
+          begin
+            update_variables('global_var', @controller.rdc.variables('global_variables')) #if @tree_var.open?('local_var')
+          ensure
+            command_enabled(true)
+          end
         }
       elsif @global_state == B_STATE_FREEZE
         @b_global_onoff.image(_i_freeze)
@@ -768,7 +780,7 @@ class RubyDebugServer
       else
         rdebug_cmd = "rdebug"
       end
-       commandLine = "#{rdebug_cmd} --host #{_host} --port #{_remote_port} -sw #{_filename}"
+      commandLine = "#{rdebug_cmd} --host #{_host} --port #{_remote_port} -sw #{_filename}"
     else
        commandLine = "rdebug --host #{_host} --port #{_remote_port} -sw #{_filename}"
     end

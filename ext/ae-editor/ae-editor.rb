@@ -34,15 +34,99 @@ end
 
 class SourceStructure
   attr_reader :root
-  attr_reader :injected_row
-  def initialize(_source)
-    _row = 1
-    _liv = 0
-    _livs = Array.new
+  
+  def initialize
     @root = TreeNode.new(nil, 'KRoot'){|_node|
       _node.rif= 'root'
       _node.label=''
     }
+  end
+  
+  def node_by_line(_from_node, _line)
+    _found_node = nil
+    _begin = _from_node.rif.to_i
+    _end = _from_node.rif_end.to_i
+    if _line.to_i <= _end && _line.to_i >= _begin
+      _found_node = _from_node
+    else 
+      _sons = _from_node.sons
+      for inode in 0.._sons.length - 1
+        _son = _sons[inode]
+        _found_node = node_by_line(_son, _line)
+        break if _found_node
+      end
+    end
+    return _found_node
+  end
+  
+  def deep_node_by_line(_from_node, _line, _found_node=nil)
+    _begin = _from_node.rif.to_i
+    _end = _from_node.rif_end.to_i
+    if _line.to_i <= _end && _line.to_i >= _begin
+      _found_node = _from_node
+    end
+    _sons = _from_node.sons
+    for inode in 0.._sons.length - 1
+      _son = _sons[inode]
+      _found_node = deep_node_by_line(_son, _line, _found_node)
+    end
+    return _found_node
+  end
+  
+  def class_node_by_line(_line)
+    line_node = node_by_line(@root, _line)
+    class_node = line_node
+    while class_node != nil && class_node.kind != "KClass"
+      class_node = class_node.parent
+    end
+    return class_node
+  end
+  
+end
+
+class CtagsSourceStructure < SourceStructure
+  def initialize(_file)
+    super()
+    @file = _file
+    build_structure
+  end
+
+  def build_structure
+    output = ctags
+    output.each {|line|
+      p line.split("\t")
+    }
+  end
+  
+  def ctags
+    _cmd_ = "|ctags -x -u #{@file}"
+    to_ret = ''
+    open(_cmd_, "r"){|f| 
+      to_ret = f.readlines
+    }
+    to_ret
+  end
+end
+
+
+
+class RubySourceStructure < SourceStructure
+  attr_reader :injected_row
+
+  def initialize(_source)
+    super()
+    parse_source(_source)
+  end
+
+
+  def parse_source(_source)
+    _row = 1
+    _liv = 0
+    _livs = Array.new
+#    @root = TreeNode.new(nil, 'KRoot'){|_node|
+#      _node.rif= 'root'
+#      _node.label=''
+#    }
     _livs[_liv]=@root
     _source.each_line{|line|
       line = "\s"+line.split("#")[0]+"\s"
@@ -134,7 +218,8 @@ class SourceStructure
       _row = _row +1
     }
   end
-  
+
+
   def scheletor_from_node(_node, _source='', _injected_source='', _injected_class='')
     _hinner_source = ''
     #_sons = _node.sons.sort
@@ -163,58 +248,16 @@ class SourceStructure
     _source = "#{_source}end\n" if _node.kind == 'KClass' || _node.kind == 'KModule'
     _source
   end
-  
-  
 
-  def node_by_line(_from_node, _line)
-    _found_node = nil
-    _begin = _from_node.rif.to_i
-    _end = _from_node.rif_end.to_i
-    if _line.to_i <= _end && _line.to_i >= _begin
-      _found_node = _from_node
-    else 
-      _sons = _from_node.sons
-      for inode in 0.._sons.length - 1
-        _son = _sons[inode]
-        _found_node = node_by_line(_son, _line)
-        break if _found_node
-      end
-    end
-    return _found_node
-  end
-  
-  def deep_node_by_line(_from_node, _line, _found_node=nil)
-    _begin = _from_node.rif.to_i
-    _end = _from_node.rif_end.to_i
-    if _line.to_i <= _end && _line.to_i >= _begin
-      _found_node = _from_node
-    end
-    _sons = _from_node.sons
-    for inode in 0.._sons.length - 1
-      _son = _sons[inode]
-      _found_node = deep_node_by_line(_son, _line, _found_node)
-    end
-    return _found_node
-  end
-  
-  def class_node_by_line(_line)
-    line_node = node_by_line(@root, _line)
-    class_node = line_node
-    while class_node != nil && class_node.kind != "KClass"
-      class_node = class_node.parent
-    end
-    return class_node
-  end
-  
+
   def classies
   end
   def modules
   end
   def class_methods(_class)
   end
-  
-
 end
+
 
 class SafeCompleteCode
   attr_reader :modified_row, :modified_col
@@ -224,7 +267,7 @@ class SafeCompleteCode
     @file = _file
     @row = _row.to_i
     @col = _col.to_i
-    @ss = SourceStructure.new(_source)
+    @ss = RubySourceStructure.new(_source)
     @filter=''
     @words = Array.new
     process_source
@@ -856,7 +899,8 @@ class AgEditorOutline
     #(re)build tree
     _txt = @editor.text.get('1.0','end')
     #@root = build_tree_from_source(_txt)
-    @ss = SourceStructure.new(_txt)
+    #CtagsSourceStructure.new(@editor.file)
+    @ss = RubySourceStructure.new(_txt)
     #@root = @ss.root
     @selected = nil
     build_tree_from_node(@ss.root, _label_sel)
@@ -916,10 +960,35 @@ class AgEditor
     @loading=false
     @tabs_show = false
     @spaces_show = false
+    @line_numbers_visible = @controller.conf('line-numbers') == 'yes'
   end
   
   def modified_from_opening?
     @modified_from_opening
+  end
+  
+  def show_line_numbers
+    if !@line_numbers_visible
+      #@fm1.hide_right
+      @fm1.show_left
+      @line_numbers_visible = true
+      do_line_update
+    end
+  end
+  
+  def hide_line_numbers
+    if @line_numbers_visible
+      @fm1.hide_left
+      @line_numbers_visible = false
+    end
+  end
+  
+  def show_hide_line_numbers
+    if @line_numbers_visible
+      hide_line_numbers
+    else
+      show_line_numbers
+    end
   end
   
   def xy_insert
@@ -946,15 +1015,24 @@ class AgEditor
       padx 0
       tabs $arcadia['conf']['editor.tabs']
     }
-
+    _self_editor = self
     class << @text
+      attr_accessor :editor
       def tag_adds(tag, *args)
         tk_send_without_enc('tag', 'add', _get_eval_enc_str(tag), 
                             *args.flatten)
         self
       end
+      
+      def do_upper_case
+        @editor.do_upper_case if @editor
+      end
+    
+      def do_lower_case
+        @editor.do_lower_case if @editor
+      end
     end
-
+    @text.editor = self
     #do_tag_configure_global('debug')
     @text.tag_configure('eval','foreground' => 'yellow', 'background' =>'red','borderwidth'=>1, 'relief'=>'raised')
     @text.tag_configure('errline','borderwidth'=>1, 'relief'=>'groove')
@@ -1976,7 +2054,6 @@ class AgEditor
       :font => "#{Arcadia.conf('menu.font')} bold",
       :hidemargin => true
     )
-
     
     #Arcadia.instance.main_menu.update_style(@pop_up)
     @pop_up.insert('end',
@@ -2226,32 +2303,14 @@ class AgEditor
       :command,
       :label=>'Selection to uppercase',
       :hidemargin => false,
-      :command=> proc{
-        _r = @text.tag_ranges('sel')
-        if _r.length>0
-          _text=@text.get(_r[0][0],_r[0][1])
-          if _text.length > 0
-            @text.delete(_r[0][0],_r[0][1])
-            @text.insert(_r[0][0],_text.upcase)
-          end
-        end
-      }
+      :command=> proc{do_upper_case}
     )
 
     _sub_code.insert('end',
       :command,
       :label=>'Selection to downcase',
       :hidemargin => false,
-      :command=> proc{
-        _r = @text.tag_ranges('sel')
-        if _r.length>0
-          _text=@text.get(_r[0][0],_r[0][1])
-          if _text.length > 0
-            @text.delete(_r[0][0],_r[0][1])
-            @text.insert(_r[0][0],_text.downcase)
-          end
-        end
-      }
+      :command=> proc{do_lower_case}
     )
 
 
@@ -2313,8 +2372,8 @@ class AgEditor
       proc{|x,y|
         _x = TkWinfo.pointerx(@text)
         _y = TkWinfo.pointery(@text)
-        @pop_up.entryconfigure(1, 'label'=>File.basename(@file)) if @file
-        #@pop_up.entryconfigure(0, 'label'=>File.basename(@file)) if @file
+        #@pop_up.entryconfigure(1, 'label'=>File.basename(@file)) if @file
+        @pop_up.entryconfigure(0, 'label'=>File.basename(@file)) if @file
         @pop_up.popup(_x,_y)
       },
     "%x %y")
@@ -2342,7 +2401,54 @@ class AgEditor
   def text_value
     return @text.value
   end
+  
+  def text_selected
+    _text = ''
+    _r = @text.tag_ranges('sel')
+    if _r.length>0
+      _text=@text.get(_r[0][0],_r[0][1])
+    end
+    _text
+  end
+  
+  def text_replace_selected_with(_text_for_replace='')
+    _r = @text.tag_ranges('sel')
+    if _r.length>0
+      bl = _r[0][0].split('.')[0].to_i
+      @text.delete(_r[0][0],_r[0][1])
+      @text.insert(_r[0][0],_text_for_replace)
+      el = @text.index('insert').split('.')[0].to_i
+      if highlighting
+        reset_highlight(bl)
+        rehighlightlines(bl,el,true)
+      end
+    end
+  end
 
+  def text_replace_value_with(_text_for_replace='')
+    pos_index = @text.index('insert') 
+    @text.delete('1.0','end')
+    reset_highlight if @highlighting
+    @text.insert('end',_text_for_replace)
+    @text.see(pos_index)
+    @text.set_insert(pos_index)
+    check_modify
+  end
+  
+  def do_upper_case
+    _text = text_selected
+    if _text.length > 0
+      text_replace_selected_with(_text.upcase)
+    end
+  end
+
+  def do_lower_case
+    _text = text_selected
+    if _text.length > 0
+      text_replace_selected_with(_text.downcase)
+    end
+  end
+  
   # vertical scrollbar : ON/OFF
   def vscroll(mode)
     st = TkGrid.info(@v_scroll)
@@ -2611,8 +2717,6 @@ class AgEditor
         line_begin = line_begin_index.split('.')[0].to_i
         line_end = @text.index('@0,'+TkWinfo.height(@text).to_s).split('.')[0].to_i + 1
         wrap_on = @text.cget("wrap") != 'none'
-        # breakpoint
-        b = @controller.breakpoint_lines_on_file(@file)
         if @highlighting
           _zone_begin = ((line_begin) / @highlight_zone_length).to_i + 1
           _zone_end = ((line_end) / @highlight_zone_length).to_i + 1
@@ -2628,52 +2732,55 @@ class AgEditor
           @last_zone_begin = _zone_begin
           @last_zone_end = _zone_end
         end
-        @text_line_num.delete('1.0','end')
-        
-
-        _rx, _ry, _width, _heigth = @text.bbox(line_begin_index);
-        
-        if _ry && _ry < 0 
-          real_line_end = line_end + 1
-        else
-          real_line_end = line_end
-        end
-        #@fm1
-        _tags = Array.new
-        for j in line_begin...real_line_end
-          nline = j.to_s.rjust(line_end.to_s.length+2)
-          _index = @text_line_num.index('end')
-          _tags.clear
-          if @highlighting && @is_line_bold[j]
-            _tags << 'bold_case'
-          else
-            _tags << 'normal_case'
-          end
+        if @line_numbers_visible
+          # breakpoint
+          b = @controller.breakpoint_lines_on_file(@file)
           
-          if wrap_on
-            w_rx_b, w_ry_b, w_width_b, w_heigth_b = @text.bbox("#{(j).to_s}.0");
-            w_rx_e, w_ry_e, w_width_e, w_heigth_e = @text.bbox("#{(j).to_s}.0 lineend");
-            if w_ry_e && w_ry_b 
-              delta = w_ry_e - w_ry_b
-              if delta > 1   
-                _tag = "wrap_case_#{j}"
-                @text_line_num.tag_configure(_tag, 'spacing3'=>delta)  
-                _tags << _tag
+          @text_line_num.delete('1.0','end')
+          _rx, _ry, _width, _heigth = @text.bbox(line_begin_index);
+          
+          if _ry && _ry < 0 
+            real_line_end = line_end + 1
+          else
+            real_line_end = line_end
+          end
+          #@fm1
+          _tags = Array.new
+          for j in line_begin...real_line_end
+            nline = j.to_s.rjust(line_end.to_s.length+2)
+            _index = @text_line_num.index('end')
+            _tags.clear
+            if @highlighting && @is_line_bold[j]
+              _tags << 'bold_case'
+            else
+              _tags << 'normal_case'
+            end
+            
+            if wrap_on
+              w_rx_b, w_ry_b, w_width_b, w_heigth_b = @text.bbox("#{(j).to_s}.0");
+              w_rx_e, w_ry_e, w_width_e, w_heigth_e = @text.bbox("#{(j).to_s}.0 lineend");
+              if w_ry_e && w_ry_b 
+                delta = w_ry_e - w_ry_b
+                if delta > 1   
+                  _tag = "wrap_case_#{j}"
+                  @text_line_num.tag_configure(_tag, 'spacing3'=>delta)  
+                  _tags << _tag
+                end
               end
             end
+  
+            @text_line_num.insert(_index, "#{nline}\n",_tags)
+            if b.include?(j.to_s)
+              add_tag_breakpoint(j)
+            end
           end
-
-          @text_line_num.insert(_index, "#{nline}\n",_tags)
-          if b.include?(j.to_s)
-            add_tag_breakpoint(j)
+          if _ry && _ry < 0 
+            @text_line_num.yview_scroll(_ry.abs+2,"pixels")
           end
-        end
-        if _ry && _ry < 0 
-          @text_line_num.yview_scroll(_ry.abs+2,"pixels")
+          resize_line_num
         end
       end
       refresh_outline if Tk.focus==@text
-      resize_line_num
   end
 
   def resize_line_num
@@ -2924,7 +3031,7 @@ class AgEditor
     @text.set_insert(pos_index)
   end
 
-  def init_editing(_ext='rb', _w1=150, _w2=60)
+  def init_editing(_ext='rb')
     @is_ruby = _ext=='rb'|| _ext=='rbw'
     @classbrowsing = @is_ruby
     @lang_hash = @controller.languages_hash(_ext)
@@ -2937,7 +3044,7 @@ class AgEditor
 #    else
 #      @fm1 = AGTkVSplittedFrames.new(@page_frame,_w2)
 #    end
-    @fm1 = AGTkVSplittedFrames.new(@page_frame,@page_frame,_w2)
+    @fm1 = AGTkVSplittedFrames.new(@page_frame,@page_frame,0,5,false,false)
     @fm1.splitter_frame.configure('relief'=>'flat')
     initialize_text(@fm1.right_frame)
     initialize_highlight(_ext)
@@ -2950,7 +3057,7 @@ class AgEditor
       @outline.show
     else
       @outline=AgEditorOutline.new(self,@controller.frame(1).hinner_frame,@controller.outline_bar)
-      @outline.build_tree
+      refresh
     end
   end
 
@@ -3325,8 +3432,54 @@ class AgMultiEditor < ArcadiaExt
     @outline_bar = AgEditorOutlineToolbar.new(self.frame(1).hinner_frame, self)
     create_find # this is the "find within current file" one
     pop_up_menu
-    
-    #self.open_last_files
+    @buffer_menu = frame.root.add_menu_button('files', DOCUMENT_GIF, 'right', {'relief'=>:raised, 'borderwidth'=>1}).cget('menu')
+  end
+
+  def add_buffer_menu_item(_filename, is_file=true)
+    index = 'end'
+    i_end = @buffer_menu.index('end')
+    if i_end
+      0.upto(i_end){|j|
+        type = @buffer_menu.menutype(j)
+        if type != 'separator'
+          label = @buffer_menu.entrycget(j,'label')
+          if label > _filename
+            index=j
+            break
+          end
+        end
+      }
+    end
+
+    @buffer_menu.insert(index,:command,
+          :label=>_filename,
+          :image=> Arcadia.file_icon(_filename),
+          :compound=>'left',
+          :command=>proc{
+            if is_file
+              open_file(_filename)
+            else
+              open_buffer(tab_name(_filename))             
+            end
+          },
+          :hidemargin => true
+    )
+  end
+
+  def del_buffer_menu_item(_file)
+    to_del = -1
+    i_end = @buffer_menu.index('end')
+    0.upto(i_end){|j|
+      type = @buffer_menu.menutype(j)
+      if type != 'separator'
+        label = @buffer_menu.entrycget(j,'label')
+        if label == _file
+          to_del=j
+          break
+        end
+      end
+    }
+    @buffer_menu.delete(to_del) if to_del != -1
   end
 
   def on_after_build(_event)
@@ -3671,6 +3824,11 @@ class AgMultiEditor < ArcadiaExt
     _e.find if _e
   end
 
+  def show_hide_current_line_numbers
+    _e = raised
+    _e.show_hide_line_numbers if _e
+  end
+
   def on_finalize(_event)
     @batch_files = true
     _files =''
@@ -3856,6 +4014,10 @@ class AgMultiEditor < ArcadiaExt
     @main_frame.enb.itemcget(page_name(_tab), 'text')
   end
 
+  def tab_title_by_tab_name(_tab_name)
+    @main_frame.enb.itemcget(_tab_name, 'text')
+  end
+
   def page_name(_page_frame)
     TkWinfo.appname(_page_frame).sub('f','')
   end
@@ -3961,7 +4123,7 @@ class AgMultiEditor < ArcadiaExt
       end
     end
     if @arcadia.layout.headed?
-      frame.top_text(_new_caption)
+      frame.root.top_text(_new_caption)
       #@arcadia.layout.domain(@arcadia['conf'][@name+'.frame'])['root'].top_text(_new_caption)
     end
     _title = @tabs_file[_name] != nil ? File.basename(@tabs_file[_name]) :_name
@@ -3983,7 +4145,7 @@ class AgMultiEditor < ArcadiaExt
   
   def tab_name(_str="")
     #_str = _str.downcase if is_windows?
-    'ff'+_str.downcase.gsub("/","_").gsub(".","_").gsub(":","_").gsub("\\","_")
+    'ff'+_str.downcase.gsub("/","_").gsub(".","__").gsub(":","___").gsub("\\","____").gsub("*","_____")
   end
   
   def tab_file_name(_filename="")
@@ -4014,21 +4176,17 @@ class AgMultiEditor < ArcadiaExt
       open_buffer(_tab_name)
     else
       @tabs_file[_tab_name]= _filename
-      if _exp
-        open_buffer(_tab_name, _basefilename)
-      else
-        open_buffer(_tab_name, _basefilename,0)
-      end
+      open_buffer(_tab_name, _basefilename, _filename)
       @tabs_editor[_tab_name].reset_highlight
       begin
         @tabs_editor[_tab_name].load_file(_filename)
       rescue RuntimeError => e
         p "RuntimeError : #{e.message}"
-        close_editor(@tabs_editor[_tab_name])
+        close_editor(@tabs_editor[_tab_name], true)
       end
     end
     
-    if _text_index != nil && _text_index != '1.0'
+    if _text_index != nil && _text_index != '1.0' && @tabs_editor[_tab_name]
       @tabs_editor[_tab_name].text_see(_text_index)
       @tabs_editor[_tab_name].mark_selected(_text_index) if _mark_selected 
     end
@@ -4037,11 +4195,12 @@ class AgMultiEditor < ArcadiaExt
   end
 
 
-  def open_buffer(_buffer_name = nil, _title = nil, w1=150)
+  def open_buffer(_buffer_name = nil, _title = nil, _filename=nil)
     _index = @main_frame.enb.index(_buffer_name)
     if _buffer_name == nil
-    		_buffer_name = tab_name('new')
     		_title_new = '*new'
+    		_buffer_name = tab_name(_title_new)
+    		#_buffer_name = tab_name('new')
     end
     
     if _index != -1
@@ -4051,7 +4210,8 @@ class AgMultiEditor < ArcadiaExt
       _n = 1
       while @main_frame.enb.index(_buffer_name) != -1
         _title_new = '*new'+_n.to_s
-        _buffer_name = tab_name('new')+_n.to_s
+        _buffer_name = tab_name(_title_new)
+        #_buffer_name = tab_name('new')+_n.to_s
         _n =_n+1
       end
       if _title == nil
@@ -4064,10 +4224,15 @@ class AgMultiEditor < ArcadiaExt
         'foreground'=> Arcadia.style("tabpanel.foreground"),
         'raisecmd'=>proc{do_buffer_raise(_buffer_name, _title)}
       )
+      if _filename
+        add_buffer_menu_item(_filename)
+      else
+        add_buffer_menu_item(_title, false)
+      end
       _e = AgEditor.new(self, _tab)
       ext = Arcadia.file_extension(_title)
       ext='rb' if ext.nil?
-      _e.init_editing(ext, w1)
+      _e.init_editing(ext)
       _e.text.set_focus
       #@tabs_file[_buffer_name]= nil
       @tabs_editor[_buffer_name]=_e
@@ -4132,39 +4297,26 @@ class AgMultiEditor < ArcadiaExt
   def close_editor(_editor, _force=false)
     if _force || can_close_editor?(_editor)
       _editor.destroy_outline
-      close_tab(_editor.page_frame)
+      close_buffer(_editor.page_frame)
     else
       return
     end
   end
 
-
-#  def close_editor(_editor, _mod=true)
-#    if ((_mod)&&(_editor.modified?))
-#      _message = @main_frame.enb.itemcget(page_name(_editor.page_frame), 'text')+"\n modified. Save?"
-#      _r = TkDialog2.new('message'=>_message, 'buttons'=>['Ok','No','Cancel']).show()
-#      if _r == 0
-#        _editor.save
-#      elsif _r == 1
-#        close_tab(_editor.page_frame)
-#      elsif _r == 2
-#        return
-#      end
-#    else
-#      close_tab(_editor.page_frame)
-#    end
-#    #EditorContract.instance.file_closed(self, 'file'=>_editor.file)
-#  end
-
-  def close_tab(_page_frame)
+  def close_buffer(_page_frame)
     _name = page_name(_page_frame)
+    if @tabs_editor[_name] && @tabs_editor[_name].file
+      del_buffer_menu_item(@tabs_editor[_name].file)
+    else
+      del_buffer_menu_item(tab_title_by_tab_name(_name))
+    end
     @tabs_editor.delete(_name)
     _index = @main_frame.enb.index(_name)
     @main_frame.enb.delete(_name)
     if !@main_frame.enb.pages.empty?
       @main_frame.enb.raise(@main_frame.enb.pages[_index-1]) if TkWinfo.mapped?(@main_frame.enb)
     else
-      frame.top_text('') if TkWinfo.mapped?(frame.hinner_frame)
+      frame.root.top_text('') if TkWinfo.mapped?(frame.hinner_frame)
     end
   end
 
