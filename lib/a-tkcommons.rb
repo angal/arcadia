@@ -256,28 +256,47 @@ class TkFrameAdapter < TkFrame
         @frame.bind_remove("Unmap") 
       end
       @frame = nil
-      self.unplace
+      self.unmap
     end
+  end
+  
+  def unmap
+    if is_place?
+      self.unplace
+    elsif is_pack?
+      self.unpack
+    end  
   end
   
   def attach_frame(_frame)
     @frame = _frame
+    @frame_manager = TkWinfo.manager(@frame)
     refresh
     if @movable
-      @frame.bind_append("Configure",proc{ refresh})
+      @frame.bind_append("Configure",proc{refresh})
       @frame.bind_append("Map",proc{refresh})
-      @frame.bind_append("Unmap",proc{unplace if TkWinfo.mapped?(@frame)})
+      @frame.bind_append("Unmap",proc{unmap  if TkWinfo.mapped?(@frame)})
     end
     self
   end
 
+  def is_place?
+    @frame_manager == 'place' || @frame_manager.nil? || @frame_manager == ''
+  end
+
+  def is_pack?
+    @frame_manager == 'pack'
+  end
   
   def refresh(_x=0, _y=0)
-    place('in'=>@frame, 'x'=>_x, 'y'=>_y, 'relheight'=> 1, 'relwidth'=>1, 'bordermode'=>'outside')
+    if is_place? 
+      place('in'=>@frame, 'x'=>_x, 'y'=>_y, 'relheight'=> 1, 'relwidth'=>1, 'bordermode'=>'outside')
+    elsif is_pack?
+      pack('in'=>@frame, 'fill'=>'both', 'expand'=>true)
+    end
   end
   
 end
-
 
 class AGTkSplittedFrames < TkFrameAdapter
   attr_reader :frame1
@@ -738,8 +757,10 @@ class TkBaseTitledFrame < TkFrame
       #background  '#303b50'
       background  Arcadia.conf('titlelabel.background')
     }.pack('side'=> 'right','anchor'=> 'w')
+
     @buttons = Hash.new
     @menu_buttons = Hash.new
+    @last_for_frame = Hash.new
     self.head_buttons
   end
 
@@ -747,31 +768,44 @@ class TkBaseTitledFrame < TkFrame
     return TkFrame.new(self,Arcadia.style('panel')).place('x'=>0, 'y'=>@title_height,'height'=>-@title_height,'relheight'=>1, 'relwidth'=>1)
   end
 
-  def add_button(_label,_proc=nil,_image=nil, _side= 'right')
-    TkButton.new(@button_frame, Arcadia.style('toolbarbutton')){
+  def add_fixed_button(_label,_proc=nil,_image=nil, _side= 'right')
+    __add_button(_label,_proc,_image, _side,@button_frame)
+  end
+
+  def add_fixed_menu_button(_name='default',_image=nil, _side= 'right', _args=nil)
+    __add_menu_button(_name, _image, _side, _args, @button_frame)
+  end
+
+  def add_fixed_sep(_width=0)
+    __add_sep(_width, @button_frame)
+  end
+
+  def __add_button(_label,_proc=nil,_image=nil, _side= 'right', _frame=nil)
+    return if _frame.nil?
+    last = @last_for_frame[_frame]
+    @last_for_frame[_frame] = TkButton.new(_frame, Arcadia.style('titletoolbarbutton')){
       text  _label if _label
       image  TkPhotoImage.new('dat' => _image) if _image
-      #relief 'flat'
       font 'helvetica 8 bold'
-      #borderwidth 0
-      #background  '#303b50'
-      #background  '#8080ff'
-      pack('side'=> _side,'anchor'=> 'e')
+      padx 0
+      pady 0
+      if last
+        pack('side'=> _side,'anchor'=> 'e', 'after'=>last)
+      else
+        pack('side'=> _side,'anchor'=> 'e')
+      end
       bind('1',_proc) if _proc
     }
   end
+  private :__add_button
 
-  def add_menu_button(_name='default',_image=nil, _side= 'right', _args=nil)
+  def __add_menu_button(_name='default',_image=nil, _side= 'right', _args=nil, _frame=nil)
+    return if _frame.nil?
     args = Arcadia.style('titlelabel')
     args.update(_args) if _args
-    @menu_buttons[_name] = TkMenuButton.new(@button_frame, args){|mb|
+    last = @last_for_frame[_frame]
+    @last_for_frame[_frame] =  @menu_buttons[_name] = TkMenuButton.new(_frame, args){|mb|
       menu TkMenu.new(mb, Arcadia.style('titlemenu'))
-#      menu TkMenu.new(:parent=>mb, Arcadia.style('titlemenu'))
-#      menu TkMenu.new(:parent=>mb,
-#        :tearoff=>0,
-#        :background=>Arcadia.style('titlelabel')['background'],
-#        :foreground=>Arcadia.style('titlelabel')['foreground']
-#      )
       if _image
         indicatoron false
         image TkPhotoImage.new('dat' => _image)
@@ -779,17 +813,39 @@ class TkBaseTitledFrame < TkFrame
         indicatoron true
       end
       padx 0
-      pack('side'=> _side,'anchor'=> 'e')
+      if last
+        pack('side'=> _side,'anchor'=> 'e', 'after'=>last)
+      else
+        pack('side'=> _side,'anchor'=> 'e')
+      end
     }
     @menu_buttons[_name]
   end
+  private :__add_menu_button
+
+
+  def __add_sep(_width=0, _frame=nil)
+    return if _width <= 0 || _frame.nil?
+    _background=_frame.background
+    last = @last_for_frame[_frame]
+    @last_for_frame[_frame] =  TkLabel.new(_frame){||
+      text  ''
+      background  _background
+      if last
+        pack('side'=> 'right','anchor'=> 'e', 'ipadx'=>_width, 'after'=>last)
+      else
+        pack('side'=> 'right','anchor'=> 'e', 'ipadx'=>_width)
+      end
+    }
+  end
+  private :__add_sep
 
   def menu_button(_name='default')
     @menu_buttons[_name]
   end
 
   def head_buttons
-    @bmaxmin = add_button('[ ]',proc{resize}, W_MAX_GIF)
+    @bmaxmin = add_fixed_button('[ ]',proc{resize}, W_MAX_GIF)
   end
 
   def visible?
@@ -797,32 +853,18 @@ class TkBaseTitledFrame < TkFrame
   end
 end
 
-
-
 class TkTitledFrame < TkBaseTitledFrame
   attr_accessor :frame
   attr_reader :top
   attr_reader :parent
-
   def initialize(parent=nil, title=nil, img=nil , keys=nil)
     super(parent, keys)
     @state = 'normal'
-    title.nil??_text_title ='':_text_title = title+' :: ' 
-    @title_label =TkLabel.new(@top, Arcadia.style('titlelabel')){
-      text _text_title
-      anchor  'w'
-      compound 'left'
-      image  TkAllPhotoImage.new('file' => img) if img
-      pack('side'=> 'left','anchor'=> 'e')
-    }
-    @top_label =TkLabel.new(@top, Arcadia.style('titlelabel')){
-      anchor  'w'
-      font "#{Arcadia.conf('titlelabel.font')} italic"
-      foreground  Arcadia.conf('titlecontext.foreground')
-      compound 'left'
-      pack('side'=> 'left','anchor'=> 'e')
-    }
-    
+    @title = title
+    @img = img
+    @left_label = create_left_label
+    @right_label = create_right_label
+    @right_labels_text = Hash.new
     @ap = Array.new
     @apx = Array.new
     @apy = Array.new
@@ -830,42 +872,79 @@ class TkTitledFrame < TkBaseTitledFrame
     @aph = Array.new
   end
 
+  def create_left_label
+    __create_left_label(@top)
+  end
+
+  def create_right_label
+    __create_right_label(@top)
+  end
+  
+  def __create_left_label(_frame)
+    @title.nil??_text_title ='':_text_title = @title+' :: '
+    _img=@img 
+    TkLabel.new(_frame, Arcadia.style('titlelabel')){
+      text _text_title
+      anchor  'w'
+      compound 'left'
+      image  TkAllPhotoImage.new('file' => _img) if _img
+      pack('side'=> 'left','anchor'=> 'e')
+    }
+  end
+
+  def __create_right_label(_frame)
+    TkLabel.new(_frame, Arcadia.style('titlelabel')){
+      anchor  'w'
+      font "#{Arcadia.conf('titlelabel.font')} italic"
+      foreground  Arcadia.conf('titlecontext.foreground')
+      compound 'left'
+      pack('side'=> 'left','anchor'=> 'e')
+    }
+  end
+  
   def title(_text=nil)
     if _text.nil?
       return @title
     else
       @title=_text
       if _text.strip.length == 0
-        @title_label.text('')
+        @left_label.text('')
       else
-        @title_label.text(_text+'::')
+        @left_label.text(_text+'::')
       end
     end
   end
 
   def top_text(_text=nil)
     if _text.nil?
-      return @top_label.text
+      return @right_label.text
     else
-      @top_label.text(_text)
+      @right_label.text(_text)
+    end
+  end
+
+  def save_caption(_name, _caption)
+    @right_labels_text[_name] = _caption
+  end
+    
+  def last_caption(_name)
+    @right_labels_text[_name]
+  end  
+    
+  def restore_caption(_name)
+    if @right_labels_text[_name]
+      top_text(@right_labels_text[_name])
+    else
+      top_text('')
     end
   end
 
 #  def top_text(_text)
-#    @top_label.text(_text)
+#    @right_label.text(_text)
 #  end
 
-  def add_sep(_width=0,_background =@top.background)
-    TkLabel.new(@top){||
-      text  ''
-      background  _background
-      pack('side'=> 'right','anchor'=> 'e', 'ipadx'=>_width)
-    }
-  end
-
-
   def head_buttons
-    @bmaxmin = add_button('[ ]',proc{resize}, W_MAX_GIF)
+    @bmaxmin = add_fixed_button('[ ]',proc{resize}, W_MAX_GIF)
     #@bmaxmin = add_button('[ ]',proc{resize}, EXPAND_GIF)
   end
 
@@ -1030,6 +1109,66 @@ end
 #  
 #end
 
+class TkTitledFrameAdapter < TkTitledFrame
+  attr_reader :transient_frame_adapter
+
+  def initialize(parent=nil, title=nil, img=nil , keys=nil)
+    super(parent, title, img, keys)
+    @transient_frame = TkFrame.new(@button_frame){
+      background  Arcadia.conf('titlelabel.background')
+      padx 0
+      pady 0
+      pack('side'=> "right",'anchor'=> 'e','fill'=>'both', 'expand'=>true)
+    }
+    @transient_frame_adapter = Hash.new
+  end
+  
+  def forge_transient_adapter(_name)
+    if @transient_frame_adapter[_name].nil?
+      @transient_frame_adapter[_name] = TkFrameAdapter.new(Arcadia.layout.root, 
+        Arcadia.style('frame').update({'background'=>  Arcadia.conf('titlelabel.background')}))
+      __attach_adapter(@transient_frame_adapter[_name])
+      @transient_frame_adapter[_name].raise
+    end
+    @transient_frame_adapter[_name]
+  end
+  
+  def __attach_adapter(_adapter)
+    @last_attached_adapter.detach_frame if @last_attached_adapter
+    _adapter.attach_frame(@transient_frame)
+    @last_attached_adapter = _adapter
+  end
+  
+  def change_adapter(_name, _adapter)
+    @transient_frame_adapter[_name] = _adapter
+    @transient_frame_adapter[_name].detach_frame
+    __attach_adapter(@transient_frame_adapter[_name])
+    @transient_frame_adapter[_name].raise
+  end
+
+  def change_adapter_name(_name)
+    __attach_adapter(forge_transient_adapter(_name))
+    @transient_frame_adapter[_name].raise
+  end
+
+  def add_button(_sender_name, _label,_proc=nil,_image=nil, _side= 'right')
+    forge_transient_adapter(_sender_name)
+    __add_button(_label,_proc,_image, _side, @transient_frame_adapter[_sender_name])
+  end
+
+  def add_menu_button(_sender_name, _name='default',_image=nil, _side= 'right', _args=nil)
+    forge_transient_adapter(_sender_name)
+    __add_menu_button(_name, _image, _side, _args, @transient_frame_adapter[_sender_name])
+  end
+
+  def add_sep(_sender_name, _width=0)
+    forge_transient_adapter(_sender_name)
+    __add_sep(_width, @transient_frame_adapter[_sender_name])
+  end
+  
+end
+
+
 class TkTitledScrollFrame < TkTitledFrame
 
   def create_frame
@@ -1062,7 +1201,7 @@ class TkFloatTitledFrame < TkBaseTitledFrame
     borderwidth  2
     relief  'groove'
 
-    @top_label = TkLabel.new(@top, Arcadia.style('titlelabel')){
+    @right_label = TkLabel.new(@top, Arcadia.style('titlelabel')){
       anchor 'w'
     }.pack('fill'=>'x', 'side'=>'top')
     #.place('x'=>0, 'y'=>0,'relheight'=>1, 'relwidth'=>1 ,'width'=>-20)
@@ -1071,7 +1210,7 @@ class TkFloatTitledFrame < TkBaseTitledFrame
       text '-'
       image TkPhotoImage.new('dat'=>EXPAND_LIGHT_GIF)
     }.pack('side'=> 'right','anchor'=> 's')
-    start_moving(@top_label, self)
+    start_moving(@right_label, self)
     start_moving(frame, self)
     start_resizing(@resizing_label, self)
     @grabbed = false
@@ -1086,11 +1225,11 @@ class TkFloatTitledFrame < TkBaseTitledFrame
   end
 
   def title(_text)
-    @top_label.text(_text)
+    @right_label.text(_text)
   end
 
   def on_close=(_proc)
-    add_button('X', _proc, TAB_CLOSE_GIF)
+    add_fixed_button('X', _proc, TAB_CLOSE_GIF)
   end
   
   def hide

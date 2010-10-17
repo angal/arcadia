@@ -10,6 +10,7 @@ require 'tktext'
 require "#{Dir.pwd}/lib/a-tkcommons"
 #require 'lib/a-commons' 
 require "#{Dir.pwd}/lib/a-core"
+require "#{Dir.pwd}/ext/ae-editor/lib/rbeautify"
 
 class TreeNode
   attr_reader :sons
@@ -2430,6 +2431,7 @@ class AgEditor
     @text.delete('1.0','end')
     reset_highlight if @highlighting
     @text.insert('end',_text_for_replace)
+    do_line_update
     @text.see(pos_index)
     @text.set_insert(pos_index)
     check_modify
@@ -3432,7 +3434,13 @@ class AgMultiEditor < ArcadiaExt
     @outline_bar = AgEditorOutlineToolbar.new(self.frame(1).hinner_frame, self)
     create_find # this is the "find within current file" one
     pop_up_menu
-    @buffer_menu = frame.root.add_menu_button('files', DOCUMENT_GIF, 'right', {'relief'=>:raised, 'borderwidth'=>1}).cget('menu')
+    @buffer_menu = frame.root.add_menu_button(self.name, 'files', DOCUMENT_COMBO_GIF, 'right', {'relief'=>:raised, 'borderwidth'=>1}).cget('menu')
+    frame.root.add_sep(self.name, 1)
+    frame.root.add_button(
+      self.name,
+      'close current',
+      proc{Arcadia.process_event(CloseCurrentTabEvent.new(self))}, 
+      CLOSE_DOCUMENT_GIF)
   end
 
   def add_buffer_menu_item(_filename, is_file=true)
@@ -3796,11 +3804,24 @@ class AgMultiEditor < ArcadiaExt
       when CloseCurrentTabEvent
          close_raised
       when PrettifyTextEvent
-        require 'rbeautify.rb' # gem
-        self.raised.save # so we can beautify it kludgely here...
-        path = raised.file
-        RBeautify.beautify_file(path)
-        self.raised.reload
+#        require 'rbeautify.rb' # gem
+#        self.raised.save # so we can beautify it kludgely here...
+#        path = raised.file
+#        RBeautify.beautify_file(path)
+#        self.raised.reload
+
+        rbea = RBeautify.beautify_string(raised.text_value_lines)
+        if rbea && rbea.length >1 && !rbea[1]
+          raised.text_replace_value_with(rbea[0])
+        else
+          msg = "Problems in prettify #{raised.tab_title}"
+          Arcadia.dialog(self, 
+            'type'=>'ok', 
+            'title' => "(Arcadia) code prettify", 
+            'msg'=>msg,
+            'level'=>'error')
+        end
+        
       when MoveBufferEvent
         if _event.old_file && _event.new_file && editor_exist?(_event.old_file)
           #close_file(_event.old_file)
@@ -4123,7 +4144,10 @@ class AgMultiEditor < ArcadiaExt
       end
     end
     if @arcadia.layout.headed?
-      frame.root.top_text(_new_caption)
+      if frame.root.title == frame.title
+        frame.root.top_text(_new_caption)
+      end  
+      frame.root.save_caption(frame.name, _new_caption)
       #@arcadia.layout.domain(@arcadia['conf'][@name+'.frame'])['root'].top_text(_new_caption)
     end
     _title = @tabs_file[_name] != nil ? File.basename(@tabs_file[_name]) :_name

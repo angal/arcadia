@@ -98,9 +98,9 @@ class Arcadia < TkApplication
       geometry = start_width.to_s+'x'+start_height.to_s+'+0+0'
     end
     @root.deiconify
-    @root.raise
     @root.focus(true)
     @root.geometry(geometry)
+    @root.raise
     Tk.update_idletasks
     #sleep(1)
     @splash.destroy  if @splash
@@ -1200,11 +1200,6 @@ class ArcadiaMainMenu < ArcadiaUserControl
     @menu = menu
     build
     @menu.configure(Arcadia.style('menu'))
-#    menu.foreground('black')
-#    menu.activeforeground('#6679f1')
-#    menu.relief('flat')
-#    menu.borderwidth(0)
-#    menu.font(Arcadia.conf('main.mainmenu.font'))
   end
 
   def get_menu_context(_menubar, _context, _underline=nil)
@@ -2349,11 +2344,11 @@ class ArcadiaLayout
            break
          elsif @panels[dom]['notebook'] != nil 
            cfrs = TkWinfo.children(_frame)
-           if cfrs && cfrs.length == 1 && cfrs[0].instance_of?(TkTitledFrame) && TkWinfo.parent(@panels[dom]['notebook'])== cfrs[0].frame
+           if cfrs && cfrs.length == 1 && cfrs[0].instance_of?(TkTitledFrameAdapter) && TkWinfo.parent(@panels[dom]['notebook'])== cfrs[0].frame
              ret_doms << dom
              frame_found = true
            end       
-         elsif @panels[dom]['root'].instance_of?(TkTitledFrame) && @panels[dom]['root'].parent == _frame 
+         elsif @panels[dom]['root'].instance_of?(TkTitledFrameAdapter) && @panels[dom]['root'].parent == _frame 
              ret_doms << dom
              frame_found = true
          end
@@ -2362,7 +2357,7 @@ class ArcadiaLayout
     
     if !frame_found
       cfrs = TkWinfo.children(_frame)
-      if cfrs && cfrs.length == 1 && cfrs[0].instance_of?(TkTitledFrame)
+      if cfrs && cfrs.length == 1 && cfrs[0].instance_of?(TkTitledFrameAdapter)
         @wrappers.each{|name, ffw|
           if ffw.hinner_frame.frame == cfrs[0].frame
             ret_doms << ffw.domain 
@@ -2373,244 +2368,6 @@ class ArcadiaLayout
     ret_doms
   end
 
-  def close_runtime_old(_domain)
-    splitted_adapter = find_splitted_frame(@panels[_domain]['root'])
-    splitted_adapter_frame = splitted_adapter.frame
-    vertical = splitted_adapter.instance_of?(AGTkVSplittedFrames)
-    
-    _row, _col = _domain.split('.')
-    
-    if @frames[_row.to_i][_col.to_i] == splitted_adapter.frame1
-      close_first = true
-    elsif @frames[_row.to_i][_col.to_i] == splitted_adapter.frame2
-      close_first = false
-    end
-    
-    return if close_first.nil?    
-    
-    #source_domains = domains_on_frame(splitted_adapter.frame1).concat(domains_on_frame(splitted_adapter.frame2))
-    #Arcadia.console(self,'msg'=>"domini coinvolti = #{source_domains.to_s}")
-    
-    @panels[_domain]['sons'].each{|name,ffw|
-      unregister_panel(ffw, false, false)
-    }
-    unbuild_titled_frame(_domain)
-    if close_first
-      #left_frame
-      other_ds = domains_on_frame(@panels[_domain]['splitted_frames'].frame2)
-      if other_ds.length == 1
-        source_domain = other_ds[0]
-      elsif other_ds.length > 1
-        max = other_ds.length-1
-        j = 0
-        while j <= max
-          if source_domain.nil?
-            source_domain = other_ds[j]
-          else
-            r,c = source_domain.split('.')
-            new_r,new_c = other_ds[j].split('.')
-            if new_r.to_i < r.to_i || new_r.to_i == r.to_i && new_c.to_i < c.to_i
-              source_domain = other_ds[j]
-            end
-          end
-          j = j+1
-        end
-      else
-        if vertical
-          source_domain = domain_name(_row.to_i, _col.to_i+1)
-        else
-          source_domain = domain_name(_row.to_i+1, _col.to_i)
-        end
-      end
-      if vertical
-        ref_source_domain = domain_name(_row.to_i, _col.to_i+1)
-      else
-        ref_source_domain = domain_name(_row.to_i+1, _col.to_i)
-      end
-
-      destination_domain = _domain
-            
-      if @panels[source_domain]['splitted_frames'] != @panels[destination_domain]['splitted_frames']
-        if @panels[source_domain]['root_splitted_frames'] && @panels[source_domain]['root_splitted_frames'] != @panels[destination_domain]['splitted_frames']
-          other_root_splitted_adapter = @panels[source_domain]['root_splitted_frames']
-        elsif @panels[source_domain]['splitted_frames']
-          other_root_splitted_adapter = @panels[source_domain]['splitted_frames']
-        end
-      end
-
-      if other_root_splitted_adapter
-        p "primo quadrante"
-        other_root_splitted_adapter.detach_frame
-        splitted_adapter.detach_frame
-        splitted_adapter.destroy
-        other_root_splitted_adapter.attach_frame(splitted_adapter_frame)
-        if source_domain == ref_source_domain
-          if vertical
-            rows = domains_on_splitter_rows(other_root_splitted_adapter)
-            rows.each{|r|
-              shift_left(r.to_i,_col.to_i)
-            }
-          else
-            cols = domains_on_splitter_cols(other_root_splitted_adapter)
-            cols.each{|c|
-              shift_top(_row.to_i,c.to_i)
-            }
-          end
-        else
-          @panels.delete(_domain)
-          @frames[_row.to_i][_col.to_i] = nil
-         # @domains[_row.to_i][_col.to_i] = nil
-#          ref_r,ref_c = ref_source_domain.split('.')
-#          real_r,real_c=source_domain.split('.')
-#          gap_r = ref_r.to_i - real_r.to_i
-#          gap_c = ref_c.to_i - real_c.to_i
-#          if gap_r != 0 && gap_c == 0 # vertical
-#            doms = domains_on_splitter(other_root_splitted_adapter)
-#            doms.each{|d|
-#              r,c=d.split('.')
-#              cur_r = r.to_i+gap_r
-#              cur_domain = "#{cur_r}.#{_col}"
-#              if @panels[cur_domain] != nil
-#                shift_bottom(cur_r,_col.to_i)
-#              end
-#              @panels[cur_domain] = @panels[d]
-#              @panels[cur_domain]['root'].set_domain(cur_domain)
-#              @panels[cur_domain]['sons'].each{|name,ffw| ffw.domain=cur_domain}
-#              @frames[cur_r.to_i][_col.to_i] = @frames[r.to_i][c.to_i]
-#              @domains[cur_r.to_i][_col.to_i] = @domains[r.to_i][c.to_i]
-#              
-#              @panels.delete(d)
-#              @frames[r.to_i][c.to_i] = nil
-#              @domains[r.to_i][c.to_i] = nil
-#            }
-#          elsif gap_c != 0
-#          end
-        end
-        @panels.delete(source_domain)
-        if vertical
-          @frames[_row.to_i][_col.to_i+1] = nil
-         # @domains[_row.to_i][_col.to_i+1] = nil
-        else
-          @frames[_row.to_i+1][_col.to_i] = nil
-         # @domains[_row.to_i+1][_col.to_i] = nil
-        end
-      else
-        p "secondo quadrante"
-        source_save = Hash.new
-        source_save.update(@panels[source_domain]['sons']) if @panels[source_domain]
-        source_save.each{|name,ffw|
-          unregister_panel(ffw, false, false)
-        }
-        splitted_adapter.detach_frame
-        splitted_adapter.destroy
-        @panels[destination_domain]['root']=splitted_adapter_frame
-        @frames[_row.to_i][_col.to_i] = splitted_adapter_frame
-       # @domains[_row.to_i][_col.to_i] = destination_domain
-        build_titled_frame(destination_domain)
-        @panels.delete(source_domain)
-        if vertical
-          @frames[_row.to_i][_col.to_i+1] = nil
-         # @domains[_row.to_i][_col.to_i+1] = nil
-        else
-          @frames[_row.to_i+1][_col.to_i] = nil
-         # @domains[_row.to_i+1][_col.to_i] = nil
-        end
-        source_save.each{|name,ffw|
-          ffw.domain = destination_domain
-          register_panel(ffw, ffw.hinner_frame)
-        }
-        #-----
-        parent_splitted_adapter = find_splitted_frame(@panels[destination_domain]['root'])
-        if  parent_splitted_adapter
-          @panels[destination_domain]['splitted_frames']=parent_splitted_adapter
-        else
-          @panels[destination_domain]['splitted_frames']= nil
-        end
-        #-----
-        source_row,source_col = source_domain.split('.')
-#        shift_left(source_row.to_i,source_col.to_i)
-        if vertical
-          shift_left(source_row.to_i,source_col.to_i-1)
-        else
-          shift_top(source_row.to_i-1,source_col.to_i)
-        end
-      end
-    else  # CLOSE OTHER
-      other_ds = domains_on_frame(@panels[_domain]['splitted_frames'].frame1)
-      if other_ds.length == 1
-        other_dom = other_ds[0]
-      else
-        if vertical
-          other_dom = domain_name(_row.to_i, _col.to_i-1)
-        else
-          other_dom = domain_name(_row.to_i-1, _col.to_i)
-        end
-      end
-      if @panels[_domain]['splitted_frames'] != @panels[other_dom]['splitted_frames']
-        if @panels[other_dom]['root_splitted_frames'] && @panels[other_dom]['root_splitted_frames'] != @panels[_domain]['splitted_frames']
-          other_root_splitted_adapter = @panels[other_dom]['root_splitted_frames']
-        elsif @panels[other_dom]['splitted_frames']
-          other_root_splitted_adapter = @panels[other_dom]['splitted_frames']
-        end
-      end
-
-      if other_root_splitted_adapter
-        p "terzo quadrante"
-        other_root_splitted_adapter.detach_frame
-        splitted_adapter.detach_frame
-        splitted_adapter.destroy
-        other_root_splitted_adapter.attach_frame(splitted_adapter_frame)
-
-        @frames[_row.to_i][_col.to_i] = nil
-       # @domains[_row.to_i][_col.to_i] = nil
-        @panels.delete(_domain)
-      else
-        p "quarto quadrante"
-        source_save = Hash.new
-        source_save.update(@panels[other_dom]['sons'])
-        source_save.each{|name,ffw|
-          unregister_panel(ffw, false, false)
-        }
-        splitted_adapter.detach_frame
-        splitted_adapter.destroy
-        @panels[other_dom]['root']=splitted_adapter_frame 
-
-        @frames[_row.to_i][_col.to_i] = nil
-       # @domains[_row.to_i][_col.to_i] = nil
-        build_titled_frame(other_dom)
-        @panels.delete(_domain)
-  
-        source_save.each{|name,ffw|
-          ffw.domain = other_dom
-          register_panel(ffw, ffw.hinner_frame)
-        }
-        #-----
-        parent_splitted_adapter = find_splitted_frame(@panels[other_dom]['root'])
-        if  parent_splitted_adapter
-          @panels[other_dom]['splitted_frames']=parent_splitted_adapter
-        else
-          @panels[other_dom]['splitted_frames']= nil
-        end
-        other_row,other_col = other_dom.split('.')
-        @frames[other_row.to_i][other_col.to_i] = splitted_adapter_frame
-       # @domains[other_row.to_i][other_col.to_i] = other_dom
-#        if vertical
-#          @frames[_row.to_i][_col.to_i-1] = splitted_adapter_frame
-#         # @domains[_row.to_i][_col.to_i-1] = other_dom
-#        else
-#          @frames[_row.to_i-1][_col.to_i] = splitted_adapter_frame
-#         # @domains[_row.to_i-1][_col.to_i] = other_dom
-#        end
-      end
-
-      if vertical
-        shift_left(_row.to_i,_col.to_i)
-      else
-        shift_top(_row.to_i,_col.to_i)
-      end
-    end 
-    build_invert_menu(true)
-  end
 
   def find_splitted_frame(_start_frame)
     splitted_frame = _start_frame
@@ -2748,8 +2505,8 @@ class ArcadiaLayout
   
   def build_titled_frame(domain)
     if @panels[domain]
-      tframe = TkTitledFrame.new(@panels[domain]['root']).place('x'=>0, 'y'=>0,'relheight'=>1, 'relwidth'=>1)
-      mb = tframe.add_menu_button('ext')
+      tframe = TkTitledFrameAdapter.new(@panels[domain]['root']).place('x'=>0, 'y'=>0,'relheight'=>1, 'relwidth'=>1)
+      mb = tframe.add_fixed_menu_button('ext')
       # add commons item
       menu = mb.cget('menu')
       add_commons_menu_items(domain, menu)
@@ -2807,10 +2564,10 @@ class ArcadiaLayout
   end
 
   def change_domain(_target_domain, _source_name)
-    tt1= @panels[_target_domain]['root'].top_text
+    #tt1= @panels[_target_domain]['root'].top_text
     source_domain = @wrappers[_source_name].domain
     source_has_domain = !source_domain.nil?
-    tt2= @panels[source_domain]['root'].top_text if source_has_domain
+    #tt2= @panels[source_domain]['root'].top_text if source_has_domain
     if @arcadia.conf('layout.exchange_panel_if_no_tabbed')=='true' && source_has_domain && @panels[source_domain]['sons'].length ==1 && @panels[_target_domain]['sons'].length > 0
       # change ------
       ffw1 = raised_fixed_frame(_target_domain)
@@ -2821,20 +2578,29 @@ class ArcadiaLayout
       ffw2.domain = _target_domain
       register_panel(ffw1, ffw1.hinner_frame) if ffw1
       register_panel(ffw2, ffw2.hinner_frame)
-      @panels[_target_domain]['root'].top_text(tt2)
-      @panels[source_domain]['root'].top_text(tt1)
+      #@panels[_target_domain]['root'].top_text(tt2)
+      #@panels[source_domain]['root'].top_text(tt1)
+      @panels[_target_domain]['root'].save_caption(ffw2.name, @panels[source_domain]['root'].last_caption(ffw2.name))
+      @panels[source_domain]['root'].save_caption(ffw1.name, @panels[_target_domain]['root'].last_caption(ffw1.name))
+      @panels[_target_domain]['root'].restore_caption(ffw2.name)
+      @panels[source_domain]['root'].restore_caption(ffw1.name)
+      @panels[_target_domain]['root'].change_adapter(ffw2.name, @panels[source_domain]['root'].forge_transient_adapter(ffw2.name))
+      @panels[source_domain]['root'].change_adapter(ffw1.name, @panels[_target_domain]['root'].forge_transient_adapter(ffw1.name))
     elsif source_has_domain && @panels[source_domain]['sons'].length >= 1
       ffw2 = @panels[source_domain]['sons'][_source_name]
       unregister_panel(ffw2, false, false)
       ffw2.domain = _target_domain
       register_panel(ffw2, ffw2.hinner_frame)
-      @panels[_target_domain]['root'].top_text(tt2)
-      @panels[source_domain]['root'].top_text('')
+      #@panels[_target_domain]['root'].top_text(tt2)
+      #@panels[source_domain]['root'].top_text('')
+      @panels[_target_domain]['root'].save_caption(ffw2.name, @panels[source_domain]['root'].last_caption(ffw2.name))
+      @panels[_target_domain]['root'].restore_caption(ffw2.name)
+      @panels[_target_domain]['root'].change_adapter(ffw2.name, @panels[source_domain]['root'].forge_transient_adapter(ffw2.name))
     elsif !source_has_domain
       ffw2 = @wrappers[_source_name]
       ffw2.domain = _target_domain
       register_panel(ffw2, ffw2.hinner_frame)
-      @panels[_target_domain]['root'].top_text('')
+      #@panels[_target_domain]['root'].top_text('')
     end
     # refresh -----
     build_invert_menu
@@ -2874,7 +2640,7 @@ class ArcadiaLayout
     @panels.keys.each{|dom|
       if  dom != '_domain_root_' && dom != _ffw.domain && @panels[dom] && @panels[dom]['root']
         titledFrame = @panels[dom]['root']
-        if titledFrame.instance_of?(TkTitledFrame)
+        if titledFrame.instance_of?(TkTitledFrameAdapter)
           menu = @panels[dom]['root'].menu_button('ext').cget('menu')
           menu.insert('0',:command,
                 :label=>_ffw.title,
@@ -2888,7 +2654,7 @@ class ArcadiaLayout
     }
     if @panels[_ffw.domain]
       titledFrame = @panels[_ffw.domain]['root']
-      if titledFrame.instance_of?(TkTitledFrame)
+      if titledFrame.instance_of?(TkTitledFrameAdapter)
         mymenu = titledFrame.menu_button('ext').cget('menu')
         index = mymenu.index('end').to_i
         if @panels.keys.length > 2
@@ -2916,7 +2682,7 @@ class ArcadiaLayout
     @panels.keys.each{|dom|
       if dom != '_domain_root_' && @panels[dom] && @panels[dom]['root']
         titledFrame = @panels[dom]['root']
-        if titledFrame.instance_of?(TkTitledFrame)
+        if titledFrame.instance_of?(TkTitledFrameAdapter)
           menu = titledFrame.menu_button('ext').cget('menu')
           if refresh_commons_items
             @panels[dom]['root'].menu_button('ext').cget('menu').delete('0','end')
@@ -2958,23 +2724,23 @@ class ArcadiaLayout
     if pan!=nil
       num = pan['sons'].length
       if @headed
+        root_frame = pan['root'].frame
         pan['root'].title(_title)
-        if !pan['root'].frame.instance_of?(TkFrameAdapter) && num==0
+        pan['root'].restore_caption(_name)
+   	    pan['root'].change_adapter_name(_name)
+        if !root_frame.instance_of?(TkFrameAdapter) && num==0
           if _adapter
             adapter = _adapter
           else
             adapter = TkFrameAdapter.new(self.root, Arcadia.style('frame'))
           end
-          adapter.attach_frame(pan['root'].frame)
+          adapter.attach_frame(root_frame)
           adapter.raise
-          #@wrappers[_name]=wrapper
         end
-        root_frame = pan['root'].frame
       else
         root_frame = pan['root']
       end
       if (num == 0 && @autotab)
-        #api = ArcadiaPanelInfo.new(_name,_title,wrapper,_ffw)
         pan['sons'][_name] = _ffw
         process_frame(_ffw)
         return adapter
@@ -2991,7 +2757,8 @@ class ArcadiaLayout
             'text'=>api.title,
             'raisecmd'=>proc{
   					    pan['root'].title(api.title)
-  					    pan['root'].top_text('') 
+  					    pan['root'].restore_caption(api.name) 
+  					    pan['root'].change_adapter_name(api.name)
          	         Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>pan['sons'][api.name].extension_name, 'frame_name'=>pan['sons'][api.name].name))
 #               changed
 #               notify_observers('RAISE', api.name)
@@ -3011,7 +2778,9 @@ class ArcadiaLayout
         _panel = pan['notebook'].insert('end',_name , 
         		'text'=>_title, 
           'raisecmd'=>proc{
-					  pan['root'].title(_title)            
+            pan['root'].title(_title)            
+            pan['root'].restore_caption(_name) 
+            pan['root'].change_adapter_name(_name)
       	     Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>_ffw.extension_name, 'frame_name'=>_ffw.name))
 #            changed
 #            notify_observers('RAISE', _name)
@@ -3064,9 +2833,13 @@ class ArcadiaLayout
     if @panels[_domain_name]['sons'].length == 1
       w = @panels[_domain_name]['sons'].values[0].hinner_frame
       t = @panels[_domain_name]['sons'].values[0].title
+      n = @panels[_domain_name]['sons'].values[0].name
       w.detach_frame
       w.attach_frame(@panels[_domain_name]['root'].frame)
       @panels[_domain_name]['root'].title(t)
+      @panels[_domain_name]['root'].restore_caption(n)
+      @panels[_domain_name]['root'].change_adapter_name(n)
+
       @panels[_domain_name]['notebook'].destroy
       @panels[_domain_name]['notebook']=nil
     elsif @panels[_domain_name]['sons'].length > 1
@@ -3078,6 +2851,7 @@ class ArcadiaLayout
       #p "unregister #{_name} ------> 5"
     elsif @panels[_domain_name]['sons'].length == 0
       @panels[_domain_name]['root'].title('')
+      @panels[_domain_name]['root'].top_text('')
     end
     build_invert_menu if refresh_menu
   end
@@ -3145,7 +2919,7 @@ class ArcadiaLayout
     ret = _frame
 #    child = TkWinfo.children(_frame)[0]
     TkWinfo.children(_frame).each{|child|
-      if child.instance_of?(TkTitledFrame)
+      if child.instance_of?(TkTitledFrameAdapter)
         ret = child.frame
         break
       end
