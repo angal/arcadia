@@ -1,8 +1,8 @@
 = Arcadia Ide
-version 0.9.0
+version 0.9.1
 
 by Antonio Galeone
-on Sep 19, 2010
+on Oct 19, 2010
 
 
 == About
@@ -16,16 +16,16 @@ Some of Arcadia ide project features include:
 * Working on any platform where ruby and tcl-tk work.
 * Highly extensibility architecture.
 
-== In this release 0.9.0
+== In this release 0.9.1
     
 [Improvements]
 	commons: 
-	  - a lot of bug-fixing
-	  - new default theme = dark
-	  - auto-hide scrollbar and auto post menu
+	  - bug-fixing
 	new features:
-	  - added process monitor (possibility to kill running sub process)
-	  - added first release of a configurable runners management (possibility to choose runner for current file)
+	  editor 
+	    - added a button for close current tab
+	    - added menu button for quick file selection
+	    - "Edit/Prettify Current" now works
 
 == Dependencies
   - rubygems
