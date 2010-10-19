@@ -1659,6 +1659,7 @@ module TkScrollableWidget
       'relwidth'=>1,
       'bordermode'=>_border_mode
     )
+    @widget.raise
     if @v_scroll_on
       show_v_scroll(true)
     end

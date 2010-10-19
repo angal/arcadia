@@ -1024,7 +1024,6 @@ class ArcadiaMainToolbar < ArcadiaUserControl
         height 20
         helptext  _hint if _hint
         text _caption if _caption
-        
       }
       if _args['context_path'] && _args['last_item_for_context']
         @item_obj.pack('after'=>_args['last_item_for_context'].item_obj, 'side' =>'left', :padx=>2, :pady=>0)
