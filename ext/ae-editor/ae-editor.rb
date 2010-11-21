@@ -1284,7 +1284,7 @@ class AgEditor
           _buffer = @text.get(_begin_index, 'insert')
           _buffer_ini_length = _buffer.length
           @raised_listbox_frame.place('x'=>_xroot,'y'=>_yroot, 'width'=>_width, 'height'=>_height)
-          @raised_listbox.extend(TkScrollableWidget).show(0,0,'inside') 
+          @raised_listbox.extend(TkScrollableWidget).show(0,0) 
           @raised_listbox.focus
           #@raised_listbox.activate(0)
           @raised_listbox.select(1)
@@ -3358,7 +3358,7 @@ class AgMultiEditor < ArcadiaExt
         entry_hash[:dir]= _event.dir if _event.dir
         entry_hash[:title]= "#{bn}"
         
-        Arcadia.persistent("runners.#{bn}", entry_hash.to_s)
+        Arcadia.persistent("runners.#{bn}", entry_hash.inspect)
         # here add new menu' item
         mr = Arcadia.menu_root('runcurr')
         if mr
@@ -3368,7 +3368,7 @@ class AgMultiEditor < ArcadiaExt
             )
           }
           exts = ''
-          run = Application.runner(entry_hash[:runner])
+          run = Arcadia.runner(entry_hash[:runner])
           if run
             file_exts = run[:file_exts]
           end

@@ -11,15 +11,15 @@ class BWidgetTreePatched < Tk::BWidget::Tree
   def open?(node)
     bool(self.itemcget(tagid(node), 'open'))
   end
-    
+
   def areabind(context, *args)
     if TkComm._callback_entry?(args[0]) || !block_given?
       cmd = args.shift
     else
       cmd = Proc.new
     end
-    _bind_for_event_class(Event_for_Items, [path, 'bindArea'], 
-                          context, cmd, *args)
+    _bind_for_event_class(Event_for_Items, [path, 'bindArea'],
+    context, cmd, *args)
     self
   end
 
@@ -29,8 +29,8 @@ class BWidgetTreePatched < Tk::BWidget::Tree
     else
       cmd = Proc.new
     end
-    _bind_append_for_event_class(Event_for_Items, [path, 'bindArea'], 
-                                 context, cmd, *args)
+    _bind_append_for_event_class(Event_for_Items, [path, 'bindArea'],
+    context, cmd, *args)
     self
   end
 
@@ -43,6 +43,9 @@ class BWidgetTreePatched < Tk::BWidget::Tree
     _bindinfo_for_event_class(Event_for_Items, [path, 'bindArea'], *args)
   end
 
+#  def selectcommand(_proc=nil)
+#    self.configure('selectcommand'=>_proc)
+#  end
 end
 
 
@@ -52,11 +55,11 @@ class TkApplication < Application
     super(_application_params)
     @tcltk_info = TclTkInfo.new
   end
-  
+
   def self.sys_info
-   "#{super}\n[TclTk version = #{TclTkInfo.new.level}]"
+    "#{super}\n[TclTk version = #{TclTkInfo.new.level}]"
   end
-  
+
   def run
     Tk.appname(self['applicationParams'].name)
     Tk.mainloop
@@ -77,18 +80,18 @@ module TkMovable
     @moving_obj.bind_remove("B1-Motion")
     @moving_obj.bind_remove("ButtonPress-1")
   end
-  
+
   def moving_do_press(_x, _y)
-  		@x0 = _x
-  		@y0 = _y
+    @x0 = _x
+    @y0 = _y
   end
-   
+
   def moving_do_move_obj(_x, _y)
     _x = TkPlace.info(@moved_obj)['x'] + _x - @x0
     _y = TkPlace.info(@moved_obj)['y'] + _y - @y0
     @moved_obj.place('x'=>_x, 'y'=>_y)
   end
-  
+
 end
 
 module TkResizable
@@ -107,12 +110,12 @@ module TkResizable
     @moving_obj.bind_remove("B1-Motion")
     @moving_obj.bind_remove("ButtonPress-1")
   end
-  
+
   def resizing_do_press(_x, _y)
-  		@x0 = _x
-  		@y0 = _y
+    @x0 = _x
+    @y0 = _y
   end
-   
+
   def resizing_do_move_obj(_x, _y)
     _width0 = TkPlace.info(@moved_obj)['width']
     _height0 = TkPlace.info(@moved_obj)['height']
@@ -122,7 +125,7 @@ module TkResizable
     _height = MIN_HEIGHT if _height < MIN_HEIGHT
     @moved_obj.place('width'=>_width, 'height'=>_height)
   end
-  
+
 end
 
 
@@ -247,27 +250,27 @@ class TkFrameAdapter < TkFrame
     @movable = true
     start_moving(_obj, self)
   end
-  
+
   def detach_frame
-    if @frame 
+    if @frame
       if @movable
-        @frame.bind_remove("Configure") 
-        @frame.bind_remove("Map") 
-        @frame.bind_remove("Unmap") 
+        @frame.bind_remove("Configure")
+        @frame.bind_remove("Map")
+        @frame.bind_remove("Unmap")
       end
       @frame = nil
       self.unmap
     end
   end
-  
+
   def unmap
     if is_place?
       self.unplace
     elsif is_pack?
       self.unpack
-    end  
+    end
   end
-  
+
   def attach_frame(_frame)
     @frame = _frame
     @frame_manager = TkWinfo.manager(@frame)
@@ -287,15 +290,15 @@ class TkFrameAdapter < TkFrame
   def is_pack?
     @frame_manager == 'pack'
   end
-  
+
   def refresh(_x=0, _y=0)
-    if is_place? 
+    if is_place?
       place('in'=>@frame, 'x'=>_x, 'y'=>_y, 'relheight'=> 1, 'relwidth'=>1, 'bordermode'=>'outside')
     elsif is_pack?
       pack('in'=>@frame, 'fill'=>'both', 'expand'=>true)
     end
   end
-  
+
 end
 
 class AGTkSplittedFrames < TkFrameAdapter
@@ -340,19 +343,19 @@ class AGTkVSplittedFrames < AGTkSplittedFrames
     @frame1 = @left_frame
     if perc
       p_width = TkWinfo.screenwidth(self)
-    		x = (p_width/100*width).to_i
+      x = (p_width/100*width).to_i
     else
-      x = width  
+      x = width
     end
-    
+
     @left_frame.place(
-      'relx' => 0,
-      'x' => 0,
-      'y' => '0',
-      'relheight' => '1',
-      'rely' => 0,
-      'bordermode' => 'inside',
-      'width' => x
+    'relx' => 0,
+    'x' => 0,
+    'y' => '0',
+    'relheight' => '1',
+    'rely' => 0,
+    'bordermode' => 'inside',
+    'width' => x
     )
     @left_frame_obj = AGTkObjPlace.new(@left_frame, 'x', nil, false)
     @left_frame_obj.width = x
@@ -363,47 +366,47 @@ class AGTkVSplittedFrames < AGTkSplittedFrames
     @splitter_frame = TkFrame.new(self, Arcadia.style('splitter'))
 
     @splitter_frame.place(
-      'relx' => 0,
-      'x' => x,
-      'y' => '0',
-      'relheight' => '1',
-      'rely' => 0,
-      'bordermode' => 'inside',
-      'width' => @slen
+    'relx' => 0,
+    'x' => x,
+    'y' => '0',
+    'relheight' => '1',
+    'rely' => 0,
+    'bordermode' => 'inside',
+    'width' => @slen
     )
-    
+
     if @user_control
       @splitter_frame.bind_append(
-        "ButtonRelease-1",
-        proc{do_resize}
+      "ButtonRelease-1",
+      proc{do_resize}
       )
       _xbutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
         background '#4966d7'
       }
       _xbutton.place(
-        'x' => 0,
-        'y' => 0,
-        'relwidth' => 1,
-        'bordermode' => 'outside',
-        'height' => 20
+      'x' => 0,
+      'y' => 0,
+      'relwidth' => 1,
+      'bordermode' => 'outside',
+      'height' => 20
       )
       _xbutton.bind_append(
-        "ButtonPress-1",
-        proc{hide_left}
+      "ButtonPress-1",
+      proc{hide_left}
       )
       _ybutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
         background '#118124'
       }
       _ybutton.place(
-        'x' => 0,
-        'y' => 21,
-        'bordermode' => 'outside',
-        'height' => 20,
-        'relwidth' => 1
+      'x' => 0,
+      'y' => 21,
+      'bordermode' => 'outside',
+      'height' => 20,
+      'relwidth' => 1
       )
       _ybutton.bind_append(
-        "ButtonPress-1",
-        proc{hide_right}
+      "ButtonPress-1",
+      proc{hide_right}
       )
     end
     #-----
@@ -417,14 +420,14 @@ class AGTkVSplittedFrames < AGTkSplittedFrames
     @right_frame = TkFrame.new(self, Arcadia.style('panel'))
     @frame2 = @right_frame
     @right_frame.place(
-      'relwidth' => 1,
-      'relx' => 0,
-      'x' => x,
-      'y' => 0,
-      'width' => -x,
-      'relheight' => 1,
-      'rely' => 0,
-      'bordermode' => 'inside'
+    'relwidth' => 1,
+    'relx' => 0,
+    'x' => x,
+    'y' => 0,
+    'width' => -x,
+    'relheight' => 1,
+    'rely' => 0,
+    'bordermode' => 'inside'
     )
     @right_frame_obj = AGTkObjPlace.new(@right_frame, 'x', nil, false)
     @right_frame_obj.width = -x
@@ -483,7 +486,7 @@ class AGTkVSplittedFrames < AGTkSplittedFrames
     @right_frame_obj.width = - _w - @slen
     @right_frame_obj.amove(_w + @slen,0)
   end
-  
+
   def is_left_hide?
     @left_frame_obj.w == 0
   end
@@ -553,21 +556,21 @@ class AGTkOSplittedFrames < AGTkSplittedFrames
   def initialize(parent=nil, frame=nil, height=10, slen=5, perc=false, user_control=true, keys=nil)
     super(parent, frame, height, slen, user_control, keys)
     @top_frame = TkFrame.new(self, Arcadia.style('panel')){
-     # relief 'flat'
+      # relief 'flat'
     }
     @frame1 = @top_frame
     if perc
-      p_height = TkWinfo.screenheight(self)    
-    		y = (p_height/100*height).to_i
+      p_height = TkWinfo.screenheight(self)
+      y = (p_height/100*height).to_i
     else
       y = height
     end
     @top_frame.place(
-      'relwidth' => '1',
-      'bordermode' => 'inside',
-      'height' => y
+    'relwidth' => '1',
+    'bordermode' => 'inside',
+    'height' => y
     )
-    
+
     @top_frame_obj = AGTkObjPlace.new(@top_frame, 'y', nil, false)
     @top_frame_obj.width = 0
     @top_frame_obj.height = y
@@ -578,13 +581,13 @@ class AGTkOSplittedFrames < AGTkSplittedFrames
       #border 1
     }
     @splitter_frame.place(
-      'relx' => 0,
-      'x' => 0,
-      'y' => y,
-      'relwidth' => '1',
-      'rely' => 0,
-      'bordermode' => 'inside',
-      'height' => @slen
+    'relx' => 0,
+    'x' => 0,
+    'y' => y,
+    'relwidth' => '1',
+    'rely' => 0,
+    'bordermode' => 'inside',
+    'height' => @slen
     )
     @splitter_frame_obj = AGTkObjPlace.new(@splitter_frame, 'y', nil, user_control)
     @splitter_frame_obj.width = 0
@@ -593,18 +596,18 @@ class AGTkOSplittedFrames < AGTkSplittedFrames
     @splitter_frame_obj.relheight = 0
     y = y + @slen
     @bottom_frame = TkFrame.new(self, Arcadia.style('panel')){
-     # relief 'flat'
+      # relief 'flat'
     }
     @frame2 = @bottom_frame
     @bottom_frame.place(
-      'relwidth' => 1,
-      'relx' => 0,
-      'x' => 0,
-      'y' => y,
-      'height' => -y,
-      'relheight' => 1,
-      'rely' => 0,
-      'bordermode' => 'inside'
+    'relwidth' => 1,
+    'relx' => 0,
+    'x' => 0,
+    'y' => y,
+    'height' => -y,
+    'relheight' => 1,
+    'rely' => 0,
+    'bordermode' => 'inside'
     )
     @bottom_frame_obj = AGTkObjPlace.new(@bottom_frame, 'y', nil, false)
     @bottom_frame_obj.width = 0
@@ -613,40 +616,40 @@ class AGTkOSplittedFrames < AGTkSplittedFrames
     @bottom_frame_obj.relheight = 1
     if @user_control
       @splitter_frame.bind_append(
-        "B1-Motion",
-        proc{@splitter_frame.raise}
+      "B1-Motion",
+      proc{@splitter_frame.raise}
       )
       @splitter_frame.bind_append(
-        "ButtonRelease-1",
-        proc{do_resize}
+      "ButtonRelease-1",
+      proc{do_resize}
       )
       _xbutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
         background '#4966d7'
       }
       _xbutton.place(
-        'x' => 0,
-        'y' => 0,
-        'relheight' => 1,
-        'bordermode' => 'outside',
-        'width' => 20
+      'x' => 0,
+      'y' => 0,
+      'relheight' => 1,
+      'bordermode' => 'outside',
+      'width' => 20
       )
       _xbutton.bind_append(
-        "ButtonPress-1",
-        proc{hide_top}
+      "ButtonPress-1",
+      proc{hide_top}
       )
       _ybutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
         background '#118124'
       }
       _ybutton.place(
-        'x' => 21,
-        'y' => 0,
-        'bordermode' => 'outside',
-        'width' => 20,
-        'relheight' => 1
+      'x' => 21,
+      'y' => 0,
+      'bordermode' => 'outside',
+      'width' => 20,
+      'relheight' => 1
       )
       _ybutton.bind_append(
-        "ButtonPress-1",
-        proc{hide_bottom}
+      "ButtonPress-1",
+      proc{hide_bottom}
       )
     end
     @state = 'middle'
@@ -879,10 +882,10 @@ class TkTitledFrame < TkBaseTitledFrame
   def create_right_label
     __create_right_label(@top)
   end
-  
+
   def __create_left_label(_frame)
     @title.nil??_text_title ='':_text_title = @title+' :: '
-    _img=@img 
+    _img=@img
     TkLabel.new(_frame, Arcadia.style('titlelabel')){
       text _text_title
       anchor  'w'
@@ -901,7 +904,7 @@ class TkTitledFrame < TkBaseTitledFrame
       pack('side'=> 'left','anchor'=> 'e')
     }
   end
-  
+
   def title(_text=nil)
     if _text.nil?
       return @title
@@ -926,11 +929,11 @@ class TkTitledFrame < TkBaseTitledFrame
   def save_caption(_name, _caption)
     @right_labels_text[_name] = _caption
   end
-    
+
   def last_caption(_name)
     @right_labels_text[_name]
-  end  
-    
+  end
+
   def restore_caption(_name)
     if @right_labels_text[_name]
       top_text(@right_labels_text[_name])
@@ -939,9 +942,9 @@ class TkTitledFrame < TkBaseTitledFrame
     end
   end
 
-#  def top_text(_text)
-#    @right_label.text(_text)
-#  end
+  #  def top_text(_text)
+  #    @right_label.text(_text)
+  #  end
 
   def head_buttons
     @bmaxmin = add_fixed_button('[ ]',proc{resize}, W_MAX_GIF)
@@ -965,7 +968,7 @@ class TkTitledFrame < TkBaseTitledFrame
     end
     self.raise
   end
-  
+
   def maximized?
     @state == 'maximize'
   end
@@ -1010,20 +1013,20 @@ end
 #    @god_parent = god_parent
 #    #add_moved_by(self)
 #  end
-#  
+#
 #  def add_moved_by(_obj)
 #    start_moving(_obj, self)
 #  end
 #
 #  def detach_frame
-#    if @frame 
-#      @frame.bind_remove("Configure") 
-#      @frame.bind_remove("Map") 
-#      @frame.bind_remove("Unmap") 
+#    if @frame
+#      @frame.bind_remove("Configure")
+#      @frame.bind_remove("Map")
+#      @frame.bind_remove("Unmap")
 #      @frame = nil
 #    end
 #  end
-#  
+#
 #  def attach_frame(_frame)
 #    @frame = _frame
 #    init
@@ -1040,9 +1043,9 @@ end
 #    @last_y = 0
 #    @last_w = 100
 #    @last_h = 100
-#    reset_offset    
-#  end  
-#    
+#    reset_offset
+#  end
+#
 #  def reset
 #    w = TkPlace.info(@frame)['width']
 #    h = TkPlace.info(@frame)['height']
@@ -1050,7 +1053,7 @@ end
 #    y = TkPlace.info(@frame)['y']
 #    refresh(x,y,w,h)
 #  end
-#  
+#
 #  def reset_offset
 #    @x0=0
 #    @y0=0
@@ -1062,9 +1065,9 @@ end
 #      @x0=@x0+xc if xc
 #      @y0=@y0+yc if yc
 #      parent= TkWinfo.parent(parent)
-#    end 
+#    end
 #  end
-#  
+#
 #  def refresh(_x=nil, _y=nil, _w=nil, _h=nil)
 #    reset_offset
 #    _x=@last_x if _x.nil?
@@ -1092,11 +1095,11 @@ end
 #    @wrapper.attach_frame(@frame)
 #    @frame=@wrapper
 #  end
-#  
+#
 #  def change_wrapper(_new_wrapper)
 #    @wrapper = _new_wrapper
 #    @frame = _new_wrapper
-#  end  
+#  end
 #
 #  #  def initialize(root_parent=nil, parent=nil, title=nil, img=nil , keys=nil)
 #  #    @root_parent = root_parent
@@ -1106,7 +1109,7 @@ end
 #  #    #@wrapper.add_moved_by(@top)
 #  #    @wrapper.attach_frame(parent)
 #  #  end
-#  
+#
 #end
 
 class TkTitledFrameAdapter < TkTitledFrame
@@ -1122,23 +1125,23 @@ class TkTitledFrameAdapter < TkTitledFrame
     }
     @transient_frame_adapter = Hash.new
   end
-  
+
   def forge_transient_adapter(_name)
     if @transient_frame_adapter[_name].nil?
-      @transient_frame_adapter[_name] = TkFrameAdapter.new(Arcadia.layout.root, 
-        Arcadia.style('frame').update({'background'=>  Arcadia.conf('titlelabel.background')}))
+      @transient_frame_adapter[_name] = TkFrameAdapter.new(Arcadia.layout.root,
+      Arcadia.style('frame').update({'background'=>  Arcadia.conf('titlelabel.background')}))
       __attach_adapter(@transient_frame_adapter[_name])
       @transient_frame_adapter[_name].raise
     end
     @transient_frame_adapter[_name]
   end
-  
+
   def __attach_adapter(_adapter)
     @last_attached_adapter.detach_frame if @last_attached_adapter
     _adapter.attach_frame(@transient_frame)
     @last_attached_adapter = _adapter
   end
-  
+
   def change_adapter(_name, _adapter)
     @transient_frame_adapter[_name] = _adapter
     @transient_frame_adapter[_name].detach_frame
@@ -1165,7 +1168,7 @@ class TkTitledFrameAdapter < TkTitledFrame
     forge_transient_adapter(_sender_name)
     __add_sep(_width, @transient_frame_adapter[_sender_name])
   end
-  
+
 end
 
 
@@ -1214,14 +1217,14 @@ class TkFloatTitledFrame < TkBaseTitledFrame
     start_moving(frame, self)
     start_resizing(@resizing_label, self)
     @grabbed = false
-#    frame.bind_append('KeyPress'){|e|
-#      p e.keysym
-#      case e.keysym
-#        when 'Escape'
-#          p "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
-#          hide
-#      end
-#    }
+    #    frame.bind_append('KeyPress'){|e|
+    #      p e.keysym
+    #      case e.keysym
+    #        when 'Escape'
+    #          p "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
+    #          hide
+    #      end
+    #    }
   end
 
   def title(_text)
@@ -1231,24 +1234,24 @@ class TkFloatTitledFrame < TkBaseTitledFrame
   def on_close=(_proc)
     add_fixed_button('X', _proc, TAB_CLOSE_GIF)
   end
-  
+
   def hide
-    @manager = TkWinfo.manager(self) 
+    @manager = TkWinfo.manager(self)
     if @manager == 'place'
-    		@x_place = TkPlace.info(self)['x']
-    		@y_place = TkPlace.info(self)['y']
-    		@width_place = TkPlace.info(self)['width']
-    		@height_place = TkPlace.info(self)['height']
-    		self.unplace
+      @x_place = TkPlace.info(self)['x']
+      @y_place = TkPlace.info(self)['y']
+      @width_place = TkPlace.info(self)['width']
+      @height_place = TkPlace.info(self)['height']
+      self.unplace
     end
-    
+
     if @grabbed
       self.grab("release")
       @grabbed = false
     end
     self
   end
-  
+
   def show
     if @manager == 'place'
       self.place('x'=>@x_place, 'y'=>@y_place, 'width'=>@width_place, 'height'=>@height_place)
@@ -1261,11 +1264,11 @@ class TkFloatTitledFrame < TkBaseTitledFrame
     @grabbed = true
     self.grab("set")
   end
-  
-#  def show_modal
-#    # not implemented
-#  end
-  
+
+  #  def show_modal
+  #    # not implemented
+  #  end
+
   def head_buttons
   end
 
@@ -1280,14 +1283,14 @@ class TkProgressframe < TkFloatTitledFrame
     @progress = TkVariable.new
     @progress.value = -1
     Tk::BWidget::ProgressBar.new(self, :width=>150, :height=>10,
-        :background=>'red',
-        :foreground=>'blue',
-   		   :variable=>@progress,
-     		 :borderwidth=>0,
-      	 :relief=>'flat',
-        :maximum=>_max).place('width' => '150','x' => 25,'y' => 30,'height' => 15)
-     
-    @buttons_frame = TkFrame.new(self).pack('fill'=>'x', 'side'=>'bottom')	
+    :background=>'red',
+    :foreground=>'blue',
+    :variable=>@progress,
+    :borderwidth=>0,
+    :relief=>'flat',
+    :maximum=>_max).place('width' => '150','x' => 25,'y' => 30,'height' => 15)
+
+    @buttons_frame = TkFrame.new(self).pack('fill'=>'x', 'side'=>'bottom')
 
     @b_cancel = TkButton.new(@buttons_frame){|_b_go|
       default  'disabled'
@@ -1299,11 +1302,11 @@ class TkProgressframe < TkFloatTitledFrame
 
     place('x'=>100,'y'=>100,'height'=> 120,'width'=> 200)
   end
-  
+
   def quit
     #self.destroy
   end
-  
+
   def progress(_incr=1)
     @progress.numeric += _incr
   end
@@ -1314,7 +1317,7 @@ class TkProgressframe < TkFloatTitledFrame
 end
 
 class TkBuffersChoiseView < TkToplevel
-  
+
   def initialize
     super
     Tk.tk_call('wm', 'title', self, '...hello' )
@@ -1325,11 +1328,11 @@ class TkBuffersChoiseView < TkToplevel
       place('relwidth' => '1','relx' => 0,'x' => '0','y' => '0','relheight' => '1','rely' => 0,'height' => '0','bordermode' => 'inside','width' => '0')
     }
   end
-  
+
 end
 
 class TkBuffersChoise < TkBuffersChoiseView
-  
+
   def initialize
     super
     @lb.value= $arcadia['buffers.code.in_memory'].keys
@@ -1342,7 +1345,7 @@ class TkBuffersChoise < TkBuffersChoiseView
     })
     raise
   end
-  
+
 end
 
 class TclTkInfo
@@ -1374,39 +1377,39 @@ class TkWidgetFactory
       initialize_tile_widgets if @use_tile
     end
   end
-  
+
   def initialize_tile_widgets
     #TScrollbar
     Tk::Tile::Style.configure("Arcadia.TScrollbar", Arcadia.style('scrollbar'))
-    Tk::Tile::Style.map("Arcadia.TScrollbar", 
-                      :background=>[:pressed, '#694418', :disabled, '#333333', :active, Arcadia.style('scrollbar')['activebackground']], 
-                      :arrowcolor=>[:pressed, '#FEF7CB', :disabled, Arcadia.style('scrollbar')['background'], :active, Arcadia.style('scrollbar')['activebackground']],  
-                      :relief=>[:pressed, :sunken])
+    Tk::Tile::Style.map("Arcadia.TScrollbar",
+    :background=>[:pressed, '#694418', :disabled, '#333333', :active, Arcadia.style('scrollbar')['activebackground']],
+    :arrowcolor=>[:pressed, '#FEF7CB', :disabled, Arcadia.style('scrollbar')['background'], :active, Arcadia.style('scrollbar')['activebackground']],
+    :relief=>[:pressed, :sunken])
 
-    Tk::Tile::Style.layout(Tk::Tile.style('Vertical', "Arcadia.TScrollbar"), 
-       ["Scrollbar.trough",{:sticky=>"nsew", :children=>[
-         "Scrollbar.uparrow",{:side=>:top, :sticky=>"we"}, 
-         "Scrollbar.downarrow", {:side=>:bottom, :sticky=>"we"}, 
-         "Scrollbar.thumb", {:sticky=>"nswe",:side=>:top, :border =>1, :expand=>true}]}]) 
+    Tk::Tile::Style.layout(Tk::Tile.style('Vertical', "Arcadia.TScrollbar"),
+    ["Scrollbar.trough",{:sticky=>"nsew", :children=>[
+      "Scrollbar.uparrow",{:side=>:top, :sticky=>"we"},
+      "Scrollbar.downarrow", {:side=>:bottom, :sticky=>"we"},
+    "Scrollbar.thumb", {:sticky=>"nswe",:side=>:top, :border =>1, :expand=>true}]}])
 
-    Tk::Tile::Style.layout(Tk::Tile.style('Horizontal', "Arcadia.TScrollbar"), 
-       ['Scrollbar.trough', {:children=>[
-         'Scrollbar.leftarrow',   {:side=>:left}, 
-         'Scrollbar.rightarrow', {:side=>:right}, 
-         'Scrollbar.thumb',  {:side=>:left, :expand=>true}]}])
+    Tk::Tile::Style.layout(Tk::Tile.style('Horizontal', "Arcadia.TScrollbar"),
+    ['Scrollbar.trough', {:children=>[
+      'Scrollbar.leftarrow',   {:side=>:left},
+      'Scrollbar.rightarrow', {:side=>:right},
+    'Scrollbar.thumb',  {:side=>:left, :expand=>true}]}])
 
-    #TFrame    
+    #TFrame
     #Tk::Tile::Style.configure(Tk::Tile::TFrame, Arcadia.style('panel'))
 
-    #TPaned    
+    #TPaned
     #Tk::Tile::Style.configure(Tk::Tile::TPaned, Arcadia.style('panel'))
-    
+
     #TEntry
     #Tk::Tile::Style.configure(Tk::Tile::TEntry, Arcadia.style('edit'))
 
     #TCombobox
     #Tk::Tile::Style.configure(Tk::Tile::TCombobox, Arcadia.style('combobox'))
-  
+
     #TLabel
     #Tk::Tile::Style.configure(Tk::Tile::TLabel, Arcadia.style('label'))
 
@@ -1421,16 +1424,16 @@ class TkWidgetFactory
     #TButton
     #Tk::Tile::Style.configure(Tk::Tile::TButton, Arcadia.style('button'))
   end
-  
+
   def scrollbar(_parent,_args=nil, &b)
     if @use_tile
       return Tk::Tile::Scrollbar.new(_parent,{:style=>"Arcadia.TScrollbar"}.update(_args), &b)
     else
       return TkScrollbar.new(_parent,Arcadia.style('scrollbar').update(_args), &b)
     end
-    
+
   end
-  
+
 end
 
 
@@ -1456,7 +1459,7 @@ module TkAutoPostMenu
   def self.included(_widget)
     _widget.__initialize_posting(_widget)
   end
-  
+
   def event_posting_on
     @event_posting_on = true
     @posting_on = false
@@ -1467,12 +1470,12 @@ module TkAutoPostMenu
     @posting_on = true
   end
 
-  
+
   def __initialize_posting(_widget=self)
-#    parent = TkWinfo.parent(_widget)
-#    parent.bind_append("Enter", proc{p "Enter parent"})
-#    parent.bind_append("Leave", proc{p "Leave parent"})
-    
+    #    parent = TkWinfo.parent(_widget)
+    #    parent.bind_append("Enter", proc{p "Enter parent"})
+    #    parent.bind_append("Leave", proc{p "Leave parent"})
+
     chs = TkWinfo.children(_widget)
     hh = 22
     @last_post = nil
@@ -1492,7 +1495,7 @@ module TkAutoPostMenu
             @last_clicked.unpost
             @last_clicked = nil
           end
-          
+
           ch.menu.post(x-rx,y-ry+hh)
 
           #just_posted = TkWinfo.containing(x, y+hh)
@@ -1503,26 +1506,26 @@ module TkAutoPostMenu
           @last_menu_posted.bind("Enter", proc{
             @last_menu_posted.bind("Leave", proc{
               if @posting_on
-              @last_post.unpost if @last_post
-              @last_post = nil
-              @last_menu_posted.bind("Enter", proc{})
-              @last_menu_posted.bind("Leave", proc{})
+                @last_post.unpost if @last_post
+                @last_post = nil
+                @last_menu_posted.bind("Enter", proc{})
+                @last_menu_posted.bind("Leave", proc{})
               end
             })
           })
           #@last_post = just_posted
         end
-        
+
         #@last_post=ch.menu
-        }, "%X %Y %x %y")
+      }, "%X %Y %x %y")
       ch.bind_append("Leave", proc{
         ch.configure("state"=>:normal, "relief"=>:flat)
         if @posting_on
           if @last_post
             _x = TkWinfo.x(@last_post)
             _y = TkWinfo.y(@last_post)
-            ch.event_generate("KeyPress", :keysym=>"Escape")  #if Tk.focus.kind_of?(TkMenu) &&  Tk.focus != ch.menu 
-            @last_post.post(_x,_y) if @last_clicked && @last_clicked == ch.menu 
+            ch.event_generate("KeyPress", :keysym=>"Escape")  #if Tk.focus.kind_of?(TkMenu) &&  Tk.focus != ch.menu
+            @last_post.post(_x,_y) if @last_clicked && @last_clicked == ch.menu
           end
           if @last_post!=ch.menu
             @last_post=ch.menu
@@ -1547,12 +1550,12 @@ module TkAutoPostMenu
         #@last_post.unpost
         #@last_post.post(0,0)
         #@last_post.set_focus
-        
+
       }, "%X %Y %x %y")
-      
+
     }
     _widget.bind_append("Leave", proc{
-      if @posting_on  && Tk.focus != @last_menu_posted 
+      if @posting_on  && Tk.focus != @last_menu_posted
         @last_post.unpost if @last_post
         @last_post=nil
         @posting_on = false if @event_posting_on
@@ -1560,17 +1563,17 @@ module TkAutoPostMenu
       TkAfter.new(1000,1, proc{
         one_post = false
         @m_show.each{|m,v|
-          one_post = v 
-          break if v 
+          one_post = v
+          break if v
         }
         @posting_on = one_post if @event_posting_on
       }).start
     })
-    
-    
+
+
     _widget.bind_append("1", proc{
-       @posting_on=true  if @event_posting_on
-     })
+      @posting_on=true  if @event_posting_on
+    })
 
   end
 end
@@ -1585,7 +1588,7 @@ module TkScrollableWidget
   def self.included(_widget)
     _widget.__initialize_scrolling(_widget)
   end
-  
+
   def __initialize_scrolling(_widget=self)
     @widget = _widget
     @parent = TkWinfo.parent(@widget)
@@ -1602,21 +1605,21 @@ module TkScrollableWidget
     @h_scroll.destroy
     @v_scroll.destroy
   end
-  
+
   def add_yscrollcommand(cmd=Proc.new)
     @v_scroll_command = cmd
-  end   
-  
+  end
+
   def do_yscrollcommand(first,last)
     if first != nil && last != nil
       delta = last.to_f - first.to_f
       if delta < 1 && delta > 0 && last != @last_y_last
         show_v_scroll
-	begin
-	  @v_scroll.set(first,last) #if TkWinfo.mapped?(@v_scroll)
-	rescue Exception => e
-     p "#{e.message}"
-	end
+        begin
+          @v_scroll.set(first,last) #if TkWinfo.mapped?(@v_scroll)
+        rescue Exception => e
+          p "#{e.message}"
+        end
       elsif delta == 1 || delta == 0
         hide_v_scroll
       end
@@ -1624,21 +1627,21 @@ module TkScrollableWidget
       @last_y_last = last if last.to_f < 1
     end
   end
-  
+
   def add_xscrollcommand(cmd=Proc.new)
     @h_scroll_command = cmd
-  end   
-  
+  end
+
   def do_xscrollcommand(first,last)
     if first != nil && last != nil
       delta = last.to_f - first.to_f
       if delta < 1 && delta > 0  && last != @last_x_last
         show_h_scroll
-	begin
+        begin
           @h_scroll.set(first,last) #if TkWinfo.mapped?(@h_scroll)
-      	rescue Exception => e
-           p "#{e.message}"
-	end
+        rescue Exception => e
+          p "#{e.message}"
+        end
       elsif  delta == 1 || delta == 0
         hide_h_scroll
       end
@@ -1646,18 +1649,20 @@ module TkScrollableWidget
       @last_x_last = last if last.to_f < 1
     end
   end
-  
-  def show(_x=0,_y=0,_border_mode='inside')
+
+  def show(_x=0,_y=0,_w=nil,_h=nil,_border_mode='inside')
     @x=_x
     @y=_y
+    _w != nil ? @w=_w : @w=-@x
+    _h != nil ? @h=_h : @h=-@y
     @widget.place(
-      'x'=>@x,
-      'y'=>@y,
-      'width' => -@x,
-      'height' => -@y,
-      'relheight'=>1,
-      'relwidth'=>1,
-      'bordermode'=>_border_mode
+    'x'=>@x,
+    'y'=>@y,
+    'width' => @w,
+    'height' => @h,
+    'relheight'=>1,
+    'relwidth'=>1,
+    'bordermode'=>_border_mode
     )
     @widget.raise
     if @v_scroll_on
@@ -1667,9 +1672,9 @@ module TkScrollableWidget
       show_h_scroll(true)
     end
     begin
-	arm_scroll_binding
+      arm_scroll_binding
     rescue  Exception => e
-	p "#{e.message}"
+      p "#{e.message}"
     end
   end
 
@@ -1679,15 +1684,15 @@ module TkScrollableWidget
     @v_scroll.unpack
     @h_scroll.unpack
   end
-  
+
   def arm_scroll_binding
-    @widget.yscrollcommand(proc{|first,last| 
+    @widget.yscrollcommand(proc{|first,last|
       do_yscrollcommand(first,last)
     })
     @v_scroll.command(proc{|*args|
       @widget.yview *args
     })
-    @widget.xscrollcommand(proc{|first,last| 
+    @widget.xscrollcommand(proc{|first,last|
       do_xscrollcommand(first,last)
     })
     @h_scroll.command(proc{|*args|
@@ -1701,13 +1706,14 @@ module TkScrollableWidget
     @v_scroll.command(proc{})
     @h_scroll.command(proc{})
   end
-  
+
   def show_v_scroll(_force=false)
     if _force || !@v_scroll_on
       begin
         @widget.place('width' => -@scroll_width-@x)
         @v_scroll.pack('side' => 'right', 'fill' => 'y')
         @v_scroll_on = true
+        @v_scroll.raise
       rescue RuntimeError => e
         p "RuntimeError : #{e.message}"
       end
@@ -1720,6 +1726,7 @@ module TkScrollableWidget
         @widget.place('height' => -@scroll_width-@y)
         @h_scroll.pack('side' => 'bottom', 'fill' => 'x')
         @h_scroll_on = true
+        @h_scroll.raise
       rescue RuntimeError => e
         p "RuntimeError : #{e.message}"
       end
@@ -1748,7 +1755,7 @@ module TkScrollableWidget
       rescue RuntimeError => e
         p "RuntimeError : #{e.message}"
       end
-    end  
+    end
   end
 
 end

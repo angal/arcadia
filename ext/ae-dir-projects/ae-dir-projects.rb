@@ -129,50 +129,13 @@ class DirProjects < ArcadiaExt
     do_close_folder_cmd = proc{|_node| do_close_folder(_node)}
     
 #	  @htree = Tk::BWidget::Tree.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
-	  @htree = Tk::BWidget::Tree.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
+	  @htree = BWidgetTreePatched.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
       showlines false
       deltay 18
       opencmd do_open_folder_cmd
       closecmd do_close_folder_cmd
       selectcommand do_select_item
     }
-    
-    class << @htree
-      def open?(node)
-        bool(self.itemcget(tagid(node), 'open'))
-      end
-    
-      def areabind(context, *args)
-        if TkComm._callback_entry?(args[0]) || !block_given?
-          cmd = args.shift
-        else
-          cmd = Proc.new
-        end
-        _bind_for_event_class(Event_for_Items, [path, 'bindArea'], 
-                              context, cmd, *args)
-        self
-      end
-    
-      def areabind_append(context, *args)
-        if TkComm._callback_entry?(args[0]) || !block_given?
-          cmd = args.shift
-        else
-          cmd = Proc.new
-        end
-        _bind_append_for_event_class(Event_for_Items, [path, 'bindArea'], 
-                                     context, cmd, *args)
-        self
-      end
-    
-      def areabind_remove(*args)
-        _bind_remove_for_event_class(Event_for_Items, [path, 'bindArea'], *args)
-        self
-      end
-    
-      def areabindinfo(*args)
-        _bindinfo_for_event_class(Event_for_Items, [path, 'bindArea'], *args)
-      end
-    end
     @htree.extend(TkScrollableWidget).show(0,26)
     self.pop_up_menu_tree
     @image_kdir = TkPhotoImage.new('dat' => ICON_FOLDER_OPEN_GIF)
@@ -194,7 +157,25 @@ class DirProjects < ArcadiaExt
     }
     
     @htree.textbind_append('Double-1',do_double_click)
-	end
+  end
+
+  def do_select_item2
+    proc{|_tree, _selected|
+      if File.exist?(node2file(_selected))
+        if File.ftype(node2file(_selected)) == 'file'
+          _sync_val = @sync
+          @sync = false
+          begin
+    	         Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>node2file(_selected)))
+    	       ensure
+            @sync = _sync_val
+    	       end
+        end
+      else
+        shure_delete_node(_selected)
+      end
+    }
+  end
 	
 	def key_press(_keysym)
       case _keysym
@@ -535,8 +516,6 @@ class DirProjects < ArcadiaExt
         end
         _ret
       }
-#      @htree.textbind('KeyPress', proc{|e| 
-#      p 'pippo'})
       @htree.edit(tmp_node_name, tmp_node_name.split(File::SEPARATOR)[-1], _verify_cmd, 1)
     end
 
@@ -817,14 +796,17 @@ class DirProjects < ArcadiaExt
   def shure_select_node(_node)
     return if @selecting_node
     @selecting_node = true
-    _proc = @htree.selectcommand
-    @htree.selectcommand(nil)
+    #_proc = @htree.selectcommand
+    #@htree.selectcommand(nil)
+    _proc = @htree.cget('selectcommand')
+    @htree.configure('selectcommand'=>nil)
     begin
       @htree.selection_clear
       @htree.selection_add(_node)
       @htree.see(_node)
     ensure
-      @htree.selectcommand(_proc)
+      #@htree.selectcommand(_proc)
+      @htree.configure('selectcommand'=>_proc)
       @selecting_node = false
     end
   end

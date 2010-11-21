@@ -1,8 +1,8 @@
 = Arcadia Ide
-version 0.9.1
+version 0.9.2
 
 by Antonio Galeone
-on Oct 19, 2010
+on Nov 21, 2010
 
 
 == About
@@ -16,16 +16,11 @@ Some of Arcadia ide project features include:
 * Working on any platform where ruby and tcl-tk work.
 * Highly extensibility architecture.
 
-== In this release 0.9.1
+== In this release 0.9.2
     
 [Improvements]
-	commons: 
-	  - bug-fixing
-	new features:
-	  editor 
-	    - added a button for close current tab
-	    - added menu button for quick file selection
-	    - "Edit/Prettify Current" now works
+  - bugs fixed in case of ruby 1.8 enviroment
+  - supported the maximized state saving of the main window
 
 == Dependencies
   - rubygems

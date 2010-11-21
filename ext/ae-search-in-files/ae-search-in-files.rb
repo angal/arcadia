@@ -139,16 +139,16 @@ class SearchOutput
       Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>@results[n_parent][n][0], 'row'=>@results[n_parent][n][1]))  if n && @results[n_parent][n]
       #EditorContract.instance.open_file(self, 'file'=>@results[n_parent][n][0], 'line'=>@results[n_parent][n][1]) if n && @results[n_parent][n]
     end
-
     @tree = Tk::BWidget::Tree.new(@ext.frame.hinner_frame, Arcadia.style('treepanel')){
       #background '#FFFFFF'
       #relief 'flat'
       #showlines true
       #linesfill '#e7de8f'
-      selectcommand _open_file 
+      selectcommand(_open_file)
       deltay 15
-    }.place('x' => '25','y' => '0','relwidth' => '1', 'relheight' => '1', 'width' => '-40', 'height'=>'-15')
-    @tree.extend(TkScrollableWidget).show
+    }
+    #.place('x' => '25','y' => '0','relwidth' => '1', 'relheight' => '1', 'width' => '-40', 'height'=>'-15')
+    @tree.extend(TkScrollableWidget).show(25,0)
     
     _proc_clear = proc{clear_tree}
     

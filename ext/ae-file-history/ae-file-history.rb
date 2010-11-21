@@ -242,8 +242,10 @@ class FilesHistrory < ArcadiaExt
     _f = _f.downcase if is_windows?
     _file_node_rif = _d+'@@@'+_f
     if @htree.exist?(_file_node_rif)
-      _proc = @htree.selectcommand
-      @htree.selectcommand(proc{nil})
+      _proc = @htree.cget('selectcommand')
+      @htree.configure('selectcommand'=>nil)
+      #_proc = @htree.selectcommand
+      #@htree.selectcommand(proc{nil})
       begin
         parent = root.dir(_d)
         @htree.selection_clear
@@ -255,7 +257,8 @@ class FilesHistrory < ArcadiaExt
         end
         @htree.see(_file_node_rif)
       ensure
-        @htree.selectcommand(_proc)
+        #@htree.selectcommand(_proc)
+        @htree.configure('selectcommand'=>_proc)
       end
     end
   end

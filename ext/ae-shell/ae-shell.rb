@@ -193,15 +193,15 @@ class Shell < ArcadiaExt
               }
                 
               alive_check = proc{
-                num = `ps -p #{fi_pid}|wc -l`
-                num.to_i > 1
+                num = `ps -p #{fi_pid}|wc -l` if fi_pid
+                num.to_i > 1 && fi_pid
               }
               
 
               #Arcadia.console(self,'msg'=>"#{th}", 'level'=>'debug', 'abort_action'=>abort_action)
 
               Open3.popen3(_cmd_){|stdin, stdout, stderr, th|
-                fi_pid = th.pid
+                fi_pid = th.pid if th
                 output_mark = Arcadia.console(self,'msg'=>" [pid #{fi_pid}]", 'level'=>'debug', 'mark'=>output_mark, 'append'=>true)
     	           Arcadia.process_event(SubProcessEvent.new(self, 'pid'=>fi_pid, 'name'=>_event.file,'abort_action'=>abort_action, 'alive_check'=>alive_check))
                 

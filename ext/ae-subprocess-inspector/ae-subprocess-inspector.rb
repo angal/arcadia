@@ -34,6 +34,13 @@ class SubProcessInspector < ArcadiaExt
       pr.event.abort_action.call if !pr.nil?
     }
   end
+  
+  def do_delete_process(_process)
+    @processs.delete(_process)
+    if @processs.length == 0
+      self.frame.free
+    end
+  end
       
 end
 
@@ -98,7 +105,7 @@ class SubProcessWidget < TkFrame
       #p "ALIVE=#{alive}"
       if !alive
         @timer.stop
-        @parent.processs.delete(self)
+        @parent.do_delete_process(self)
         self.destroy
       end
       @progress.numeric += 1

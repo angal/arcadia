@@ -22,7 +22,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.9.1',
+        '0.9.2',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -55,8 +55,6 @@ class Arcadia < TkApplication
       protocol( "WM_DELETE_WINDOW", $arcadia['action.on_exit'])
       iconphoto(TkPhotoImage.new('dat'=>ARCADIA_RING_GIF))
     }
-    
-    
     @on_event = Hash.new
 
     @main_menu_bar = TkMenubar.new(
@@ -102,6 +100,13 @@ class Arcadia < TkApplication
     @root.geometry(geometry)
     @root.raise
     Tk.update_idletasks
+    if self['conf']['geometry.state'] == 'zoomed'
+      if Arcadia.is_windows?
+        @root.state('zoomed')
+      else
+        @root.wm_attributes('zoomed',1)
+      end
+    end
     #sleep(1)
     @splash.destroy  if @splash
     if @first_run # first ARCADIA ever
@@ -286,7 +291,7 @@ class Arcadia < TkApplication
     end
   end
   
-  def load_maximised
+  def load_maximized
     lm = self['conf']['layout.maximized']
     if lm    
       ext,index=lm.split(',')
@@ -592,7 +597,12 @@ class Arcadia < TkApplication
     mr.insert('0', :separator) if runs && !runs.empty?
     pers_runner = Hash.new
     runs.each{|name, hash_string|
-      pers_runner[name]=eval hash_string
+      begin
+        pers_runner[name]=eval hash_string
+      rescue Exception => e
+        p  "Loading runners : probably bud runner conf '#{hash_string}' : #{e.message}"
+        Arcadia.unpersistent("runners.#{name}")
+      end
     }
     
     pers_runner.each{|name, run|
@@ -723,8 +733,44 @@ class Arcadia < TkApplication
     _event.can_exit
   end
 
+  def geometry_refine(_geometry)
+    begin
+      a = geometry_to_a(_geometry)
+      toolbar_height = @root.winfo_height-@root.winfo_screenheight
+      a[3] = (a[3].to_i - toolbar_height).to_s
+      geometry_from_a(a)
+    rescue
+      return _geometry
+    end
+  end
+
+  def geometry_to_a(_geometry=nil)
+    return if _geometry.nil?
+    wh,x,y=_geometry.split('+')
+    w,h=wh.split('x')
+    [w,h,x,y]
+  end
+
+  def geometry_from_a(_a=nil)
+    return "0x0+0+0" if _a.nil? || _a.length < 4
+    "#{_a[0]}x#{_a[1]}+#{_a[2]}+#{_a[3]}"
+  end
+
   def save_layout
-    self['conf']['geometry']= TkWinfo.geometry(@root)
+    self['conf']['geometry']= geometry_refine(TkWinfo.geometry(@root))
+    begin
+      if Arcadia.is_windows?
+        self['conf']['geometry.state'] = @root.state.to_s
+      else
+        if @root.wm_attributes('zoomed') == '1'
+          self['conf']['geometry.state']='zoomed'
+        else
+          self['conf']['geometry.state']='normal'
+        end
+      end
+    rescue
+      self['conf']['geometry.state']='not_supported'
+    end
     Arcadia.del_conf_group(self['conf'],'layout')
     # resizing
     @exts_i.each{|e|

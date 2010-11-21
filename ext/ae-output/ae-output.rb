@@ -140,7 +140,7 @@ end
 
 class Output < ArcadiaExt
   attr_reader :main_frame
-
+  MARKSUF='mark-'
 	def on_before_build(_event)
     #ArcadiaContractListener.new(self, MsgContract, :do_msg_event)
     Arcadia.attach_listener(self, MsgEvent)
@@ -161,7 +161,9 @@ class Output < ArcadiaExt
    def on_msg(_event)
      self.frame.show
      if _event.mark
-       _index_begin = "#{@main_frame.text.index(_event.mark)} + 1 lines + 1 chars"
+       _mark_index = _event.mark.sub(MARKSUF,'');
+       _index_begin = "#{_mark_index} + 1 lines + 1 chars"
+       #_index_begin = "#{@main_frame.text.index(_event.mark)} + 1 lines + 1 chars"
 #       _b = Tk::BWidget::Button.new(@main_frame.text, 
 #         'helptext'=>Time.now.strftime("-> %d-%b-%Y %H:%M:%S"),
 #         'background'=>Arcadia.style('edit')['background'], 
@@ -194,7 +196,7 @@ class Output < ArcadiaExt
    		end
    		@main_frame.text.see(_index_end)
    		@main_frame.text.mark_unset(_event.mark)
-   		_event.mark="mark-#{_index_end}"
+   		_event.mark="#{MARKSUF}#{_index_end}"
    		@main_frame.text.mark_set(_event.mark, "#{_index_end} - 1 lines -1 chars")
 #     if _event.instance_of?(MsgRunEvent)
 #       _b = TkButton.new(@main_frame.text, 
