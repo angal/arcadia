@@ -940,6 +940,7 @@ end
 
 class AgEditor
   attr_accessor :file
+  attr_accessor :line_numbers_visible
   attr_reader :read_only 
   attr_reader :page_frame
   attr_reader :text, :root
@@ -2794,8 +2795,19 @@ class AgEditor
       line_end_chars  = _line_end.to_s.length  
       if @last_line_end_chars != line_end_chars
         if @line_num_rx_e.nil?
-          @line_num_rx_e, @line_num_ry_e, @line_num_width_e, @line_num_heigth_e = @text_line_num.bbox("0.1 lineend - 1chars");
+          @line_num_rx_e, @line_num_ry_e, @line_num_width_e, @line_num_heigth_e = @text_line_num.bbox("0.1 lineend - 1 chars");
+          if @line_num_rx_e.nil?
+            @line_num_rx_e = 0
+          end
+          if @line_num_width_e.nil?
+            linfo_x, linfo_y, linfo_w, linfo_h, linfo_b  = @text_line_num.dlineinfo('0.1')
+            if linfo_w
+              @line_num_width_e = linfo_w.to_f/(line_end_chars+1.5)
+            end
+          end
         end
+        
+        
         if @line_num_rx_e && @line_num_width_e && line_end_chars >0 
           actual_width = @line_num_rx_e + @line_num_width_e
           need_width = (line_end_chars+1)*@line_num_width_e
@@ -3450,8 +3462,10 @@ class AgMultiEditor < ArcadiaExt
       0.upto(i_end){|j|
         type = @buffer_menu.menutype(j)
         if type != 'separator'
-          label = @buffer_menu.entrycget(j,'label')
-          if label > _filename
+          #label = @buffer_menu.entrycget(j,'label')
+          #if label > _filename
+          value = @buffer_menu.entrycget(j,'value')
+          if value > _filename
             index=j
             break
           end
@@ -3459,18 +3473,20 @@ class AgMultiEditor < ArcadiaExt
       }
     end
 
-    @buffer_menu.insert(index,:command,
-          :label=>_filename,
-          :image=> Arcadia.file_icon(_filename),
-          :compound=>'left',
-          :command=>proc{
-            if is_file
-              open_file(_filename)
-            else
-              open_buffer(tab_name(_filename))             
-            end
-          },
-          :hidemargin => true
+    @buffer_menu.insert(index,:radio,
+      :label=>File.basename(_filename),
+     # :variable=>TkVariable.new(_filename),
+      :value=>_filename,
+      :image=> Arcadia.file_icon(_filename),
+      :compound=>'left',
+      :command=>proc{
+        if is_file
+          open_file(_filename)
+        else
+          open_buffer(tab_name(_filename))             
+        end
+      },
+      :hidemargin => true
     )
   end
 
@@ -3480,8 +3496,10 @@ class AgMultiEditor < ArcadiaExt
     0.upto(i_end){|j|
       type = @buffer_menu.menutype(j)
       if type != 'separator'
-        label = @buffer_menu.entrycget(j,'label')
-        if label == _file
+        #label = @buffer_menu.entrycget(j,'label')
+        #if label == _file
+        value = @buffer_menu.entrycget(j,'value')
+        if value == _file
           to_del=j
           break
         end
@@ -3860,7 +3878,7 @@ class AgMultiEditor < ArcadiaExt
         #_insert_index = editor.text.index('insert')
         _insert_index = editor.text.index('@0,0')
         _files=_files+'|' if _files.strip.length > 0
-        _files=_files + "#{editor.file};#{_insert_index}"
+        _files=_files + "#{editor.file};#{_insert_index};#{editor.line_numbers_visible.to_s}"
       end
       #p editor.text.dump_tag('0.1',editor.text.index('end'))
       close_editor(editor,true)
@@ -3924,11 +3942,14 @@ class AgMultiEditor < ArcadiaExt
     if Arcadia.persistent('editor.files.open')
       _files_index =Arcadia.persistent('editor.files.open').split("|")
       _files_index.each do |value| 
-        _file,_index = value.split(';')
+        _file,_index,_line_numbers_visible_as_string = value.split(';')
         if _file && _index
-          open_file(_file,_index,false)
+          ed = open_file(_file,_index,false)
         else
-          open_file(_file)
+          ed = open_file(_file)
+        end
+        if ed && _line_numbers_visible_as_string && ed.line_numbers_visible
+          ed.line_numbers_visible = _line_numbers_visible_as_string == 'true'
         end
       end
     end
@@ -4205,7 +4226,8 @@ class AgMultiEditor < ArcadiaExt
       begin
         @tabs_editor[_tab_name].load_file(_filename)
       rescue RuntimeError => e
-        p "RuntimeError : #{e.message}"
+        Arcadia.dialog(self,'type'=>'ok', 'level'=>'error','title' => 'RuntimeError', 'msg'=>"RuntimeError : #{e.message}")
+        #p "RuntimeError : #{e.message}"
         close_editor(@tabs_editor[_tab_name], true)
       end
     end
@@ -4244,8 +4266,8 @@ class AgMultiEditor < ArcadiaExt
       _tab = @main_frame.enb.insert('end', _buffer_name ,
         'text'=> _title,
         'image'=> Arcadia.file_icon(_title),
-        'background'=> Arcadia.style("tabpanel.background"),
-        'foreground'=> Arcadia.style("tabpanel.foreground"),
+        'background'=> Arcadia.style("tabpanel")["background"],
+        'foreground'=> Arcadia.style("tabpanel")["foreground"],
         'raisecmd'=>proc{do_buffer_raise(_buffer_name, _title)}
       )
       if _filename

@@ -1495,14 +1495,14 @@ module TkAutoPostMenu
             @last_clicked.unpost
             @last_clicked = nil
           end
-
+          
           ch.menu.post(x-rx,y-ry+hh)
-
           #just_posted = TkWinfo.containing(x, y+hh)
 
           chmenus = TkWinfo.children(ch)
           @last_menu_posted = chmenus[0]
           @last_menu_posted.set_focus
+
           @last_menu_posted.bind("Enter", proc{
             @last_menu_posted.bind("Leave", proc{
               if @posting_on
@@ -1524,7 +1524,7 @@ module TkAutoPostMenu
           if @last_post
             _x = TkWinfo.x(@last_post)
             _y = TkWinfo.y(@last_post)
-            ch.event_generate("KeyPress", :keysym=>"Escape")  #if Tk.focus.kind_of?(TkMenu) &&  Tk.focus != ch.menu
+            ch.event_generate("KeyPress", :keysym=>"Escape")  if Tk.focus.kind_of?(TkMenu) &&  Tk.focus != ch.menu
             @last_post.post(_x,_y) if @last_clicked && @last_clicked == ch.menu
           end
           if @last_post!=ch.menu

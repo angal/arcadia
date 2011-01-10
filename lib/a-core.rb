@@ -22,7 +22,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.9.2',
+        '0.9.3',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -1582,7 +1582,7 @@ class ArcadiaAboutSplash < TkToplevel
       place('x' => 100,'y' => 65,'height' => 19)
     }
     @tkLabel21 = TkLabel.new(self){
-      text  'by Antonio Galeone - 2004/2010'
+      text  'by Antonio Galeone - 2004/2011'
       background  _bgcolor
       foreground  '#ffffff'
       font Arcadia.instance['conf']['splash.credits.font']
@@ -1632,13 +1632,13 @@ class ArcadiaAboutSplash < TkToplevel
   def set_progress(_max=10)
     @max = _max
     Tk::BWidget::ProgressBar.new(self, :width=>150, :height=>10,
-    :background=>'black',
-    :troughcolor=>'black',
-    :foreground=>'#a11934',
-    :variable=>@progress,
-    :borderwidth=>0,
-    :relief=>'flat',
-    :maximum=>_max).place('relwidth' => '1','y' => 146,'height' => 2)
+      :background=>'#000000',
+      :troughcolor=>'#000000',
+      :foreground=>'#a11934',
+      :variable=>@progress,
+      :borderwidth=>0,
+      :relief=>'flat',
+      :maximum=>_max).place('relwidth' => '1','y' => 146,'height' => 2)
   end
 
   def reset
