@@ -91,18 +91,15 @@ class Breakpoints < ArcadiaExt
   end
   
   def goto_select_item
-    _file, _line = get_tree_selection(@tree_break)
+    _file, _line = get_tree_selection
     if _file && _line
       Arcadia.process_event(OpenBufferEvent.new(self,'file'=>_file, 'row'=>_line))
     elsif _file
       Arcadia.process_event(OpenBufferEvent.new(self,'file'=>_file, 'row'=>0))
     end
   end
-  
-  
-  
-  def raise_clear_selected(_delete=false)
-    _file, _line = get_tree_selection(@tree_break)
+
+  def clear_node(_file=nil, _line=nil, _delete=false)
     if _file && _line
        Arcadia.process_event(UnsetBreakpointEvent.new(self, 'file'=>_file, 'row'=>_line, 'delete'=>_delete))
     elsif _file
@@ -115,6 +112,19 @@ class Breakpoints < ArcadiaExt
          }
       end
     end
+  end
+  
+  def raise_clear_selected(_delete=false)
+    _file, _line = get_tree_selection
+    clear_node(_file, _line, _delete)
+  end
+
+  def clear_all(_delete=false)
+    nodes = @tree_break.nodes('root')
+    nodes.each{|n|
+      _file, _line = node2file_line(n)
+      clear_node(_file, _line, _delete)
+    }
   end
   
   def build_popup
@@ -135,21 +145,28 @@ class Breakpoints < ArcadiaExt
 
     _pop_up.insert('end',
       :command,
-      :label=>'Clear breakpoint',
+      :label=>'Clear selected breakpoint',
       :hidemargin => false,
       :command=> proc{raise_clear_selected}
     )
 
     _pop_up.insert('end',
       :command,
-      :label=>'Delete breakpoint',
+      :label=>'Delete selected breakpoint',
       :hidemargin => false,
       :command=> proc{raise_clear_selected(true)}
     )
 
     _pop_up.insert('end',
       :command,
-      :label=>'Goto breakpoint',
+      :label=>'Delete all breakpoints',
+      :hidemargin => false,
+      :command=> proc{clear_all(true)}
+    )
+
+    _pop_up.insert('end',
+      :command,
+      :label=>'Goto selected breakpoint',
       :hidemargin => false,
       :command=> proc{goto_select_item}
     )
@@ -160,7 +177,7 @@ class Breakpoints < ArcadiaExt
         _x = TkWinfo.pointerx(@tree_break)
         _y = TkWinfo.pointery(@tree_break)
         _selected = @tree_break.selection_get[0]
-        _file, _line = get_tree_selection(@tree_break)
+        _file, _line = get_tree_selection
         _label = _file
         if _line
           _label << " line: #{_line}"
@@ -171,17 +188,22 @@ class Breakpoints < ArcadiaExt
       })
   end
   
-  def get_tree_selection(_tree)
-    _ret = Array.new
-    _selected = _tree.selection_get[0]
+  def get_tree_selection
+    _selected = @tree_break.selection_get[0]
     if _selected
-      _node_name, _line = _selected.split('_')
-      _ret << _tree.itemcget(_node_name, 'text')
-      _ret << _line if _line
+      return node2file_line(_selected)
+    else
+      return Array.new
     end
-    _ret
   end
 
+  def node2file_line(_node)
+    _ret = Array.new
+    _node_name, _line = _node.split('_')
+    _ret << @tree_break.itemcget(_node_name, 'text')
+    _ret << _line if _line
+    _ret
+  end
 
   def on_debug(_event)
     case _event

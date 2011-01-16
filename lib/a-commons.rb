@@ -510,24 +510,30 @@ module EventBus #(or SourceEvent)
 end
 
 
-module Autils
-	def full_in_path_command(_command=nil)
-	  return nil if _command.nil?
-		_ret = nil
-		RUBY_PLATFORM =~ /win32|mingw/ ? _sep = ';':_sep=':'
-		ENV['PATH'].split(_sep).each{|_path|
-			_file = File.join(_path, _command)
-			if FileTest.exist?(_file)
-	  			_ret = _file
-			end
-		}
-		_ret
-	end
-
-  def is_windows?
-    RUBY_PLATFORM =~ /mingw|mswin/
+module Cacheble
+  def self.extended(_obj)
+    _obj.__initialize_cache(_obj) 
   end
-	
+
+  def self.included(_obj)
+    _obj.__initialize_cache(_obj)
+  end
+
+  def __initialize_cache(_obj)
+    @@cache = Hash.new
+  end
+  
+  def self.clear_cache
+    @@cache.clear
+  end
+  
+  def self.set_cache(_key, _value)
+    @@cache[_key]=_value
+  end
+  
+  def self.get_cache(_key, _value)
+    @@cache[_key]
+  end
 end
 
 module Configurable

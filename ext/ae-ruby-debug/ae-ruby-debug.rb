@@ -772,17 +772,19 @@ class RubyDebugServer
   end
 
   def start_session_new(_filename, _host='localhost', _remote_port='8989')
-    if is_windows?
-      if RubyWhich.new.which("rdebug.bat") != []
+    if Arcadia.is_windows?
+      #if RubyWhich.new.which("rdebug.bat") != []
+      if Arcadia.which("rdebug.bat")
         rdebug_cmd = "rdebug.bat" 
-      elsif RubyWhich.new.which("rdebug.cmd") != []
+      #elsif RubyWhich.new.which("rdebug.cmd") != []
+      elsif Arcadia.which("rdebug.cmd")
         rdebug_cmd = "rdebug.cmd"
       else
         rdebug_cmd = "rdebug"
       end
       commandLine = "#{rdebug_cmd} --host #{_host} --port #{_remote_port} -sw #{_filename}"
     else
-       commandLine = "rdebug --host #{_host} --port #{_remote_port} -sw #{_filename}"
+      commandLine = "rdebug --host #{_host} --port #{_remote_port} -sw #{_filename}"
     end
     #Arcadia.process_event(SystemExecEvent.new(self, 'command'=>commandLine))
     Arcadia.process_event(RunCmdEvent.new(self, 'cmd'=>commandLine, 'file'=>_filename))
@@ -797,10 +799,12 @@ class RubyDebugServer
   end
   
   def start_session(_filename, _host='localhost', _remote_port='8989')
-    if is_windows?
-      if RubyWhich.new.which("rdebug.bat") != []
+    if Arcadia.is_windows?
+      #if RubyWhich.new.which("rdebug.bat") != []
+      if Arcadia.which("rdebug.bat")
         rdebug_cmd = "rdebug.bat" 
-      elsif RubyWhich.new.which("rdebug.cmd") != []
+      #elsif RubyWhich.new.which("rdebug.cmd") != []
+      elsif Arcadia.which("rdebug.cmd")
         rdebug_cmd = "rdebug.cmd"
       else
         rdebug_cmd = "rdebug"
@@ -811,7 +815,7 @@ class RubyDebugServer
     end
     begin
       @alive = true
-      if is_windows?
+      if Arcadia.is_windows?
         @tid = Thread.new do
           if Kernel.system(commandLine)
               Kernel.system('y')
@@ -867,7 +871,7 @@ class RubyDebugServer
   
   def kill
     begin
-      if is_windows?
+      if Arcadia.is_windows?
         @tid.join(2)
         @tid.kill!
       else
@@ -880,10 +884,6 @@ class RubyDebugServer
     end
   end
   
-  def is_windows?
-    !(RUBY_PLATFORM =~ /(win|w)32$/).nil?
-  end
-
   def notify(_state)
      #p "----- notify ----- #{_state}"
      changed
@@ -1387,7 +1387,7 @@ class RubyDebugClient
     matches = text.downcase.match(/breakpoint ([0-9]*)?/)
     #Arcadia.new_error_msg(self, "text=#{text}")
     #Arcadia.new_error_msg(self, "matches[1]=#{matches[1]}")
-    breakpoint_no = matches[1].to_i if (matches.length == 2)
+    breakpoint_no = matches[1].to_i if matches && (matches.length == 2)
     return breakpoint_no
   end
 
@@ -1397,11 +1397,11 @@ class RubyDebugClient
 end
 
 class RubyDebug < ArcadiaExt
-  include Autils
   attr_reader :rds
   attr_reader :rdc
   def on_before_build(_event)
-    if RubyWhich.new.which("rdebug") != []
+    #if RubyWhich.new.which("rdebug") != []
+    if Arcadia.which("rdebug") || ((Arcadia.which("rdebug.bat") || Arcadia.which("rdebug.cmd"))&& Arcadia.is_windows?)
       @breakpoints = Hash.new
       @static_breakpoints = Array.new
       Arcadia.attach_listener(self, BufferEvent)
@@ -1428,7 +1428,7 @@ class RubyDebug < ArcadiaExt
       when StartDebugEvent
         _filename = _event.file
         _filename = @arcadia['pers']['run.file.last'] if _filename == "*LAST"
-        if File.exist?(_filename)
+        if _filename && File.exist?(_filename)
           debug(_filename)
         else
           Arcadia.dialog(self,

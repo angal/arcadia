@@ -1994,7 +1994,6 @@ class AgEditor
     end
   end
 
-
   def do_tag_configure_global(_name)
     h = Hash.new
 
@@ -2039,7 +2038,6 @@ class AgEditor
     end
   end
 
-
   def pop_up_menu
     @pop_up = TkMenu.new(
       :parent=>@text,
@@ -2056,7 +2054,6 @@ class AgEditor
       :font => "#{Arcadia.conf('menu.font')} bold",
       :hidemargin => true
     )
-    
     #Arcadia.instance.main_menu.update_style(@pop_up)
     @pop_up.insert('end',
       :command,
@@ -3314,7 +3311,6 @@ end
 
 
 class AgMultiEditor < ArcadiaExt
-  include Autils
   include Configurable
   attr_reader :breakpoints
   attr_reader :splitted_frame

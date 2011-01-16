@@ -22,7 +22,6 @@ class Project
 end
 
 class DirProjects < ArcadiaExt
-  include Autils
   attr_reader :htree
 
   def sync_on

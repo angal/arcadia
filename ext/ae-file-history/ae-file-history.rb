@@ -74,7 +74,6 @@ end
 
 
 class FilesHistrory < ArcadiaExt
-  include Autils
   attr_reader :htree
 
   def sync_on
@@ -235,11 +234,10 @@ class FilesHistrory < ArcadiaExt
     return _selected
   end
 
-
   def select_file_without_event(_file)
     _d, _f = File.split(File.expand_path(_file))
-    _d = _d.downcase if is_windows?
-    _f = _f.downcase if is_windows?
+    _d = _d.downcase if Arcadia.is_windows?
+    _f = _f.downcase if Arcadia.is_windows?
     _file_node_rif = _d+'@@@'+_f
     if @htree.exist?(_file_node_rif)
       _proc = @htree.cget('selectcommand')
@@ -306,8 +304,8 @@ class FilesHistrory < ArcadiaExt
           _file = _line.split(';')[0]
           if FileTest::exist?(_file)
 						dir,fil =File.split(File.expand_path(_file))
-						dir = dir.downcase if is_windows?
-						fil = fil.downcase if is_windows?
+						dir = dir.downcase if Arcadia.is_windows?
+						fil = fil.downcase if Arcadia.is_windows?
 						file_dir[dir] = Array.new if file_dir[dir] == nil
 						file_dir[dir] << fil if !file_dir[dir].include?(fil)
           end
@@ -400,8 +398,8 @@ class FilesHistrory < ArcadiaExt
 	 #Arcadia.new_error_msg(self, "add_to_tree _file=#{_file}")
 	 #Arcadia.new_error_msg(self, "add_to_tree _d=#{_d}")
 	 #Arcadia.new_error_msg(self, "add_to_tree _f=#{_f}")
-	 _d = _d.downcase if is_windows?
-	 _f = _f.downcase if is_windows?
+	 _d = _d.downcase if Arcadia.is_windows?
+	 _f = _f.downcase if Arcadia.is_windows?
     #_foreground = conf('color.foreground')
 	 node = root.dir(_d)
 	 

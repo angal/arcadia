@@ -939,7 +939,20 @@ class Arcadia < TkApplication
   def Arcadia.is_windows?
     RUBY_PLATFORM =~ /mingw|mswin/
   end
-
+  
+  def Arcadia.which(_command=nil)
+    return nil if _command.nil?
+    _ret = nil
+    ENV['PATH'].split(File::PATH_SEPARATOR).each{|_path|
+      _file = File.join(_path, _command)
+      if FileTest.exist?(_file)
+        _ret = _file
+        break
+      end
+    }
+    _ret
+  end
+  
   def Arcadia.menu_root(_menu_root_name, _menu_root=nil)
     if @@instance['menu_roots'] == nil
       @@instance['menu_roots'] = Hash.new
@@ -1828,7 +1841,6 @@ class EventWatcherForGem
 end
 
 class ArcadiaGemsWizard
-  include Autils
   def initialize(_arcadia)
     @arcadia = _arcadia
     Arcadia.attach_listener(self, NeedRubyGemWizardEvent)
