@@ -206,6 +206,7 @@ class Breakpoints < ArcadiaExt
   end
 
   def on_debug(_event)
+    return if _event.file.nil?
     case _event
       when SetBreakpointEvent
         ensure_build_ui
