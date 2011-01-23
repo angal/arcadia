@@ -166,9 +166,9 @@ class DirProjects < ArcadiaExt
           @sync = false
           begin
     	         Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>node2file(_selected)))
-    	       ensure
+    	     ensure
             @sync = _sync_val
-    	       end
+    	     end
         end
       else
         shure_delete_node(_selected)

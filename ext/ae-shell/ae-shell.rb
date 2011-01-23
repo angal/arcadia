@@ -253,6 +253,7 @@ class Shell < ArcadiaExt
 #                output_mark = Arcadia.console(self,'msg'=>output_dump, 'level'=>'debug', 'mark'=>output_mark)
 #                _event.add_result(self, 'output'=>_readed)
 #              }
+              #p "da cancellare #{ _event.file } #{_event.file[-2..-1] == '~~'} #{_event.persistent == false}  #{File.exist?(_event.file)}"
               if _event.persistent == false && _event.file[-2..-1] == '~~'
                 File.delete(_event.file) if File.exist?(_event.file)
               end

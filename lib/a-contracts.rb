@@ -131,16 +131,21 @@ end
 class BufferRaisedEvent < BufferEvent
 end
 
+class NoBufferExistEvent < BufferEvent
+end
+
+class OneBufferExistEvent < BufferEvent
+end
+
 #  +---------------------------------------------+
 #         Debug event
 #  +---------------------------------------------+
 
 class DebugEvent < ArcadiaEvent
-   attr_accessor :file, :row, :active
+   attr_accessor :id, :file, :row, :active, :persistent 
 end
 
 class SetBreakpointEvent < DebugEvent
-   attr_accessor :active
    attr_accessor :line_code
 end
 

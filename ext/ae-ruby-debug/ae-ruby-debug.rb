@@ -3,7 +3,7 @@
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
 
-require 'whichr'
+#require 'whichr'
 
 class RubyDebugView
   include TkUtil
@@ -798,7 +798,8 @@ class RubyDebugServer
     @alive = _value
   end
   
-  def start_session(_filename, _host='localhost', _remote_port='8989')
+  def start_session(_debug_event, _host='localhost', _remote_port='8989')
+    _filename = _debug_event.file
     if Arcadia.is_windows?
       #if RubyWhich.new.which("rdebug.bat") != []
       if Arcadia.which("rdebug.bat")
@@ -831,6 +832,10 @@ class RubyDebugServer
           end
           set_alive(false)
           notify(RDS_QUIET)
+          if _debug_event.persistent == false && _debug_event.file[-2..-1] == '~~'
+             File.delete(_debug_event.file) if File.exist?(_debug_event.file)
+          end
+
         end
       else
         @pid = Process.fork do
@@ -852,12 +857,18 @@ class RubyDebugServer
             #p "alive=#{is_alive?}"
             notify(RDS_QUIET)
             Kernel.system('y')
+
+            if _debug_event.persistent == false && _debug_event.file[-2..-1] == '~~'
+               File.delete(_debug_event.file) if File.exist?(_debug_event.file)
+            end
+
             Kernel.exit!
           else
             Kernel.exit!
             Arcadia.console(self, 'msg'=>"#{$?.inspect}", 'level'=>'debug')
             #Arcadia.new_debug_msg(self,"#{$?.inspect}")    
           end
+
           #p "@alive=#{@alive}"
           #notify(RDS_QUIET)
           #Process.wait
@@ -1381,6 +1392,7 @@ class RubyDebugClient
   def set_breakpoint(_file, _line)
     #_line = _line + 1
     text = read("break #{_file}:#{_line}")
+    return if text.nil?
     #p text
     breakpoint_no = -1
     #matches = text.match(/Set breakpoint ([0-9]*)?/)
@@ -1426,10 +1438,11 @@ class RubyDebug < ArcadiaExt
   def on_debug(_event)
     case _event
       when StartDebugEvent
+        return if _event.file.nil?
         _filename = _event.file
         _filename = @arcadia['pers']['run.file.last'] if _filename == "*LAST"
         if _filename && File.exist?(_filename)
-          debug(_filename)
+          do_debug(_event)
         else
           Arcadia.dialog(self,
             'type'=>'ok',
@@ -1447,8 +1460,13 @@ class RubyDebug < ArcadiaExt
         #p "on_debug --> @rdc.is_alive?=#{@rdc.is_alive?}"
         #p "on_debug --> @rds.is_alive?=#{@rds.is_alive?}"
       when SetBreakpointEvent
-        self.breakpoint_add(File.expand_path(_event.file), _event.row)
+        if _event.file
+          self.breakpoint_add(File.expand_path(_event.file), _event.row)
+        elsif _event.id
+          self.breakpoint_add(_event.id, _event.row)
+        end
       when UnsetBreakpointEvent
+        return if _event.file.nil?
         self.breakpoint_del(File.expand_path(_event.file), _event.row)
       when EvalExpressionEvent
         eval_expression(_event.expression)
@@ -1520,6 +1538,15 @@ class RubyDebug < ArcadiaExt
     @static_breakpoints << {:file=>_file,:line=>_line}
   end
   #private :breakpoint_add
+  def static_breakpoints_of_file(_filename)
+    ret = Array.new
+    @static_breakpoints.each{|b|
+      if b[:file]==_filename
+        ret << b
+      end
+    }
+    ret
+  end
 
   def breakpoint_del(_file,_line)
     breakpoint_del_live(_file,_line)
@@ -1562,13 +1589,14 @@ class RubyDebug < ArcadiaExt
     #DebugContract.instance.debug_begin(self)
   end
 
-  def debug(_filename=nil)
+  def do_debug(_event)
+    _filename = _event.file
     if _filename && !debugging?
       begin
         self.debug_begin
-        @arcadia['pers']['run.file.last']=_filename
+        @arcadia['pers']['run.file.last']=_filename if _event.persistent
         @rds = RubyDebugServer.new(self,@arcadia) if @rds.nil?
-        @rds.start_session(_filename, conf('server.host'), conf('server.port'))
+        @rds.start_session(_event, conf('server.host'), conf('server.port'))
         #Arcadia.new_msg(self,@rds.to_s)
         
         @rdc = RubyDebugClient.new(self, conf('server.host'), conf('server.port'), conf('server.timeout')) if @rdc.nil?
@@ -1577,10 +1605,13 @@ class RubyDebug < ArcadiaExt
         @rdv.start_process(_filename)
         if @rdc.start_session
           @static_breakpoints.each{|_b|
+            if !_event.persistent && _b[:file]==_event.id
+              _b[:file]=_filename
+            end
             #Arcadia.console(self,'msg'=>" breakpoint_add #{_b[:file]}:#{_b[:line]}")
             breakpoint_add_live(_b[:file], _b[:line])
           }
-          if @static_breakpoints.length > 0 && conf("auto_resume_break_on_first_line")!='no'
+          if static_breakpoints_of_file(_filename).length > 0 && conf("auto_resume_break_on_first_line")!='no'
             @rdv.debug_send(:resume)
           end
         end

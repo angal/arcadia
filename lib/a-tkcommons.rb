@@ -873,6 +873,9 @@ class TkTitledFrame < TkBaseTitledFrame
     @apy = Array.new
     @apw = Array.new
     @aph = Array.new
+    @top.bind_append("Double-Button-1", proc{resize})
+    @left_label.bind_append("Double-Button-1", proc{resize})
+    @right_label.bind_append("Double-Button-1", proc{resize})
   end
 
   def create_left_label

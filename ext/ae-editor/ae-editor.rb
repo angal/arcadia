@@ -941,11 +941,13 @@ end
 class AgEditor
   attr_accessor :file
   attr_accessor :line_numbers_visible
+  attr_accessor :id
   attr_reader :read_only 
   attr_reader :page_frame
   attr_reader :text, :root
   attr_reader :outline
   attr_reader :highlighting
+  attr_reader :last_tmp_file
   def initialize(_controller, _page_frame)
     @controller = _controller
     @page_frame = _page_frame
@@ -963,6 +965,7 @@ class AgEditor
     @tabs_show = false
     @spaces_show = false
     @line_numbers_visible = @controller.conf('line-numbers') == 'yes'
+    @id = -1
   end
   
   def modified_from_opening?
@@ -1051,7 +1054,11 @@ class AgEditor
 
   def create_temp_file
     if @file
-      _file = @file+'~~'
+      n=0
+      while File.exist?("#{@file}#{n*'_'}~~")
+        n+=1
+      end
+      _file = "#{@file}#{n*'_'}~~"
     else
       n=0
       while File.exist?(File.join(Arcadia.instance.local_dir,"buffer#{n}~~"))
@@ -1067,6 +1074,7 @@ class AgEditor
     ensure
       f.close unless f.nil?
     end
+    @last_tmp_file = _file
     _file
   end
 
@@ -1890,13 +1898,16 @@ class AgEditor
       _i1 = _index+' linestart'
       _i2 = _i1+' + 2 chars'
       
-      if @controller.breakpoint_lines_on_file(@file).include?(_line)
+      if @file && @controller.breakpoint_lines_on_file(@file).include?(_line)
         #remove_tag_breakpoint(_index)
-        @controller.breakpoint_del(@file, _line)
+        @controller.breakpoint_del(@file, _line, @id)
+      elsif @file.nil? && @controller.breakpoint_lines_on_file("__TMP__#{@id}").include?(_line)
+        #remove_tag_breakpoint(_index)
+        @controller.breakpoint_del(@file, _line, @id)
       else
         @text_line_num.tag_remove('current',_i1,_i2)
         #add_tag_breakpoint(_index)
-        @controller.breakpoint_add(@file, _line)
+        @controller.breakpoint_add(@file, _line, @id)
       end
     end
   end
@@ -3152,7 +3163,6 @@ class AgMultiEditorView
       end
     }
     @enb.bind_append("Map",refresh_after_map)
-
   end
   
 end
@@ -3312,13 +3322,15 @@ end
 
 class AgMultiEditor < ArcadiaExt
   include Configurable
-  attr_reader :breakpoints
+#  attr_reader :breakpoints
   attr_reader :splitted_frame
   attr_reader :outline_bar
   def on_before_build(_event)
     @breakpoints =Array.new
     @tabs_file =Hash.new
     @tabs_editor =Hash.new
+    @editor_seq=-1
+    @editors =Array.new
     Arcadia.attach_listener(self, BufferEvent)
     Arcadia.attach_listener(self, DebugEvent)
   #  Arcadia.attach_listener(self, RunRubyFileEvent)
@@ -3686,19 +3698,36 @@ class AgMultiEditor < ArcadiaExt
   end
 
   def on_before_debug(_event)
-    "on_before_debug #{_event}"
     case _event
       when StartDebugEvent
+        _event.persistent=true
         _filename = _event.file
-        if _filename.nil?
+        if _filename.nil? || _filename == "*CURR"
           current_editor = self.raised
-          _event.file=current_editor.file if current_editor
+          if current_editor
+            if current_editor.file
+              _event.file=current_editor.file
+            else
+              _event.file=current_editor.create_temp_file
+              _event.id=current_editor.id
+              _event.persistent=false
+            end
+          end
+        else
+          if _filename  == "*LAST"
+            _event.file = Arcadia.persistent('run.file.last')
+          end
         end
         self.debug_begin
       when SetBreakpointEvent
         if _event.active == 1
-          @breakpoints << {:file=>_event.file,:line=>_event.row}
-          _e = @tabs_editor[tab_file_name(_event.file)]
+          if _event.file
+            @breakpoints << {:file=>_event.file,:line=>_event.row}
+            _e = @tabs_editor[tab_file_name(_event.file)]
+          elsif _event.id
+            @breakpoints << {:file=>"__TMP__#{_event.id}",:line=>_event.row}
+            _e = @editors[_event.id]
+          end
           if _e
             _index =_event.row+'.0'
             _line = _e.text.get(_index, _index+ '  lineend')
@@ -3731,8 +3760,13 @@ class AgMultiEditor < ArcadiaExt
       when UnsetBreakpointEvent
         #p "ae-editor : UnsetBreakpointEvent file : #{_event.file}"
         #p "ae-editor : UnsetBreakpointEvent _event.row : #{_event.row}"
-        @breakpoints.delete_if{|b| (b[:file]==_event.file && b[:line]==_event.row)}
-        _e = @tabs_editor[tab_file_name(_event.file)]
+        if _event.file
+          @breakpoints.delete_if{|b| (b[:file]==_event.file && b[:line]==_event.row)}
+          _e = @tabs_editor[tab_file_name(_event.file)]
+        elsif _event.id
+          @breakpoints.delete_if{|b| (b[:file]=="__TMP__#{_event.id}" && b[:line]==_event.row)}
+          _e = @editors[_event.id]
+        end
         _e.remove_tag_breakpoint(_event.row) if _e
     end
   end
@@ -3880,6 +3914,7 @@ class AgMultiEditor < ArcadiaExt
       close_editor(editor,true)
     }
     Arcadia.persistent('editor.files.open', _files)
+    clear_temp_files
 #    _breakpoints = '';
 #    @breakpoints.each{|point|
 #      if point[:file] != nil
@@ -3889,6 +3924,16 @@ class AgMultiEditor < ArcadiaExt
 #    }
 #    Arcadia.persistent('editor.debug_breakpoints', _breakpoints)
     @batch_files = true
+  end
+
+
+  def clear_temp_files
+    files = Dir[File.join(Arcadia.instance.local_dir,"*")]
+    files.each{|f|
+      if File.stat(f).file? && f[-2..-1] == '~~'
+        File.delete(f)
+      end
+    }
   end
 
   def raised
@@ -3901,12 +3946,12 @@ class AgMultiEditor < ArcadiaExt
     close_editor(_e) if _e
   end
 
-  def breakpoint_add(_file,_line)
-    Arcadia.process_event(SetBreakpointEvent.new(self, 'file'=>_file, 'row'=>_line, 'active'=>1))
+  def breakpoint_add(_file,_line,_id=-1)
+    Arcadia.process_event(SetBreakpointEvent.new(self, 'id'=>_id, 'file'=>_file, 'row'=>_line, 'active'=>1))
   end
 
-  def breakpoint_del(_file,_line)
-    Arcadia.process_event(UnsetBreakpointEvent.new(self, 'file'=>_file, 'row'=>_line))
+  def breakpoint_del(_file,_line,_id=-1)
+    Arcadia.process_event(UnsetBreakpointEvent.new(self, 'id'=>_id, 'file'=>_file, 'row'=>_line))
   end
 
   def breakpoint_lines_on_file(_file)
@@ -4119,11 +4164,17 @@ class AgMultiEditor < ArcadiaExt
     #debug_reset
     if _filename && _line && File.exists?(_filename)
       @last_index = _line.to_s+'.0'
-      _editor_exist = editor_exist?(_filename)
-      @last_e = open_file(_filename, @last_index, false, false)
+      #_editor_exist = editor_exist?(_filename)
+      _editor = editor_of(_filename)
+      if _editor
+        @last_e = raise_editor(_editor, @last_index, false, false)
+      else
+        @last_e = open_file(_filename, @last_index, false, false)
+      end
       #@last_e.hide_exp
       @last_e.mark_debug(@last_index) if @last_e
-      if !_editor_exist
+      #if !_editor_exist
+      if _editor.nil?
         @editors_in_debug <<  @last_e
         # workaround for hightlight
         #p "add editor for close #{_filename}"
@@ -4172,6 +4223,28 @@ class AgMultiEditor < ArcadiaExt
     #EditorContract.instance.buffer_raised(self, 'title'=>_title, 'file'=>@tabs_file[_name])
   end
   
+  def editor_of(_filename)
+    _ret = nil
+    _basefilename = File.basename(_filename)
+    _name = self.tab_file_name(_filename)
+    _index = @main_frame.enb.index(_name)
+    if _index == -1
+      _name = name_read_only(_name)
+      _index = @main_frame.enb.index(_name)
+    end
+    if _index != -1
+      _ret = @tabs_editor[_name]
+    else
+      @editors.each{|e|
+        if e.last_tmp_file == _filename
+          _ret = e
+          break
+        end
+      } 
+    end
+    _ret
+  end
+  
   def editor_exist?(_filename)
     _basefilename = File.basename(_filename)
     #_basename = _basefilename.split('.')[0]+'_'+_basefilename.split('.')[1]
@@ -4180,6 +4253,14 @@ class AgMultiEditor < ArcadiaExt
     _index = @main_frame.enb.index(_name)
     if _index == -1
       _index = @main_frame.enb.index(name_read_only(_name))
+    end
+    if _index == -1
+      @editors.each{|e|
+        if e.last_tmp_file == _filename
+          _index = 0
+          break
+        end
+      } 
     end
     return _index != -1
   end
@@ -4241,6 +4322,7 @@ class AgMultiEditor < ArcadiaExt
     _index = @main_frame.enb.index(_buffer_name)
     if _buffer_name == nil
     		_title_new = '*new'
+    		tmp_buffer_num = 0
     		_buffer_name = tab_name(_title_new)
     		#_buffer_name = tab_name('new')
     end
@@ -4252,6 +4334,7 @@ class AgMultiEditor < ArcadiaExt
       _n = 1
       while @main_frame.enb.index(_buffer_name) != -1
         _title_new = '*new'+_n.to_s
+        tmp_buffer_num = _n
         _buffer_name = tab_name(_title_new)
         #_buffer_name = tab_name('new')+_n.to_s
         _n =_n+1
@@ -4272,6 +4355,9 @@ class AgMultiEditor < ArcadiaExt
         add_buffer_menu_item(_title, false)
       end
       _e = AgEditor.new(self, _tab)
+      @editor_seq=@editor_seq+1
+      _e.id=@editor_seq
+      @editors[@editor_seq]=_e
       ext = Arcadia.file_extension(_title)
       ext='rb' if ext.nil?
       _e.init_editing(ext)
@@ -4283,6 +4369,28 @@ class AgMultiEditor < ArcadiaExt
     @main_frame.enb.raise(_buffer_name) if frame_visible?
     @main_frame.enb.see(_buffer_name)
     return _tab
+  end
+
+  def raise_editor(_editor = nil, _text_index='0.0', _mark_selected=true, _exp=true)
+    return if _editor == nil
+    _tab_name = nil
+    @tabs_editor.each{|tn,e|
+      if e == _editor
+        _tab_name = tn
+      end
+    }
+    if _tab_name
+      _index = @main_frame.enb.index(_tab_name)
+      _exist_buffer = _index != -1
+      if _exist_buffer
+        open_buffer(_tab_name)
+        if _text_index != nil && _text_index != '0.0'
+          _editor.text_see(_text_index)
+          _editor.mark_selected(_text_index) if _mark_selected 
+        end
+      end
+    end
+    return _editor
   end
 
   def close_others_editor(_editor, _mod=true)
