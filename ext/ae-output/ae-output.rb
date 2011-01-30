@@ -186,13 +186,15 @@ class Output < ArcadiaExt
     else
       _txt = "#{_event.msg}\n"
     end
-    if _event.level == 'error'
-      TkTextImage.new(@main_frame.text, _index_begin, 'padx'=>0, 'pady'=>0, 'image'=> TkPhotoImage.new('data' => ERROR_9X9_GIF))
-    end
+#    if _event.level == 'error'
+#      TkTextImage.new(@main_frame.text, _index_begin, 'padx'=>0, 'pady'=>0, 'image'=> TkPhotoImage.new('data' => ERROR_9X9_GIF))
+#    end
     @main_frame.text.insert(_index_begin,_txt, "#{_event.level}_msg")
     _index_end = @main_frame.text.index('end')
     if ['debug','error'].include?(_event.level)
-      parse_debug(_index_begin.split('.')[0].to_i, _index_end.split('.')[0].to_i)
+      parse_begin_row = _index_begin.split('.')[0].to_i-2
+      parse_end_row = _index_end.split('.')[0].to_i
+      parse_debug(parse_begin_row, parse_end_row)
     end
     @main_frame.text.see(_index_end)
     @main_frame.text.mark_unset(_event.mark)
