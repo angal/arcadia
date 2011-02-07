@@ -145,7 +145,7 @@ class DirProjects < ArcadiaExt
     },"%K")
 
     do_double_click = proc{
-        _selected = @htree.selection_get[0]
+        _selected = @htree.selected
         if File.ftype(node2file(_selected)) == 'directory'
           if !_selected.nil? && @htree.open?(node2file(_selected))
             @htree.close_tree(node2file(_selected))
@@ -179,7 +179,7 @@ class DirProjects < ArcadiaExt
 	def key_press(_keysym)
       case _keysym
         when 'F5'
-        _selected = self.selected
+        _selected = @htree.selected
         do_refresh(_selected)
       end
 	end
@@ -299,7 +299,7 @@ class DirProjects < ArcadiaExt
       :label=>'New folder',
       :hidemargin => false,
       :command=> proc{
-        _selected = self.selected
+        _selected = @htree.selected
         if _selected
           do_new_folder(_selected)
         end
@@ -311,7 +311,7 @@ class DirProjects < ArcadiaExt
       :label=>'New file',
       :hidemargin => false,
       :command=> proc{
-        _selected = self.selected
+        _selected = @htree.selected
         if _selected
           do_new_file(_selected)
         end
@@ -338,7 +338,7 @@ class DirProjects < ArcadiaExt
       :label=>'Rename',
       :hidemargin => false,
       :command=> proc{
-        _selected = self.selected
+        _selected = @htree.selected
         if _selected
           do_rename(_selected)
         end
@@ -349,7 +349,7 @@ class DirProjects < ArcadiaExt
       :label=>'Move',
       :hidemargin => false,
       :command=> proc{
-        _selected = self.selected
+        _selected = @htree.selected
         if _selected
           _idir = File.split(_selected)[0]
           _dir=Tk.chooseDirectory('initialdir'=>_idir,'mustexist'=>true) 
@@ -378,7 +378,7 @@ class DirProjects < ArcadiaExt
       :label=>'Find in files...',
       :hidemargin => false,
       :command=> proc{
-        _target = self.selected
+        _target = @htree.selected
         if _target
           _target = File.dirname(_target) if File.ftype(_target) == 'file'
           Arcadia.process_event(SearchInFilesEvent.new(self,'dir'=>_target))
@@ -391,7 +391,7 @@ class DirProjects < ArcadiaExt
       :label=>'Act in files...',
       :hidemargin => false,
       :command=> proc{
-        _target = self.selected
+        _target = @htree.selected
         if _target
           _target = File.dirname(_target) if File.ftype(_target) == 'file'
           Arcadia.process_event(AckInFilesEvent.new(self,'dir'=>_target))
@@ -419,7 +419,7 @@ class DirProjects < ArcadiaExt
       :label=>'Close Project',
       :hidemargin => false,
       :command=> proc{
-        _selected = self.selected
+        _selected = @htree.selected
         if _selected
           #p _selected
           do_close_project(_selected)
@@ -431,7 +431,7 @@ class DirProjects < ArcadiaExt
       :label=>'Refresh',
       :hidemargin => false,
       :command=> proc{
-        _selected = self.selected
+        _selected = @htree.selected
         do_refresh(_selected)
       }
     )
@@ -440,7 +440,7 @@ class DirProjects < ArcadiaExt
       :label=>'Delete',
       :hidemargin => false,
       :command=> proc{
-        _selected = self.selected
+        _selected = @htree.selected
         if _selected
           do_delete(_selected)
         end
@@ -461,7 +461,7 @@ class DirProjects < ArcadiaExt
       shure_select_node(@current_opened_folder)
       @last_current_opened_folder = @current_opened_folder
     else
-      _selected = self.selected
+      _selected = @htree.selected
       if _selected && @htree.exist?(_selected)
         _parent = @htree.parent(_selected)
         if _parent && _parent != 'root'
@@ -473,25 +473,29 @@ class DirProjects < ArcadiaExt
     end 
   end
 
-  def selected
-    if @htree.selection_get[0]
-      if @htree.selection_get[0].length >0
-       	_selected = ""
-        if String.method_defined?(:lines)
-      	   selection_lines = @htree.selection_get[0].lines
-        else
-      	   selection_lines = @htree.selection_get[0].split("\n")
-        end
-        selection_lines.each{|_block|
-          _selected = _selected + _block.to_s + "\s" 
-        }
-        _selected = _selected.strip
-      else
-        _selected = @htree.selection_get[0]
-      end
-    end
-    return _selected
-  end
+#  def selected
+#    if @htree.selection_get[0]
+#      if @htree.selection_get[0].length >0
+#       	_selected = ""
+#        if @htree.selection_get[0].instance_of?(Array)
+#          selection_lines = @htree.selection_get[0]
+#        else
+#          if String.method_defined?(:lines)
+#        	   selection_lines = @htree.selection_get[0].lines
+#          else
+#        	   selection_lines = @htree.selection_get[0].split("\n")
+#          end
+#        end
+#        selection_lines.each{|_block|
+#          _selected = _selected + _block.to_s + "\s" 
+#        }
+#        _selected = _selected.strip
+#      else
+#        _selected = @htree.selection_get[0]
+#      end
+#    end
+#    return _selected
+#  end
 
   def do_new_project(_parent_folder_node=nil)
     if _parent_folder_node.nil?
@@ -928,7 +932,7 @@ class DirProjects < ArcadiaExt
   end
   
   def on_before_save_as_buffer(_event)
-    _selected = self.selected
+    _selected = @htree.selected
     if _selected
       tpy =  File.ftype(node2file(_selected))
       if tpy == 'directory'

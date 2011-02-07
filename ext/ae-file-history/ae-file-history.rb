@@ -114,7 +114,7 @@ class FilesHistrory < ArcadiaExt
     @cb_sync.command(do_check)
     
     do_select_item = proc{|_self|
-      _selected = self.selected
+      _selected = @htree.selected
       _dir, _file = _selected.sub("%%%",":").split('@@@')
       if _file
         _file = File.expand_path( _file  , _dir ) 
@@ -146,7 +146,8 @@ class FilesHistrory < ArcadiaExt
     @htree.extend(TkScrollableWidget).show(0,26)
 
     do_double_click = proc{
-        _selected = @htree.selection_get[0]
+        #_selected = @htree.selection_get[0]
+        _selected = @htree.selected
         _dir, _file = _selected.sub("%%%",":").split('@@@')
         if _dir && _file.nil? && File.ftype(node2file(_dir)) == 'directory'
 	        _file = Tk.getOpenFile('initialdir'=>node2file(_dir))
@@ -214,25 +215,25 @@ class FilesHistrory < ArcadiaExt
   end  
 
 
-  def selected
-    if @htree.selection_get[0]
-      if @htree.selection_get[0].length >0
-       	_selected = ""
-        if String.method_defined?(:lines)
-      	   selection_lines = @htree.selection_get[0].lines
-        else
-      	   selection_lines = @htree.selection_get[0].split("\n")
-        end
-        selection_lines.each{|_block|
-          _selected = _selected + _block.to_s + "\s" 
-        }
-        _selected = _selected.strip
-      else
-        _selected = @htree.selection_get[0]
-      end
-    end
-    return _selected
-  end
+#  def selected
+#    if @htree.selection_get[0]
+#      if @htree.selection_get[0].length >0
+#       	_selected = ""
+#        if String.method_defined?(:lines)
+#      	   selection_lines = @htree.selection_get[0].lines
+#        else
+#      	   selection_lines = @htree.selection_get[0].split("\n")
+#        end
+#        selection_lines.each{|_block|
+#          _selected = _selected + _block.to_s + "\s" 
+#        }
+#        _selected = _selected.strip
+#      else
+#        _selected = @htree.selection_get[0]
+#      end
+#    end
+#    return _selected
+#  end
 
   def select_file_without_event(_file)
     _d, _f = File.split(File.expand_path(_file))
@@ -354,7 +355,7 @@ class FilesHistrory < ArcadiaExt
       :label=>'Find in files...',
       :hidemargin => false,
       :command=> proc{
-        _target = self.selected
+        _target = @htree.selected
         _dir, _file = _target.sub("%%%",":").split('@@@')
         if _dir
           Arcadia.process_event(SearchInFilesEvent.new(self,'dir'=>_dir))
@@ -367,7 +368,7 @@ class FilesHistrory < ArcadiaExt
       :label=>'Act in files...',
       :hidemargin => false,
       :command=> proc{
-        _target = self.selected
+        _target = @htree.selected
         _dir, _file = _target.sub("%%%",":").split('@@@')
         if _dir
           Arcadia.process_event(AckInFilesEvent.new(self,'dir'=>_dir))

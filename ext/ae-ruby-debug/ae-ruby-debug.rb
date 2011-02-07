@@ -125,13 +125,14 @@ class RubyDebugView
   end
 
   def build_process_panel(_frame)
-    @tree_process = Tk::BWidget::Tree.new(_frame, Arcadia.style('treepanel')){
+    @tree_process = BWidgetTreePatched.new(_frame, Arcadia.style('treepanel')){
       showlines false
       deltay 15
       place('relwidth' => 1,'relheight' => '1')
     }
     @tree_process.textbind("Double-ButtonPress-1", proc{
-      _selected = @tree_process.selection_get[0]
+      #_selected = @tree_process.selection_get[0]
+      _selected = @tree_process.selected
       if @tree_process.parent(_selected)=='client'
         _text = @tree_process.itemcget(_selected, 'text')
         pos = match_position_from_stack(_text)
@@ -181,7 +182,7 @@ class RubyDebugView
         inspect_node(_arg) if @nodes_to_open.include?(_arg)
     end
         
-    @tree_var = Tk::BWidget::Tree.new(_frame, Arcadia.style('treepanel')){
+    @tree_var = BWidgetTreePatched.new(_frame, Arcadia.style('treepanel')){
       showlines false
       deltay 15
       opencmd _open_proc
@@ -200,7 +201,8 @@ class RubyDebugView
 #    @tree_var.yscrollcommand proc{|first,last| _scrollbar.set(first,last)}
 
     @tree_var.textbind("Double-ButtonPress-1", proc{
-      _selected = @tree_var.selection_get[0]
+      #_selected = @tree_var.selection_get[0]
+      _selected = @tree_var.selected
       _msg = @tree_var.itemcget(_selected, 'text')
       Arcadia.dialog(self, 'type'=>'ok','title' => 'Value', 'msg' => _msg, 'level'=>'info')
     })
@@ -514,7 +516,8 @@ class RubyDebugView
   def match_position_from_stack(_line)
     #Arcadia.new_error_msg(self, "match on #{_line}")
     ret = Array.new
-    matchline = _line.match(/#*([0-9]*)[\s\w\W]*\s(.*):([0-9]*)(.*)/)
+    #matchline = _line.match(/#*([0-9]*)[\s\w\W]*\s([\w\:]*[\.\/]*[\/A-Za-z_\-\.]*[\.\/\w\d]*):(\d*)/)
+    matchline = _line.match(/#*([0-9]*)[\s\w\W]*line\s(.*):([0-9]*)(.*)/)
     if !matchline.nil? && matchline.length==5
       #Arcadia.new_error_msg(self, "matchline[2]=#{matchline[2]}")
       #Arcadia.new_error_msg(self, "matchline[3]=#{matchline[3]}")
@@ -540,7 +543,6 @@ class RubyDebugView
       end
       if pos.length > 0
         _file = pos[0]
-        #p "_file=#{_file}"
         _file = File.expand_path(pos[0]) if !File.exist?(_file)
         Arcadia.broadcast_event(DebugStepInfoEvent.new(self,'file'=> _file, 'row'=>pos[1]))
         #DebugContract.instance.debug_step(self, 'file'=> _file, 'line'=>pos[1])
@@ -810,7 +812,7 @@ class RubyDebugServer
       else
         rdebug_cmd = "rdebug"
       end
-      commandLine = "#{rdebug_cmd} --port #{_remote_port} -sw #{_filename}"
+      commandLine = "#{rdebug_cmd} --host #{_host} --port #{_remote_port} -sw '#{_filename}'"
     else
       commandLine = "rdebug --host #{_host} --port #{_remote_port} -sw #{_filename}"
     end

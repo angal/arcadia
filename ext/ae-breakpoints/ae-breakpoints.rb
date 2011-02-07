@@ -70,7 +70,7 @@ class Breakpoints < ArcadiaExt
 #      end
 #    }
 
-    @tree_break = Tk::BWidget::Tree.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
+    @tree_break = BWidgetTreePatched.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
       #showlines true
       deltay 18
       padx 25
@@ -176,7 +176,8 @@ class Breakpoints < ArcadiaExt
       proc{|*x|
         _x = TkWinfo.pointerx(@tree_break)
         _y = TkWinfo.pointery(@tree_break)
-        _selected = @tree_break.selection_get[0]
+        #_selected = @tree_break.selection_get[0]
+        _selected = @tree_break.selected
         _file, _line = get_tree_selection
         _label = _file
         if _line
@@ -189,7 +190,8 @@ class Breakpoints < ArcadiaExt
   end
   
   def get_tree_selection
-    _selected = @tree_break.selection_get[0]
+    #_selected = @tree_break.selection_get[0]
+    _selected = @tree_break.selected
     if _selected
       return node2file_line(_selected)
     else

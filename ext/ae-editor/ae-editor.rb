@@ -799,7 +799,8 @@ class AgEditorOutline
       sync_val = @bar.sync
       @bar.sync=false
       begin
-        _line = _self.selection_get[0]
+        #_line = _self.selection_get[0]
+        _line = _self.selected
         _index =_line.to_s+'.0'
         _hinner_text = @tree_exp.itemcget(_line,'text').strip
         _editor_line = @editor.text.get(_index, _index+ '  lineend')
@@ -812,7 +813,8 @@ class AgEditorOutline
             build_tree(_line)
             Tk.update
           }
-          _line = _self.selection_get[0]
+          #_line = _self.selection_get[0]
+          _line = _self.selected
           _index =_line.to_s+'.0'
         end
         @editor.text.set_focus
@@ -3748,7 +3750,6 @@ class AgMultiEditor < ArcadiaExt
   end
   
   def on_after_debug(_event)
-    "on_after_debug #{_event}"
     case _event
       when StepDebugEvent
         if _event.command == :quit_yes 

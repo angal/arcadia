@@ -37,7 +37,8 @@ class SearchInFilesListener
     @find = FindFrame.new(@service.arcadia.layout.root)
     @find.on_close=proc{@find.hide}
     @find.hide
-    @find.b_go.bind('1', proc{Thread.new{update_all_combo;do_find}}) # add trigger to button    
+    @find.b_go.bind('1', proc{update_all_combo;do_find}) # add trigger to button    
+    #@find.b_go.bind('1', proc{Thread.new{update_all_combo;do_find}}) # add trigger to button    
     
     enter_proc = proc {|e|
       case e.keysym
@@ -91,37 +92,37 @@ class SearchInFilesListener
       @search_output = SearchOutput.new(@service)
     end
     @service.frame.show_anyway
-    begin
-    
-      MonitorLastUsedDir.set_last @find.e_dir.text # save it away TODO make it into a message
-      
-      _search_title = 'search result for : "'+@find.e_what.text+'" in :"'+@find.e_dir.text+'"'+' ['+@find.e_filter.text+']'
-      _filter = @find.e_dir.text+'/**/'+@find.e_filter.text
-      _files = Dir[_filter]
-      _node = @search_output.new_result(_search_title, _files.length)
-      progress_stop=false
-      @progress_bar = TkProgressframe.new(@service.arcadia.layout.root, _files.length)		  
-      @progress_bar.title('Searching')
-      @progress_bar.on_cancel=proc{progress_stop=true}
-      #@progress_bar.on_cancel=proc{cancel}
-      pattern = Regexp.new(@find.e_what.text)
-      _files.each do |_filename|
-          File.open(_filename) do |file|
-            file.grep(pattern) do |line|
-              @search_output.add_result(_node, _filename, file.lineno.to_s, line)
-              break if progress_stop
+    Thread.new do
+      begin    
+        MonitorLastUsedDir.set_last @find.e_dir.text # save it away TODO make it into a message
+        
+        _search_title = 'search result for : "'+@find.e_what.text+'" in :"'+@find.e_dir.text+'"'+' ['+@find.e_filter.text+']'
+        _filter = @find.e_dir.text+'/**/'+@find.e_filter.text
+        _files = Dir[_filter]
+        _node = @search_output.new_result(_search_title, _files.length)
+        progress_stop=false
+        progress_bar = TkProgressframe.new(@service.arcadia.layout.root, _files.length)		  
+        progress_bar.title('Searching')
+        progress_bar.on_cancel=proc{progress_stop=true}
+        #@progress_bar.on_cancel=proc{cancel}
+        pattern = Regexp.new(@find.e_what.text)
+        _files.each do |_filename|
+            File.open(_filename) do |file|
+              file.grep(pattern) do |line|
+                @search_output.add_result(_node, _filename, file.lineno.to_s, line)
+                break if progress_stop
+              end
             end
-          end
-          @progress_bar.progress
-          break if progress_stop
+            progress_bar.progress
+            break if progress_stop
+        end
+      rescue Exception => e
+        Arcadia.console(self, 'msg'=>e.message, 'level'=>'error')
+        #Arcadia.new_error_msg(self, e.message)
+      ensure
+        progress_bar.destroy if progress_bar
       end
-    rescue Exception => e
-      Arcadia.console(self, 'msg'=>e.message, 'level'=>'error')
-      #Arcadia.new_error_msg(self, e.message)
-    ensure
-      @progress_bar.destroy if @progress_bar
     end
-
   end
   
   
@@ -132,22 +133,16 @@ class SearchOutput
     @sequence = 0
     @ext = _ext
     left_frame = TkFrame.new(@ext.frame.hinner_frame, Arcadia.style('panel')).place('x' => '0','y' => '0','relheight' => '1','width' => '25')
-    #right_frame = TkFrame.new(@ext.frame).place('x' => '25','y' => '0','relwidth' => '1', 'relheight' => '1', 'width' => '-25')
+    #right_frame = TkFrame.new(@ext.frame.hinner_frame, Arcadia.style('panel')).place('x' => '25','y' => '0','relwidth' => '1', 'relheight' => '1', 'width' => '-25')
     @results = {}
     _open_file = proc do |tree, sel|
       n_parent, n = sel.split('@@@')
       Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>@results[n_parent][n][0], 'row'=>@results[n_parent][n][1]))  if n && @results[n_parent][n]
-      #EditorContract.instance.open_file(self, 'file'=>@results[n_parent][n][0], 'line'=>@results[n_parent][n][1]) if n && @results[n_parent][n]
     end
-    @tree = Tk::BWidget::Tree.new(@ext.frame.hinner_frame, Arcadia.style('treepanel')){
-      #background '#FFFFFF'
-      #relief 'flat'
-      #showlines true
-      #linesfill '#e7de8f'
+    @tree = BWidgetTreePatched.new(@ext.frame.hinner_frame, Arcadia.style('treepanel')){
       selectcommand(_open_file)
       deltay 15
     }
-    #.place('x' => '25','y' => '0','relwidth' => '1', 'relheight' => '1', 'width' => '-40', 'height'=>'-15')
     @tree.extend(TkScrollableWidget).show(25,0)
     
     _proc_clear = proc{clear_tree}

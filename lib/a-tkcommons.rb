@@ -46,6 +46,31 @@ class BWidgetTreePatched < Tk::BWidget::Tree
 #  def selectcommand(_proc=nil)
 #    self.configure('selectcommand'=>_proc)
 #  end
+
+  def selected
+    if self.selection_get[0]
+      if self.selection_get[0].respond_to?(:length) && self.selection_get[0].length >0
+       	_selected = ""
+        if self.selection_get[0].instance_of?(Array)
+          selection_lines = self.selection_get[0]
+        else
+          if String.method_defined?(:lines)
+        	   selection_lines = self.selection_get[0].lines
+          else
+        	   selection_lines = self.selection_get[0].split("\n")
+          end
+        end
+        selection_lines.each{|_block|
+          _selected = _selected + _block.to_s + "\s" 
+        }
+        _selected = _selected.strip
+      else
+        _selected = self.selection_get[0]
+      end
+    end
+    return _selected
+  end
+
 end
 
 

@@ -1,8 +1,8 @@
 = Arcadia Ide
-version 0.9.2
+version 0.9.3
 
 by Antonio Galeone
-on Nov 21, 2010
+on Gen 31, 2011
 
 
 == About
@@ -16,11 +16,10 @@ Some of Arcadia ide project features include:
 * Working on any platform where ruby and tcl-tk work.
 * Highly extensibility architecture.
 
-== In this release 0.9.2
+== In this release 0.9.3
     
 [Improvements]
-  - bugs fixed in case of ruby 1.8 enviroment
-  - supported the maximized state saving of the main window
+  - bugs fixed
 
 == Dependencies
   - rubygems
@@ -29,7 +28,6 @@ Some of Arcadia ide project features include:
   - ack (optional)
   - gem coderay
   - gem ruby-debug (ruby-debug19 on ruby 1.9)
-  - gem whichr
   - gem win32-process (only on windows)
   - gem ruby-wmi (only on windows)
   
@@ -133,10 +131,11 @@ under ~/.arcadia  directory. The format of property definition are:
 I have tested arcadia with ruby 1.8.4, 1.8.5, 1.8.6, 1.8.7, 1.9.1, 1.9.2 on 
 
 * Archlinux
+* Fedora
 * Ubuntu
 * FreeBsd6.x, FreeBsd7.x, 
 * Vector linux 5.*,
-* Windows 2000/XP, 
+* Windows 2000/XP/7, 
 * Cygwin (note: same page fault error on dll under cygwin may be solved in this way:
   by ash.exe exec "/bin/rebaseall"). 
 If you will test arcadia on other operating system sends me an e-mail.
@@ -154,6 +153,7 @@ For all questions:
 antonio-galeone@rubyforge.org
 
 For bugs, support request, features request:
-http://groups.google.it/group/arcadia-ruby-ide
+http://github.com/angal/arcadia/issues
+
 Repository at:
 http://github.com/angal/arcadia/tree/master
