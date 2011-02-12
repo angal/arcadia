@@ -3709,7 +3709,9 @@ class AgMultiEditor < ArcadiaExt
       when StartDebugEvent
         _event.persistent=true
         _filename = _event.file
-        if _filename.nil? || _filename == "*CURR"
+        if _filename  == "*LAST"
+          _event.file = Arcadia.persistent('run.file.last')
+        elsif _filename.nil? || _filename == "*CURR"
           current_editor = self.raised
           if current_editor
             if current_editor.file
@@ -3719,10 +3721,6 @@ class AgMultiEditor < ArcadiaExt
               _event.id=current_editor.id
               _event.persistent=false
             end
-          end
-        else
-          if _filename  == "*LAST"
-            _event.file = Arcadia.persistent('run.file.last')
           end
         end
         self.debug_begin

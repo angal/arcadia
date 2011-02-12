@@ -136,7 +136,7 @@ class RubyDebugView
       if @tree_process.parent(_selected)=='client'
         _text = @tree_process.itemcget(_selected, 'text')
         pos = match_position_from_stack(_text)
-        if pos.length >0 
+        if pos && pos.length >0 
     	     Arcadia.process_event(OpenBufferEvent.new(self,'file'=>pos[0], 'row'=>pos[1]))
           #EditorContract.instance.open_file(self, 'file'=>pos[0], 'line'=>pos[1])
         end
@@ -495,14 +495,16 @@ class RubyDebugView
       elsif _command == 'cont' && !_result.downcase.include?('breakpoint')
         @controller.rdc.kill
         clear
-      elsif _command != 'where' && _command != 'quit_yes'  
+      elsif _command != 'where' && _command != 'quit_yes'  && @controller.rdc.is_alive?
         begin
           update_position
-          update_variables('local_var', @controller.rdc.variables('local_variables')) if @local_state == B_STATE_ON
-          update_variables('instance_var', @controller.rdc.variables('instance_variables')) if @instance_state == B_STATE_ON
-          update_variables('class_var', @controller.rdc.variables('self.class.class_variables')) if @class_state == B_STATE_ON
-          #Arcadia.new_debug_msg(self,"on command #{_command}:global_variables")
-          update_variables('global_var', @controller.rdc.variables('global_variables')) if @global_state == B_STATE_ON
+          if @controller.rdc.is_alive?
+            update_variables('local_var', @controller.rdc.variables('local_variables')) if @local_state == B_STATE_ON
+            update_variables('instance_var', @controller.rdc.variables('instance_variables')) if @instance_state == B_STATE_ON
+            update_variables('class_var', @controller.rdc.variables('self.class.class_variables')) if @class_state == B_STATE_ON
+            #Arcadia.new_debug_msg(self,"on command #{_command}:global_variables")
+            update_variables('global_var', @controller.rdc.variables('global_variables')) if @global_state == B_STATE_ON
+          end
         ensure
           command_enabled(true) if !@controller.rdc.nil? && @controller.rdc.is_debugging_ready? && (!_command.include?('quit') || _command.include?('quit_no')) 
         end
@@ -541,7 +543,7 @@ class RubyDebugView
       elsif !stack[0].nil?
         pos = match_position_from_stack(stack[0])
       end
-      if pos.length > 0
+      if pos && pos.length > 0
         _file = pos[0]
         _file = File.expand_path(pos[0]) if !File.exist?(_file)
         Arcadia.broadcast_event(DebugStepInfoEvent.new(self,'file'=> _file, 'row'=>pos[1]))
@@ -676,7 +678,11 @@ class RubyDebugView
   def var_name(_node)
     #_parent = @tree_var.parent(_node)
     #return _node.sub("#{_parent}_", '') 
-    return _node.split('@@@')[-1].gsub('__S__','$').gsub('__E__','&').gsub('__D__',':').gsub('__A__','!')
+    to_split= _node
+    if _node.instance_of?(Array) && _node.length > 0
+      to_split=_node[0].to_s
+    end
+    return to_split.split('@@@')[-1].gsub('__S__','$').gsub('__E__','&').gsub('__D__',':').gsub('__A__','!')
   end
   
   def command_enabled(_value)
@@ -1105,7 +1111,7 @@ class RubyDebugClient
       end
       #_command !="cont"
       true 
-    rescue Errno::ECONNABORTED => e
+    rescue Errno::ECONNABORTED,Errno::ECONNRESET, Errno::EPIPE => e
       notify("quit_yes")
       #DebugContract.instance.debug_end(self)
       Arcadia.console(self, 'msg'=>"Debugger has finished executing:\n #{e.class}:#{e.inspect}", 'level'=>'debug')
@@ -1123,7 +1129,8 @@ class RubyDebugClient
   private :command
 
   def read(_command=nil)
-    return nil if _command && !command(_command) 
+    return nil if _command && !command(_command)
+    #return nil if _command.nil? || (_command && !command(_command)) 
     result = ""
     if socket_session
       @session.flush
@@ -1347,10 +1354,18 @@ class RubyDebugClient
   end
 
   def debug_eval(_exp)
-    command("eval #{res=_exp}.to_s + '|||' + #{res}.class.to_s")
-    _str = eval(read)
-    _value, _class = _str.split('|||')
-    return Var.new(_value, _class)
+    if command("eval #{res=_exp}.to_s + '|||' + #{res}.class.to_s")
+      begin
+        _str = eval(read)
+        _value, _class = _str.split('|||')
+      rescue Exception => e
+        _value = "?"
+        _class = "?"
+      end
+      return Var.new(_value, _class)
+    else
+      return Var.new("?", "?")
+    end
   end
   
   # returns the local variables and there values

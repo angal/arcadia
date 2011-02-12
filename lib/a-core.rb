@@ -1874,7 +1874,7 @@ class ArcadiaGemsWizard
     
     sh=ArcadiaSh.new
     cmd = "gem install --remote --include-dependencies #{name}"
-    cmd="sudo #{cmd}" if !is_windows?
+    cmd="sudo #{cmd}" if !Arcadia.is_windows?
     cmd+=" --source=#{repository}" if repository
     sh.prepare_exec(cmd)    
     while sh.wait

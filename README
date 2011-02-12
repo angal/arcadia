@@ -2,7 +2,7 @@
 version 0.9.3
 
 by Antonio Galeone
-on Gen 31, 2011
+on Feb 12, 2011
 
 
 == About
@@ -40,7 +40,7 @@ There are two way:
    b. unzip (on windows) arcadia-<version>.zip
 
 == How to run
-* exec on command line "ruby <path/>arcadia"
+* exec on command line "arcadia" or "ruby <path/>arcadia"
 
 
 == Short User guide
@@ -52,13 +52,11 @@ for the dynamic layout functions.
 
 ==== Main Toolbar
 The toolbar button are in order:
-- new, open, save
-  (relatively to edit operation)
+- new, open, save, find
+  (relatively to edit/find operation)
 - run current, run last 
   (for execute the raised file in the editor or the last runned file)  
   after "run current" there is a menubutton to choose a configurated runner to apply at current file
-- show rad palette
-  (for tk rad need)  
 - debug current, debug last, quit debug panel
   (for debug need)
 - quit (to exit from arcadia)
@@ -99,21 +97,6 @@ It is a navigational tree:
 ==== File history
 The last used files are organizing in tree so you can reopen them or there  
 directory by clicking on the tree node.
-
-==== Rad Palette (instable)
-It contain the wrapper components for the tk gui building. 
-It is in very unstabled and incomplete state. 
-The first component is a TkTopLevel wrapper, when you click on it a new form is created and a 
-Object inspector appears.
-The other components must be first selected and then created by clicking on container widget.
-The so created widgets has a popup menu for deleting them or in the toplevel case to switch
-to a code view.
-On the palette there are also two button, one for deselect and other for copy from the selected 
-created widget. The copy action copy also the code into the clipboard, so you can copy the
-code rapresenting the gui into the embedded editor or into external editor.
-
-==== Rad Object Inspector  (instable)
-It is for modify the widget property at runtime
 
 ==== Debug
 Require ruby-debug gem.
