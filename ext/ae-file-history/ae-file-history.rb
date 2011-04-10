@@ -259,6 +259,7 @@ class FilesHistrory < ArcadiaExt
         #@htree.selectcommand(_proc)
         @htree.configure('selectcommand'=>_proc)
       end
+      @htree.call_after_next_show_h_scroll(proc{Tk.update;@htree.see(_file_node_rif)})
     end
   end
 		

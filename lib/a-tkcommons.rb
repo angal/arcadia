@@ -1634,6 +1634,14 @@ module TkScrollableWidget
     @v_scroll.destroy
   end
 
+  def call_after_next_show_h_scroll(_proc_to_call=nil)
+    @h_proc = _proc_to_call
+  end
+
+  def call_after_next_show_v_scroll(_proc_to_call=nil)
+    @v_proc = _proc_to_call    
+  end
+
   def add_yscrollcommand(cmd=Proc.new)
     @v_scroll_command = cmd
   end
@@ -1654,6 +1662,7 @@ module TkScrollableWidget
       @v_scroll_command.call(first,last) if !@v_scroll_command.nil?
       @last_y_last = last if last.to_f < 1
     end
+    
   end
 
   def add_xscrollcommand(cmd=Proc.new)
@@ -1675,6 +1684,13 @@ module TkScrollableWidget
       end
       @h_scroll_command.call(first,last) if !@h_scroll_command.nil?
       @last_x_last = last if last.to_f < 1
+    end
+    if @x_proc
+      begin
+        @x_proc.call
+      ensure
+        @x_proc=nil
+      end
     end
   end
 
@@ -1742,6 +1758,13 @@ module TkScrollableWidget
         @v_scroll.pack('side' => 'right', 'fill' => 'y')
         @v_scroll_on = true
         @v_scroll.raise
+        if @v_proc
+          begin
+            @v_proc.call
+          ensure
+            @v_proc=nil
+          end
+        end
       rescue RuntimeError => e
         p "RuntimeError : #{e.message}"
       end
@@ -1755,6 +1778,13 @@ module TkScrollableWidget
         @h_scroll.pack('side' => 'bottom', 'fill' => 'x')
         @h_scroll_on = true
         @h_scroll.raise
+        if @h_proc
+          begin
+            @h_proc.call
+          ensure
+            @h_proc=nil
+          end
+        end
       rescue RuntimeError => e
         p "RuntimeError : #{e.message}"
       end

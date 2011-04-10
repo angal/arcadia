@@ -1,0 +1,3 @@
+language=python
+scanner=coderay
+@include=coderay.tokens

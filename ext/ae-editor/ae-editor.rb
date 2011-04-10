@@ -12,16 +12,16 @@ require "#{Dir.pwd}/lib/a-tkcommons"
 require "#{Dir.pwd}/lib/a-core"
 require "#{Dir.pwd}/ext/ae-editor/lib/rbeautify"
 
-class TreeNode
+class SourceTreeNode
   attr_reader :sons
   attr_reader :parent
   attr_reader :kind
-  attr_reader :rif, :rif_end, :label, :helptext
-  attr_writer :rif, :rif_end, :label, :helptext
-  def initialize(parent=nil, kind='KClass')
+  attr_accessor :rif, :rif_end, :label, :helptext, :sortable
+  def initialize(parent=nil, kind='class', sortable=true)
     @sons = Array.new
     @parent = parent
     @kind = kind
+    @sortable = sortable
     if @parent !=nil
       @parent.sons << self
     end
@@ -29,15 +29,23 @@ class TreeNode
   end
 
   def <=> (other)
-    self.label.strip <=> other.label.strip
+    if self.sortable && other.sortable
+      self.label.strip <=> other.label.strip
+    elsif !self.sortable
+      -1
+    elsif !other.sortable
+      1
+    end
   end
+
 end
+
 
 class SourceStructure
   attr_reader :root
   
   def initialize
-    @root = TreeNode.new(nil, 'KRoot'){|_node|
+    @root = SourceTreeNode.new(nil, 'root'){|_node|
       _node.rif= 'root'
       _node.label=''
     }
@@ -77,7 +85,7 @@ class SourceStructure
   def class_node_by_line(_line)
     line_node = node_by_line(@root, _line)
     class_node = line_node
-    while class_node != nil && class_node.kind != "KClass"
+    while class_node != nil && class_node.kind != "class"
       class_node = class_node.parent
     end
     return class_node
@@ -86,21 +94,63 @@ class SourceStructure
 end
 
 class CtagsSourceStructure < SourceStructure
-  def initialize(_file)
+  def initialize(_file, _ctags_string='ctags', _language=nil)
     super()
     @file = _file
+    @ctags_string = _ctags_string
+    @language = (_language.nil?)?nil:_language.capitalize
+    @classes = Hash.new
+    @last_root = @root
+    @last_class_node = @root
+    @last_node = @root    
     build_structure
   end
 
   def build_structure
     output = ctags
     output.each {|line|
-      p line.split("\t")
-    }
+      b1,brest =  line.split("/^")
+      b2,b3 = brest.split('$/;"')
+      name,file = b1.strip.split("\t")
+      definition = b2.strip
+      fields_raw = b3.strip.split("\t")
+      fields = Hash.new
+      fields_raw.each{|item|
+        k,v=item.split(":")
+        fields[k.strip]=v.strip if !k.nil? && !v.nil?
+      }      
+      if fields['class'] != nil
+        parent = @classes[fields['class']]
+      elsif fields['interface'] != nil
+        parent = @classes[fields['interface']]
+      elsif ['method','singleton method'].include?(fields['kind'])
+        parent = @last_class_node
+      else
+        parent = @last_root
+      end
+      
+      node = SourceTreeNode.new(parent, fields['kind'])
+      node.label = name
+      node.helptext = definition
+      node.rif = fields['line']
+      @last_node.rif_end = (node.rif.to_i-1).to_s
+      
+      if ['class','module','interface','package'].include?(fields['kind'])
+        @classes[name]=node
+        @last_class_node = node
+      end
+      node.sortable =  !['package','field'].include?(fields['kind'])
+      @last_node = node
+    }   
+      
+    
   end
   
   def ctags
-    _cmd_ = "|ctags -x -u #{@file}"
+    if @language != nil
+      @ctags_string = "#{@ctags_string} --language-force=#{@language}"
+    end
+    _cmd_ = "|#{@ctags_string} --fields=+a+f+m+i+k+K+n+s+S+t+z -uf - #{@file}"
     to_ret = ''
     open(_cmd_, "r"){|f| 
       to_ret = f.readlines
@@ -124,10 +174,6 @@ class RubySourceStructure < SourceStructure
     _row = 1
     _liv = 0
     _livs = Array.new
-#    @root = TreeNode.new(nil, 'KRoot'){|_node|
-#      _node.rif= 'root'
-#      _node.label=''
-#    }
     _livs[_liv]=@root
     _source.each_line{|line|
       line = "\s"+line.split("#")[0]+"\s"
@@ -152,7 +198,7 @@ class RubySourceStructure < SourceStructure
             _label = _helptext
           end
           if (m[0].strip[0..4] == "class" && m.pre_match.strip.length==0)
-            _kind = 'KClass'
+            _kind = 'class'
             if m.post_match.strip[0..1]=='<<'
               hinner_class = true
             else
@@ -163,7 +209,7 @@ class RubySourceStructure < SourceStructure
             _liv = _liv - 1
             next
           elsif (m[0].strip[0..5] == "module" && m.pre_match.strip.length==0)
-            _kind = 'KModule'
+            _kind = 'module'
           elsif (m[0].strip[0..5] == "module" && m.pre_match.strip.length>0)
             _row = _row +1
             _liv = _liv - 1
@@ -176,9 +222,9 @@ class RubySourceStructure < SourceStructure
             _liv = _liv - 1
             next
           elsif (m[0].strip[0..2] == "def" && m.pre_match.strip.length==0)
-            _kind = 'KDef'
+            _kind = 'method'
             if _label.include?(_parent.label + '.')
-              _kind = 'KDefClass'
+              _kind = 'singleton method'
             end
 #          elsif (m[0].strip[0..10] == "attr_reader" && m.pre_match.strip.length==0)
 #            _kind = 'KAttr_reader'
@@ -186,15 +232,15 @@ class RubySourceStructure < SourceStructure
 #            _row = _row +1
           end
           
-          if  _livs[_liv-1] && (_livs[_liv-1].kind != 'KDef' || (_livs[_liv-1].kind == 'KDef' && _kind == 'KClass' && hinner_class))
-            TreeNode.new(_parent, _kind){|_node|
+          if  _livs[_liv-1] && (_livs[_liv-1].kind != 'method' || (_livs[_liv-1].kind == 'method' && _kind == 'class' && hinner_class))
+            SourceTreeNode.new(_parent, _kind){|_node|
               _node.label = _label
               _node.helptext = _helptext
               _node.rif = _row.to_s
               _livs[_pliv + 1]=_node
             }
           else
-            TreeNode.new(_livs[_liv-3], _kind){|_node|
+            SourceTreeNode.new(_livs[_liv-3], _kind){|_node|
               _node.label = _label
               _node.helptext = _helptext
               _node.rif = _row.to_s
@@ -227,26 +273,26 @@ class RubySourceStructure < SourceStructure
     _sons = _node.sons
     for inode in 0.._sons.length - 1
       _son = _sons[inode]
-      if _son.kind == 'KClass'
+      if _son.kind == 'class'
          _hinner_source = "#{_hinner_source}class #{_son.helptext}\n"
-      elsif _son.kind == 'KModule'
+      elsif _son.kind == 'module'
          _hinner_source = "#{_hinner_source}module #{_son.helptext}\n"
-      elsif _son.kind == 'KDef' && _son.helptext != 'initialize'
+      elsif _son.kind == 'method' && _son.helptext != 'initialize'
          
          _hinner_source = "#{_hinner_source}  def #{_son.helptext}\n"
          _hinner_source = "#{_hinner_source}  end\n"
-      elsif _son.kind == 'KDefClass'
+      elsif _son.kind == 'singleton method'
          _hinner_source = "#{_hinner_source}  def #{_son.helptext}\n"
          _hinner_source = "#{_hinner_source}  end\n"
       end
       _hinner_source= scheletor_from_node(_son, _hinner_source, _injected_source, _injected_class)
     end
     _source = "#{_source}#{_hinner_source}" if _hinner_source.strip.length>0
-    if _node.kind == 'KClass' && _node.label == _injected_class
+    if _node.kind == 'class' && _node.label == _injected_class
       _source = "#{_source}  def initialize\n  #{_injected_source}  end\n"
       @injected_row = _source.split("\n").length-2
     end
-    _source = "#{_source}end\n" if _node.kind == 'KClass' || _node.kind == 'KModule'
+    _source = "#{_source}end\n" if _node.kind == 'class' || _node.kind == 'module'
     _source
   end
 
@@ -742,10 +788,11 @@ end
 class AgEditorOutline
   attr_reader :last_row
   attr_reader :tree_exp
-  def initialize(_editor, _frame, _bar)
+  def initialize(_editor, _frame, _bar, _lang=nil)
     @editor = _editor
     @frame = _frame
     @bar = _bar
+    @lang = _lang
     initialize_tree(_frame)
   end
 
@@ -779,10 +826,12 @@ class AgEditorOutline
       @tree_exp.close_tree(to_open) if to_open && !@opened
 
       @tree_exp.see(_node.rif)
+      
     ensure
       @tree_exp.selectcommand(_proc)
       @selecting_node = false
     end
+    @tree_exp.call_after_next_show_h_scroll(proc{Tk.update;@tree_exp.see(_node.rif)})    
   end
 
   def select_without_event(_line)
@@ -853,22 +902,22 @@ class AgEditorOutline
   end
 
   def build_tree_from_node(_node, _label_match=nil)
-    @image_kclass = TkPhotoImage.new('dat' => TREE_NODE_CLASS_GIF)
-    @image_kmodule =  TkPhotoImage.new('dat' => TREE_NODE_MODULE_GIF)
-    @image_kdef =  TkPhotoImage.new('dat' => TREE_NODE_DEF_GIF)
-    @image_kdefclass =  TkPhotoImage.new('dat' => TREE_NODE_DEFCLASS_GIF)
+    @image_class = TkPhotoImage.new('dat' => TREE_NODE_CLASS_GIF)
+    @image_module =  TkPhotoImage.new('dat' => TREE_NODE_MODULE_GIF)
+    @image_method =  TkPhotoImage.new('dat' => TREE_NODE_METHOD_GIF)
+    @image_singleton_method =  TkPhotoImage.new('dat' => TREE_NODE_SINGLETON_METHOD_GIF)
     
-    _sorted_sons = _node.sons.sort
+    _sorted_sons = _node.sons.sort 
     for inode in 0.._sorted_sons.length - 1
       _son = _sorted_sons[inode]
-      if _son.kind == 'KClass'
-          _image = @image_kclass
-      elsif _son.kind == 'KModule'
-          _image = @image_kmodule
-      elsif _son.kind == 'KDef'
-          _image = @image_kdef
-      elsif _son.kind == 'KDefClass'
-          _image = @image_kdefclass
+      if _son.kind == 'class'
+          _image = @image_class
+      elsif _son.kind == 'module'
+          _image = @image_module
+      elsif _son.kind == 'method'
+          _image = @image_method
+      elsif _son.kind == 'singleton method'
+          _image = @image_singleton_method
       end
       @tree_exp.insert('end', _son.parent.rif ,_son.rif, {
         'text' =>  _son.label ,
@@ -899,12 +948,21 @@ class AgEditorOutline
     end
     
     
-    #(re)build tree
     _txt = @editor.text.get('1.0','end')
-    #@root = build_tree_from_source(_txt)
-    #CtagsSourceStructure.new(@editor.file)
-    @ss = RubySourceStructure.new(_txt)
-    #@root = @ss.root
+    if @editor.has_ctags?
+      if @editor.file
+        @ss = CtagsSourceStructure.new(@editor.file, @editor.ctags_string)
+      else
+        tmp_file = @editor.create_temp_file
+        begin
+          @ss = CtagsSourceStructure.new(tmp_file, @editor.ctags_string, @lang)
+        ensure 
+          File.delete(tmp_file)
+        end
+      end
+    else
+      @ss = RubySourceStructure.new(_txt)
+    end
     @selected = nil
     build_tree_from_node(@ss.root, _label_sel)
     if @selected
@@ -950,6 +1008,7 @@ class AgEditor
   attr_reader :outline
   attr_reader :highlighting
   attr_reader :last_tmp_file
+  attr_reader :lang
   def initialize(_controller, _page_frame)
     @controller = _controller
     @page_frame = _page_frame
@@ -961,6 +1020,7 @@ class AgEditor
     @font_metrics_bold = TkFont.new(@font_bold).metrics
     @highlighting = false
     @classbrowsing = false
+    @codeinsight = false
     @find = @controller.get_find
     @read_only=false
     @loading=false
@@ -1508,7 +1568,7 @@ class AgEditor
       when 'g'
         Arcadia.process_event(GoToLineBufferEvent.new(self))
       when 'n'
-        $arcadia['main.action.new_file'] # necessary? Is there an event for this?
+        Arcadia.process_event(NewBufferEvent.new(self))
       when 'w'
         Arcadia.process_event(CloseCurrentTabEvent.new(self))
       end
@@ -3058,11 +3118,25 @@ class AgEditor
     @text.see(pos_index)
     @text.set_insert(pos_index)
   end
+  
+  def has_ctags?
+    @controller.has_ctags
+  end
+  
+  def ctags_string
+    @controller.ctags_string
+  end
 
-  def init_editing(_ext='rb')
+  def initialize_editing(_ext='rb')
     @is_ruby = _ext=='rb'|| _ext=='rbw'
-    @classbrowsing = @is_ruby
+    @classbrowsing = @is_ruby || has_ctags?
+    @codeinsight = @is_ruby
     @lang_hash = @controller.languages_hash(_ext)
+    if @lang_hash
+      @lang = @lang_hash['language']
+    else
+      @lang = 'ruby'
+    end
 #    @highlight_scanner = @controller.highlight_scanner(_ext)
 #    if !_ext.nil? && @is_ruby
 #      @fm = AGTkVSplittedFrames.new(@page_frame,_w1)
@@ -3084,7 +3158,7 @@ class AgEditor
     if @outline
       @outline.show
     else
-      @outline=AgEditorOutline.new(self,@controller.frame(1).hinner_frame,@controller.outline_bar)
+      @outline=AgEditorOutline.new(self, @controller.frame(1).hinner_frame, @controller.outline_bar, @lang)
       refresh
     end
   end
@@ -3105,7 +3179,6 @@ class AgEditor
     begin
       @file = _filename
       if _filename
-        #init_editing(file_extension(_filename))
         File::open(_filename,'rb'){ |file|
           @text.insert('end',file.readlines.collect!{| line | line.chomp}.join("\n"))
           #@text.insert('end',file.read)
@@ -3331,7 +3404,10 @@ class AgMultiEditor < ArcadiaExt
 #  attr_reader :breakpoints
   attr_reader :splitted_frame
   attr_reader :outline_bar
+  attr_reader :has_ctags, :ctags_string
   def on_before_build(_event)
+    Arcadia.is_windows? ? @ctags_string="lib/ctags.exe" : @ctags_string='ctags'
+    @has_ctags = !Arcadia.which(@ctags_string).nil?
     @breakpoints =Array.new
     @tabs_file =Hash.new
     @tabs_editor =Hash.new
@@ -3461,13 +3537,13 @@ class AgMultiEditor < ArcadiaExt
     @outline_bar = AgEditorOutlineToolbar.new(self.frame(1).hinner_frame, self)
     create_find # this is the "find within current file" one
     pop_up_menu
-    @buffer_menu = frame.root.add_menu_button(self.name, 'files', DOCUMENT_COMBO_GIF, 'right', {'relief'=>:raised, 'borderwidth'=>1}).cget('menu')
-    frame.root.add_sep(self.name, 1)
     frame.root.add_button(
       self.name,
       'close current',
       proc{Arcadia.process_event(CloseCurrentTabEvent.new(self))}, 
       CLOSE_DOCUMENT_GIF)
+    frame.root.add_sep(self.name, 1)
+    @buffer_menu = frame.root.add_menu_button(self.name, 'files', DOCUMENT_COMBO_GIF, 'right', {'relief'=>:raised, 'borderwidth'=>1}).cget('menu')
   end
 
   def add_buffer_menu_item(_filename, is_file=true)
@@ -3523,7 +3599,7 @@ class AgMultiEditor < ArcadiaExt
     @buffer_menu.delete(to_del) if to_del != -1
   end
 
-  def on_after_build(_event)
+  def on_initialize(_event)
     self.open_last_files
   end
 
@@ -3574,37 +3650,37 @@ class AgMultiEditor < ArcadiaExt
   end
 
   def languages_hash(_ext=nil)
-    @@langs_hash = Hash.new if !defined?(@@langs_hash)
+    @langs_hash = Hash.new if !defined?(@langs_hash)
     return nil if _ext.nil?
-    if @@langs_hash[_ext].nil?
+    if @langs_hash[_ext].nil?
       #_ext='' if _ext.nil?
       lang_file = File.dirname(__FILE__)+'/langs/'+_ext+'.lang'
       if File.exist?(lang_file)
-        @@langs_hash[_ext] = properties_file2hash(lang_file)
+        @langs_hash[_ext] = properties_file2hash(lang_file)
       elsif File.exist?(lang_file+'.bind')
         b= properties_file2hash(lang_file+'.bind')
         if b 
-          if @@langs_hash[b['bind']].nil?
+          if @langs_hash[b['bind']].nil?
             lang_file_bind = File.dirname(__FILE__)+'/langs/'+b['bind']+".lang"
             if File.exist?(lang_file_bind)
-              @@langs_hash[b['bind']]=properties_file2hash(lang_file_bind)
-              @@langs_hash[_ext]=@@langs_hash[b['bind']]
+              @langs_hash[b['bind']]=properties_file2hash(lang_file_bind)
+              @langs_hash[_ext]=@langs_hash[b['bind']]
             end
           else
-            @@langs_hash[_ext]=@@langs_hash[b['bind']]
+            @langs_hash[_ext]=@langs_hash[b['bind']]
           end
         end
       end
-      if @@langs_hash[_ext] && @@langs_hash[_ext]['@include'] != nil
-        include_file = "#{File.dirname(__FILE__)}/langs/#{@@langs_hash[_ext]['@include']}"
+      if @langs_hash[_ext] && @langs_hash[_ext]['@include'] != nil
+        include_file = "#{File.dirname(__FILE__)}/langs/#{@langs_hash[_ext]['@include']}"
         if File.exist?(include_file)
           include_hash = properties_file2hash(include_file)
-          @@langs_hash[_ext] = include_hash.merge(@@langs_hash[_ext])
+          @langs_hash[_ext] = include_hash.merge(@langs_hash[_ext])
         end
       end 
-      self.resolve_properties_link(@@langs_hash[_ext], Arcadia.instance['conf']) if @@langs_hash[_ext]
+      self.resolve_properties_link(@langs_hash[_ext], Arcadia.instance['conf']) if @langs_hash[_ext]
     end
-    @@langs_hash[_ext]
+    @langs_hash[_ext]
   end
 
 
@@ -3792,7 +3868,7 @@ class AgMultiEditor < ArcadiaExt
     #Arcadia.new_error_msg(self, "on_buffer #{_event.class}")
     case _event
       when NewBufferEvent
-        self.open_buffer
+        self.open_buffer(nil, nil, nil, _event.lang)
       when OpenBufferEvent
         if _event.file
           if _event.row
@@ -4249,10 +4325,11 @@ class AgMultiEditor < ArcadiaExt
       else
         _new_caption = _title
       end
+      _lang = _e.lang
     end
     change_frame_caption(_new_caption)
     _title = @tabs_file[_name] != nil ? File.basename(@tabs_file[_name]) :_name
-    Arcadia.broadcast_event(BufferRaisedEvent.new(self,'title'=>_title, 'file'=>@tabs_file[_name]))
+    Arcadia.broadcast_event(BufferRaisedEvent.new(self, 'title'=>_title, 'file'=>@tabs_file[_name], 'lang'=>_lang ))
     #EditorContract.instance.buffer_raised(self, 'title'=>_title, 'file'=>@tabs_file[_name])
   end
   
@@ -4341,7 +4418,7 @@ class AgMultiEditor < ArcadiaExt
   end
 
 
-  def open_buffer(_buffer_name = nil, _title = nil, _filename=nil)
+  def open_buffer(_buffer_name = nil, _title = nil, _filename=nil, _lang=nil)
     _index = @main_frame.enb.index(resolve_tab_name(_buffer_name))
     if _buffer_name == nil
     		_title_new = '*new'
@@ -4364,10 +4441,18 @@ class AgMultiEditor < ArcadiaExt
       end
       if _title == nil
         _title =  _title_new
+        case _lang
+          when 'ruby', nil
+            lang_sign = '*.rb'
+          when 'java'
+            lang_sign = '*.java'
+        end
+      else
+        lang_sign = _title
       end
       _tab = @main_frame.enb.insert('end', _buffer_name ,
         'text'=> _title,
-        'image'=> Arcadia.file_icon(_title),
+        'image'=> Arcadia.file_icon(lang_sign),
         'background'=> Arcadia.style("tabpanel")["background"],
         'foreground'=> Arcadia.style("tabpanel")["foreground"],
         'raisecmd'=>proc{do_buffer_raise(_buffer_name, _title)}
@@ -4382,9 +4467,9 @@ class AgMultiEditor < ArcadiaExt
       @editor_seq=@editor_seq+1
       _e.id=@editor_seq
       @editors[@editor_seq]=_e
-      ext = Arcadia.file_extension(_title)
+      ext = Arcadia.file_extension(lang_sign)
       ext='rb' if ext.nil?
-      _e.init_editing(ext)
+      _e.initialize_editing(ext)
       _e.text.set_focus
       #@tabs_file[_buffer_name]= nil
       @tabs_editor[_buffer_name]=_e

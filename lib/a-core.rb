@@ -22,7 +22,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.9.3',
+        '0.10.0',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -943,13 +943,25 @@ class Arcadia < TkApplication
   def Arcadia.which(_command=nil)
     return nil if _command.nil?
     _ret = nil
-    ENV['PATH'].split(File::PATH_SEPARATOR).each{|_path|
-      _file = File.join(_path, _command)
+    _file = _command
+    if FileTest.exist?(_file)
+      _ret = _file
+    end
+    if _ret.nil?
+      _file = File.join(Dir.pwd, _command)
       if FileTest.exist?(_file)
         _ret = _file
-        break
       end
-    }
+    end
+    if _ret.nil?
+      ENV['PATH'].split(File::PATH_SEPARATOR).each{|_path|
+        _file = File.join(_path, _command)
+        if FileTest.exist?(_file)
+          _ret = _file
+          break
+        end
+      }
+    end
     _ret
   end
   

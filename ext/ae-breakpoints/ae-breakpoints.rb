@@ -15,7 +15,7 @@ class Breakpoints < ArcadiaExt
 #    load_persistent_breakpoints
   end
   
-  def on_after_build(_event)
+  def on_initialize(_event)
     load_persistent_breakpoints
   end  
   

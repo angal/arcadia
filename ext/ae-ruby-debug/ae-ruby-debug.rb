@@ -606,7 +606,7 @@ class RubyDebugView
     if _hash['__CLASS__']=='Array'
      _sorted_keys = _hash.keys.collect!{|x| x.to_i}.sort.collect!{|x| x.to_s}
     else
-     _sorted_keys = _hash.keys.sort
+     _sorted_keys = _hash.keys.collect!{|x| x.to_s}.sort
     end
     _sorted_keys.each{|k|
     #_hash.keys.sort.each{|k|
@@ -1430,9 +1430,9 @@ class RubyDebug < ArcadiaExt
   attr_reader :rdc
   def on_before_build(_event)
     #if RubyWhich.new.which("rdebug") != []
+    @breakpoints = Hash.new
+    @static_breakpoints = Array.new
     if Arcadia.which("rdebug") || ((Arcadia.which("rdebug.bat") || Arcadia.which("rdebug.cmd"))&& Arcadia.is_windows?)
-      @breakpoints = Hash.new
-      @static_breakpoints = Array.new
       Arcadia.attach_listener(self, BufferEvent)
     else
       Arcadia.console(self, 'msg'=>"Warning: Extension ae-ruby-debug depend upon rdebug command (install it or update system path!)", 'level'=>'error')
@@ -1449,6 +1449,8 @@ class RubyDebug < ArcadiaExt
     case _event
       when BufferRaisedEvent
         @raised_file=_event.file
+        debugcurr = Arcadia.toolbar_item('debugcurr')
+        debugcurr.enable=_event.lang=='ruby' if debugcurr
     end
   end
 

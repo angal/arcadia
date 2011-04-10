@@ -143,6 +143,7 @@ class Output < ArcadiaExt
   MARKSUF='mark-'
   def on_before_build(_event)
     #ArcadiaContractListener.new(self, MsgContract, :do_msg_event)
+    @tag_seq = 0
     Arcadia.attach_listener(self, MsgEvent)
     #_frame = @arcadia.layout.register_panel('_rome_',@name, 'Output')
     @main_frame = OutputView.new(self)
@@ -213,7 +214,6 @@ class Output < ArcadiaExt
     return if _from_row == _to_row
     _row = _from_row
     @cursor = @main_frame.text.cget('cursor')
-    @j=0
     file_tag=Hash.new
     if String.method_defined?(:lines)
       lines = @main_frame.text.value.lines.to_a[_from_row.._to_row]
@@ -235,8 +235,7 @@ class Output < ArcadiaExt
           if m[1] && m[2]
             _file = m[1]
             if File.exist?(_file)
-              @j=@j+1
-              _line = m[2]
+               _line = m[2]
               _ibegin = _row.to_s+'.'+(m.begin(1)+_end).to_s
               _iend = _row.to_s+'.'+(m.end(2)+_end).to_s
               file_binding(_file, _line, _ibegin, _iend)
@@ -250,10 +249,15 @@ class Output < ArcadiaExt
       }
     end
   end
+  
+  def next_tag_name
+    @tag_seq = @tag_seq + 1 
+    "tag_#{@tag_seq}"
+  end
 
   def file_binding(_file, _line, _ibegin, _iend)
     _line = '0' if _line.nil? || _line.strip.length == 0
-    tag_name = "tag_#{@j}"
+    tag_name = next_tag_name
     @main_frame.text.tag_configure(tag_name,
     'foreground' => Arcadia.conf('hightlight.link.foreground'),
     'borderwidth'=>0,

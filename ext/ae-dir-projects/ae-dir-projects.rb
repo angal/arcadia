@@ -744,9 +744,12 @@ class DirProjects < ArcadiaExt
     _name = File.basename(_node)
     _drawcross = 'auto'
     if _kind == "project" || _kind == "directory"
-      num = Dir.entries(_node).length-2
-      if num > 0
-        _drawcross = 'always'
+      begin
+        num = Dir.entries(_node).length-2
+        if num > 0
+          _drawcross = 'always'
+        end
+      rescue  Errno::EACCES
       end
     end
     @htree.insert('end', _parent ,_node, {
@@ -812,6 +815,7 @@ class DirProjects < ArcadiaExt
       @htree.configure('selectcommand'=>_proc)
       @selecting_node = false
     end
+    @htree.call_after_next_show_h_scroll(proc{Tk.update;@htree.see(_node)})
   end
 
   def del_project(_dir)
