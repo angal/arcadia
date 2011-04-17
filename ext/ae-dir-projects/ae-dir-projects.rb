@@ -66,7 +66,7 @@ class DirProjects < ArcadiaExt
       'anchor' => 'nw',
       'command'=>proc{self.do_open_project},
       'helptext'=>'Open dir as Project',
-      'image'=> TkPhotoImage.new('dat' => OPEN_GIF)})
+      'image'=> TkPhotoImage.new('dat' => OPEN_PROJECT_GIF)})
     )
 
     @button_box.add(Arcadia.style('toolbarbutton').update({
@@ -76,6 +76,15 @@ class DirProjects < ArcadiaExt
       'helptext'=>'Go to parent folder',
       'image'=> TkPhotoImage.new('dat' => PARENTFOLDER_GIF)})
     )
+    
+    @button_box.add(Arcadia.style('toolbarbutton').update({
+      'name'=>'parent_folder',
+      'anchor' => 'nw',
+      'command'=>proc{self.do_search_files},
+      'helptext'=>'Search in files from current folder',
+      'image'=> TkPhotoImage.new('dat' => SEARCH_FILES_GIF)})
+    )
+
     #--- button_box
     
     @cb_sync = TkCheckButton.new(self.frame.hinner_frame, Arcadia.style('checkbox')){
@@ -377,13 +386,7 @@ class DirProjects < ArcadiaExt
       :command,
       :label=>'Find in files...',
       :hidemargin => false,
-      :command=> proc{
-        _target = @htree.selected
-        if _target
-          _target = File.dirname(_target) if File.ftype(_target) == 'file'
-          Arcadia.process_event(SearchInFilesEvent.new(self,'dir'=>_target))
-        end
-      }
+      :command=> proc{ do_search_files }
     )
     
     sub_ref_search.insert('end',
@@ -454,6 +457,14 @@ class DirProjects < ArcadiaExt
         @pop_up_tree.popup(_x,_y)
       },
     "%x %y")
+  end
+
+  def do_search_files
+    _target = @htree.selected
+    if _target
+      _target = File.dirname(_target) if File.ftype(_target) == 'file'
+      Arcadia.process_event(SearchInFilesEvent.new(self,'dir'=>_target))
+    end
   end
 
   def do_goto_parent_folder

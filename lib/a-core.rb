@@ -44,7 +44,6 @@ class Arcadia < TkApplication
     FocusEventManager.new
     #self.load_local_config(false)
     ObjectSpace.define_finalizer($arcadia, self.class.method(:finalize).to_proc)
-    publish('action.on_exit', proc{do_exit})
     #_title = "Arcadia Ruby ide :: [Platform = #{RUBY_PLATFORM}] [Ruby version = #{RUBY_VERSION}] [TclTk version = #{tcltk_info.level}]"
     _title = "Arcadia ide "
     @root = TkRoot.new(
@@ -52,7 +51,7 @@ class Arcadia < TkApplication
       ){
       title _title
       withdraw
-      protocol( "WM_DELETE_WINDOW", $arcadia['action.on_exit'])
+      protocol( "WM_DELETE_WINDOW", proc{Arcadia.process_event(QuitEvent.new(self))})
       iconphoto(TkPhotoImage.new('dat'=>ARCADIA_RING_GIF))
     }
     @on_event = Hash.new
@@ -73,7 +72,7 @@ class Arcadia < TkApplication
     #.place('x'=>0,'y'=>0,'relwidth'=>1,'relheight'=>1)
     @mf_root.show_statusbar('none')
     #@toolbar = @mf_root.add_toolbar
-    @main_toolbar = ArcadiaMainToolbar.new(self, @mf_root.add_toolbar)
+    self['toolbar']= ArcadiaMainToolbar.new(self, @mf_root.add_toolbar)
     @is_toolbar_show=self['conf']['user_toolbar_show']=='yes'
     @mf_root.show_toolbar(0,@is_toolbar_show)
     @use_splash = self['conf']['splash.show']=='yes'
@@ -81,24 +80,63 @@ class Arcadia < TkApplication
     @splash.set_progress(50) if @splash
     @splash.deiconify if @splash
     Tk.update
-    @splash.next_step('..prepare')  if @splash
-    prepare
-    @splash.last_step('..load finish')  if @splash
+    @screenwidth=TkWinfo.screenwidth(@root)
+    @screenheight=TkWinfo.screenheight(@root)
+    @need_resize=false
+    @x_scale=1
+    @y_scale=1
     if self['conf']['geometry']
-      geometry = self['conf']['geometry']
+      w0,h0,x0,y0= geometry_to_a(self['conf']['geometry'])
+      g_array = []
+      if @screenwidth > 0 && w0.to_i > @screenwidth
+        g_array << (@screenwidth - x0.to_i).to_s
+        @need_resize = true
+        @x_scale = @screenwidth.to_f/w0.to_f
+      else 
+        g_array << w0
+      end 
+      if @screenheight > 0 && h0.to_i > @screenheight
+        g_array << (@screenheight - y0.to_i).to_s
+        @need_resize = true
+        @y_scale = @screenheight.to_f/h0.to_f 
+      else 
+        g_array << h0
+      end
+      g_array << x0 
+      g_array << y0 
+      geometry = geometry_from_a(g_array)
     else
-      start_width = (TkWinfo.screenwidth(@root)-4)
-      start_height = (TkWinfo.screenheight(@root)-20)
+      start_width = (@screenwidth-4)
+      start_height = (@screenheight-20)
       if RUBY_PLATFORM =~ /mswin|mingw/ # on doze don't go below the start gar
         start_height -= 50
         start_width -= 20
       end
       geometry = start_width.to_s+'x'+start_height.to_s+'+0+0'
     end
-    @root.deiconify
-    @root.focus(true)
-    @root.geometry(geometry)
-    @root.raise
+    @splash.next_step('..prepare')  if @splash
+    prepare
+    @splash.last_step('..load finish')  if @splash
+    begin
+      @root.deiconify
+    rescue RuntimeError => e
+      p "RuntimeError : #{e.message}"
+    end
+    begin
+      @root.focus(true)
+    rescue RuntimeError => e
+      p "RuntimeError : #{e.message}"
+    end
+    begin
+      @root.geometry(geometry)
+    rescue RuntimeError => e
+      p "RuntimeError : #{e.message}"
+    end
+    begin
+      @root.raise
+    rescue RuntimeError => e
+      p "RuntimeError : #{e.message}"
+    end
     Tk.update_idletasks
     if self['conf']['geometry.state'] == 'zoomed'
       if Arcadia.is_windows?
@@ -290,6 +328,10 @@ class Arcadia < TkApplication
       end
     end
   end
+
+  def do_initialize
+    _build_event = Arcadia.process_event(InitializeEvent.new(self))
+  end
   
   def load_maximized
     lm = self['conf']['layout.maximized']
@@ -387,7 +429,7 @@ class Arcadia < TkApplication
     end
   end
 
-  def init_layout
+  def initialize_layout
     @layout = ArcadiaLayout.new(self, @mf_root.get_frame)
     suf = "layout.split"
     elems = self['conf'][suf]
@@ -408,7 +450,12 @@ class Arcadia < TkApplication
               if perc 
                 @layout.add_cols_perc(pt[0].to_i, pt[1].to_i, w.to_i)
               else
-                @layout.add_cols(pt[0].to_i, pt[1].to_i, w.to_i)
+                if @need_resize
+                  w_c = (w.to_i*@x_scale).to_i
+                else
+                  w_c = w.to_i
+                end
+                @layout.add_cols(pt[0].to_i, pt[1].to_i, w_c)
               end
             else
               r = property.split('r')
@@ -419,7 +466,12 @@ class Arcadia < TkApplication
                 if perc 
                   @layout.add_rows_perc(pt[0].to_i, pt[1].to_i, w.to_i)
                 else
-                  @layout.add_rows(pt[0].to_i, pt[1].to_i, w.to_i)
+                  if @need_resize
+                    w_c = (w.to_i*@y_scale).to_i
+                  else
+                    w_c = w.to_i
+                  end
+                  @layout.add_rows(pt[0].to_i, pt[1].to_i, w_c)
                 end
               end
             end
@@ -474,14 +526,10 @@ class Arcadia < TkApplication
     @splash.next_step  if @splash
     @splash.next_step('... load extensions')  if @splash
     #load_config
-    init_layout
+    initialize_layout
     publish('buffers.code.in_memory',Hash.new)
-    publish('action.load_code_from_buffers', proc{TkBuffersChoise.new})
-    publish('output.action.run_last', proc{$arcadia['output'].run_last})
-    publish('main.action.open_file', proc{self['editor'].open_file(Arcadia.open_file_dialog)})
     @splash.next_step('... load obj controller')  if @splash
     @splash.next_step('... load editor')  if @splash
-    publish('main.action.new_file',proc{$arcadia['editor'].open_buffer()})
     @splash.next_step('... load actions')  if @splash
     #provvisorio 
     @keytest = KeyTest.new
@@ -492,34 +540,30 @@ class Arcadia < TkApplication
     publish('action.get.font', proc{Tk::BWidget::SelectFont::Dialog.new.create})
     @splash.next_step  if @splash
     publish('action.show_about', proc{ArcadiaAboutSplash.new.deiconify})
-#    publish('main.menu', @main_menu)
-    @main_menu = ArcadiaMainMenu.new(@main_menu_bar)
+    self['menubar'] = ArcadiaMainMenu.new(@main_menu_bar)
     self.do_build
-    #publish('main.menu', ArcadiaMainMenu.new(@main_menu))
     @splash.next_step  if @splash
     publish('objic.action.raise_active_obj',
     proc{
     		InspectorContract.instance.raise_active_toplevel(self)
     }
     )
-    @splash.next_step('... toolbar buttons ')  if @splash
-    #@main_toolbar.load_toolbar_buttons
-    
-    #load user controls
+    @splash.next_step('... toolbar buttons ')  if @splash   
     #Arcadia control
-    load_user_control(@main_toolbar)
-    load_user_control(@main_menu)
+    load_user_control(self['toolbar'])
+    load_user_control(self['menubar'])
     #Extension control
     load_key_binding
     @exts.each{|ext|
       @splash.next_step("... load #{ext} user controls ")  if @splash
-      load_user_control(@main_menu, ext)
-      load_user_control(@main_toolbar, ext)
+      load_user_control(self['menubar'], ext)
+      load_user_control(self['toolbar'], ext)
       load_key_binding(ext)
     }
-    load_user_control(@main_menu,"","e")
-    load_user_control(@main_toolbar,"","e")
+    load_user_control(self['menubar'],"","e")
+    load_user_control(self['toolbar'],"","e")
     load_runners
+    do_initialize
     #@layout.build_invert_menu
   end
   
@@ -566,9 +610,9 @@ class Arcadia < TkApplication
       run[:title] = nil
       run[:runner_name] = name
       _command = proc{
-          _event = Arcadia.process_event(
-            RunCmdEvent.new(self, run)
-          )
+         _event = Arcadia.process_event(
+           RunCmdEvent.new(self, run)
+         )
       }
       mr.insert('0', 
         :command ,{
@@ -737,7 +781,7 @@ class Arcadia < TkApplication
     begin
       a = geometry_to_a(_geometry)
       toolbar_height = @root.winfo_height-@root.winfo_screenheight
-      a[3] = (a[3].to_i - toolbar_height).to_s
+      a[3] = (a[3].to_i - toolbar_height.abs).to_s
       geometry_from_a(a)
     rescue
       return _geometry
@@ -893,11 +937,6 @@ class Arcadia < TkApplication
     Configurable.properties_group(_path, Arcadia.instance['conf'], 'conf', _refresh)
   end
   
-  def Arcadia.runner(_name)
-	  @@instance['runners'][_name] if @@instance
-  end
-
-  
   def Arcadia.persistent(_property, _value=nil, _immediate=false)
     if @@instance
       if _value.nil?
@@ -940,19 +979,27 @@ class Arcadia < TkApplication
     RUBY_PLATFORM =~ /mingw|mswin/
   end
   
+  def Arcadia.ruby
+    @ruby_interpreter=Gem.ruby if !defined?(@ruby_interpreter)
+    @ruby_interpreter
+  end
+    
   def Arcadia.which(_command=nil)
     return nil if _command.nil?
     _ret = nil
     _file = _command
+    # command check
     if FileTest.exist?(_file)
       _ret = _file
     end
+    # current dir check
     if _ret.nil?
       _file = File.join(Dir.pwd, _command)
       if FileTest.exist?(_file)
         _ret = _file
       end
     end
+    # $PATH check
     if _ret.nil?
       ENV['PATH'].split(File::PATH_SEPARATOR).each{|_path|
         _file = File.join(_path, _command)
@@ -961,6 +1008,10 @@ class Arcadia < TkApplication
           break
         end
       }
+    end
+    # gem bin check
+    if _ret.nil?
+      _ret = Gem.bin_path(_command)
     end
     _ret
   end
@@ -1012,6 +1063,18 @@ class Arcadia < TkApplication
 #    return ret
 #  end
 
+  def Arcadia.menubar_item(_name=nil)
+    if _name && @@instance && @@instance['menubar']
+        return @@instance['menubar'].items(_name)
+	  end
+  end
+
+  def Arcadia.toolbar_item(_name=nil)
+    if _name && @@instance && @@instance['toolbar']
+        #@@instance['toolbar'].items.each{|k, v | p k}
+        return @@instance['toolbar'].items[_name]
+	  end
+  end
 
 end
 
@@ -1115,9 +1178,9 @@ class ArcadiaMainToolbar < ArcadiaUserControl
       #Tk::BWidget::Separator.new(@frame, :orient=>'vertical').pack('side' =>'left', :padx=>2, :pady=>2, :fill=>'y',:anchor=> 'w')
     end
 
-    def enabled=(_value)
+    def enable=(_value)
       if _value
-        @item_obj.state='enable'
+        @item_obj.state='normal'
       else
         @item_obj.state='disable'
       end
@@ -1256,9 +1319,9 @@ class ArcadiaMainMenu < ArcadiaUserControl
       @index = @menu.index('last')
     end
 
-    def enabled=(_value)
+    def enable=(_value)
       if _value
-        @item_obj.entryconfigure(@index, 'state'=>'enable')
+        @item_obj.entryconfigure(@index, 'state'=>'normal')
       else
         @item_obj.entryconfigure(@index,'state'=>'disable')
       end
@@ -1269,7 +1332,11 @@ class ArcadiaMainMenu < ArcadiaUserControl
     # create main menu
     @menu = menu
     build
-    @menu.configure(Arcadia.style('menu'))
+    begin
+      @menu.configure(Arcadia.style('menu'))
+    rescue RuntimeError => e
+      p "RuntimeError : #{e.message}"
+    end
   end
 
   def get_menu_context(_menubar, _context, _underline=nil)
@@ -1372,12 +1439,12 @@ class ArcadiaMainMenu < ArcadiaUserControl
     menu_spec_file = [
       ['File', 0],
       ['Open', proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>Arcadia.open_file_dialog))}, 0],
-      ['New', $arcadia['main.action.new_file'], 0],
+      ['New', proc{Arcadia.process_event(NewBufferEvent.new(self))}, 0],
       #['Save', proc{EditorContract.instance.save_file_raised(self)},0],
       ['Save', proc{Arcadia.process_event(SaveBufferEvent.new(self))},0],
       ['Save as ...', proc{Arcadia.process_event(SaveAsBufferEvent.new(self))},0],
       '---',
-      ['Quit', $arcadia['action.on_exit'], 0]]
+      ['Quit', proc{Arcadia.process_event(QuitEvent.new(self))}, 0]]
       menu_spec_edit = [['Edit', 0],
       ['Cut', proc{Arcadia.process_event(CutTextEvent.new(self))}, 2],
       ['Copy', proc{Arcadia.process_event(CopyTextEvent.new(self))}, 0],
@@ -1405,13 +1472,16 @@ class ArcadiaMainMenu < ArcadiaUserControl
     ]
     menu_spec_help = [['Help', 0],
     ['About', $arcadia['action.show_about'], 2],]
-    @menu.add_menu(menu_spec_file)
-    @menu.add_menu(menu_spec_edit)
-    @menu.add_menu(menu_spec_search)
-    @menu.add_menu(menu_spec_view)
-    @menu.add_menu(menu_spec_tools)
-    @menu.add_menu(menu_spec_help)
-  
+    begin
+      @menu.add_menu(menu_spec_file)
+      @menu.add_menu(menu_spec_edit)
+      @menu.add_menu(menu_spec_search)
+      @menu.add_menu(menu_spec_view)
+      @menu.add_menu(menu_spec_tools)
+      @menu.add_menu(menu_spec_help)
+    rescue RuntimeError => e
+      p "RuntimeError : #{e.message}"
+    end
 #    #@menu.bind_append("1", proc{
 #      chs = TkWinfo.children(@menu)
 #      hh = 25

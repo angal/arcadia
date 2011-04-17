@@ -1082,6 +1082,7 @@ class AgEditor
       padx 0
       tabs $arcadia['conf']['editor.tabs']
     }
+    
     _self_editor = self
     class << @text
       attr_accessor :editor
@@ -1703,8 +1704,7 @@ class AgEditor
         if ['Control_L', 'Control_V', 'BackSpace', 'Delete'].include?(e.keysym)
           do_line_update
         end
-        if @highlighting && /\w/.match(e.keysym)
-    #      rehighlightline(@text.index('insert').split('.')[0].to_i)
+        if @highlighting
           row = @text.index('insert').split('.')[0].to_i
           rehighlightlines(row, row)
         end
@@ -1836,7 +1836,12 @@ class AgEditor
         'bordermode'=>'outside'
       )
     }
-    delta = (@font_metrics_bold[2][1]-@font_metrics[2][1])
+    if Arcadia.conf("textline.spacing3")
+      @text_line_spacing3 = Arcadia.conf("textline.spacing3").to_i
+    else
+      @text_line_spacing3 = 0
+    end
+    delta = (@font_metrics_bold[2][1]-@font_metrics[2][1]) + @text_line_spacing3
     @text_line_num.tag_configure('normal_case', 'justify'=>'right')
     @text_line_num.tag_configure('bold_case', 'spacing3'=>delta, 'justify'=>'right')
     @text_line_num.tag_configure('breakpoint', 'background'=>'red','foreground'=>'yellow','borderwidth'=>1, 'relief'=>'raised')
@@ -2836,7 +2841,7 @@ class AgEditor
                 delta = w_ry_e - w_ry_b
                 if delta > 1   
                   _tag = "wrap_case_#{j}"
-                  @text_line_num.tag_configure(_tag, 'spacing3'=>delta)  
+                  @text_line_num.tag_configure(_tag, 'spacing3'=>delta + @text_line_spacing3)  
                   _tags << _tag
                 end
               end
@@ -3046,13 +3051,19 @@ class AgEditor
     end
   end
 
+  def update_toolbar
+    save = Arcadia.toolbar_item('save')
+    save.enable=@set_mod if save    
+  end
+
   def check_modify
     return  if @loading
-    if modified? 
+    if modified?
       set_modify if !@set_mod
     else
       reset_modify
     end
+    update_toolbar
   end
 
   def modified_by_others?
@@ -3507,6 +3518,9 @@ class AgMultiEditor < ArcadiaExt
         else
           _event.cmd = _event.file
         end        
+      end
+      if _event.file && _event.cmd.include?('<<RUBY>>')
+        _event.cmd = _event.cmd.gsub('<<RUBY>>',Arcadia.ruby)
       end
       if _event.file && _event.cmd.include?('<<FILE>>')
         _event.cmd = _event.cmd.gsub('<<FILE>>',_event.file)
@@ -4326,6 +4340,7 @@ class AgMultiEditor < ArcadiaExt
         _new_caption = _title
       end
       _lang = _e.lang
+      _e.update_toolbar
     end
     change_frame_caption(_new_caption)
     _title = @tabs_file[_name] != nil ? File.basename(@tabs_file[_name]) :_name

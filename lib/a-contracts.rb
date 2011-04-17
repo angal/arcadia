@@ -28,6 +28,10 @@ class BuildEvent < ArcadiaEvent
   attr_accessor :name
 end 
 
+class InitializeEvent < ArcadiaEvent
+end
+
+
 # ExitQueryEvent is processed by arcadia-core 
 # before process FinalizeEvent during quiet face.
 # If listener(Extension) set can_exit property to false then 
@@ -69,7 +73,7 @@ end
 #  +---------------------------------------------+
 
 class BufferEvent < ArcadiaEvent # Abstract
-  attr_accessor :file, :title, :text, :row, :col 
+  attr_accessor :file, :title, :text, :row, :col, :lang 
   # if file==nil && title==nil buffer=current buffer
 end
 

@@ -210,6 +210,7 @@ class ArcadiaExt
     @arcadia = _arcadia
     @arcadia.register(self)
     Arcadia.attach_listener(self, BuildEvent)
+    Arcadia.attach_listener(self, InitializeEvent)
     Arcadia.attach_listener(self, ExitQueryEvent)
     Arcadia.attach_listener(self, FinalizeEvent)
     @name = _name
@@ -393,6 +394,7 @@ class Event
   def break
     @breaked = true
   end
+  
 end
 
 module EventBus #(or SourceEvent)
@@ -537,7 +539,9 @@ module Cacheble
 end
 
 module Configurable
-  
+  LINK_SYMBOL='>>>'
+  ADD_SYMBOL='+++'
+  FONT_TYPE_SYMBOL='$$font:::'
   def properties_file2hash(_property_file, _link_hash=nil)
     r_hash = Hash.new
     if _property_file &&  FileTest::exist?(_property_file)
@@ -571,7 +575,7 @@ module Configurable
               _value = var[1].strip
               var[2..-1].collect{|x| _value=_value+'='+x} if var.length > 2
               if _link_hash 
-                _value = resolve_link(_value, _link_hash)
+                _value = resolve_value(_value, _link_hash)
               end
               r_hash[var[0].strip]=_value
             end
@@ -610,34 +614,34 @@ module Configurable
     Hash.new.update(@@conf_groups[group_key])
   end
 
-  def resolve_link(_value, _hash_source, _link_symbol='>>>', _add_symbol='+++')
+  def resolve_value(_value, _hash_source)
       if _value.length > 0 
-        _v, _vadd = _value.split(_add_symbol)
+        _v, _vadd = _value.split(ADD_SYMBOL)
       else
         _v = _value
       end
-      if _v.length > 3 && _v[0..2]==_link_symbol
+      if _v.length > 3 && _v[0..2]==LINK_SYMBOL
         _v=_hash_source[_v[3..-1]] if _hash_source[_v[3..-1]]
         _v=_v+_vadd if _vadd
       end
       return _v
   end
   
-  def resolve_properties_link(_hash_target, _hash_source, _link_symbol='>>>', _add_symbol='+++')
+  def resolve_properties_link(_hash_target, _hash_source)
     loop_level_max = 10
 #    _hash_adding = Hash.new
     _keys_to_extend = Array.new
     _hash_target.each{|k,value|
       loop_level = 0
       if value.length > 0
-        v, vadd = value.split(_add_symbol)
+        v, vadd = value.split(ADD_SYMBOL)
       else
         v= value
       end
 #      p "value=#{value} class=#{value.class}"
 #      p "v=#{v} class=#{v.class}"
 #      p "vadd=#{vadd}"
-      while loop_level < loop_level_max && v.length > 3 && v[0..2]==_link_symbol
+      while loop_level < loop_level_max && v.length > 3 && v[0..2]==LINK_SYMBOL
         if k[-1..-1]=='.'
           _keys_to_extend << k
           break

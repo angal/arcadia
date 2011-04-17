@@ -24,7 +24,7 @@ class Shell < ArcadiaExt
   def on_system_exec(_event)
     begin
       _cmd_ = "#{_event.command}"
-      if is_windows?
+      if Arcadia.is_windows?
         io = IO.popen(_cmd_)
         Arcadia.console(self,'msg'=>io.read, 'level'=>'debug')
       else
@@ -134,12 +134,13 @@ class Shell < ArcadiaExt
   @@next_number = 0
   def on_run_cmd(_event)
     if _event.cmd
+      p "_event.cmd = #{_event.cmd}"
       begin
         output_mark = Arcadia.console(self,'msg'=>"Running #{_event.title}...", 'level'=>'debug') # info?
         start_time = Time.now
         @arcadia['pers']['run.file.last']=_event.file if _event.persistent
         @arcadia['pers']['run.cmd.last']=_event.cmd if _event.persistent
-        if is_windows?
+        if Arcadia.is_windows?
           # use win32-process gem to startup a child process [not sure if linux needs something like this, too]
           require 'win32/process'
           require 'ruby-wmi'
@@ -286,7 +287,7 @@ class Shell < ArcadiaExt
   def on_system_exec_bo(_event)
     command = "#{_event.command} 2>&1"
     (RUBY_PLATFORM.include?('mswin32'))?_cmd="cmd":_cmd='sh'
-    if is_windows?
+    if Arcadia.is_windows?
       Thread.new{
         Arcadia.console(self,'msg'=>'begin', 'level'=>'debug')
         #Arcadia.new_debug_msg(self, 'inizio')
@@ -310,45 +311,41 @@ class Shell < ArcadiaExt
     end
   end
 
-  def is_windows?
-    RUBY_PLATFORM =~ /mingw|mswin/
-  end
-
-  def run_last
-    run($arcadia['pers']['run.file.last'])
-  end
-
-  def run_current
-    current_editor = $arcadia['editor'].raised
-    run(current_editor.file) if current_editor
-  end
-
-  def stop
-    @run_threads.each{|t|
-      if t.alive?
-        t.kill
-      end
-    }
-    debug_quit if @adw
-  end
-
-  def run(_filename=nil)
-    if _filename
-      begin
-        @arcadia['pers']['run.file.last']=_filename
-        @run_threads << Thread.new do
-          _cmd_ = "|"+$arcadia['conf']['shell.ruby']+" "+_filename+" 2>&1"
-          #  Arcadia.new_debug_msg(self, _cmd_)
-          @cmd = open(_cmd_,"r"){|f|
-            Arcadia.console(self, 'msg'=>f.read ,'level'=>'debug')
-            #Arcadia.new_debug_msg(self, f.read)
-          }
-        end
-      rescue Exception => e
-        Arcadia.console(self, 'msg'=>e ,'level'=>'debug')
-        #Arcadia.new_debug_msg(self, e)
-      end
-    end
-  end
+#  def run_last
+#    run($arcadia['pers']['run.file.last'])
+#  end
+#
+#  def run_current
+#    current_editor = $arcadia['editor'].raised
+#    run(current_editor.file) if current_editor
+#  end
+#
+#  def stop
+#    @run_threads.each{|t|
+#      if t.alive?
+#        t.kill
+#      end
+#    }
+#    debug_quit if @adw
+#  end
+#
+#  def run(_filename=nil)
+#    if _filename
+#      begin
+#        @arcadia['pers']['run.file.last']=_filename
+#        @run_threads << Thread.new do
+#          _cmd_ = "|"+$arcadia['conf']['shell.ruby']+" "+_filename+" 2>&1"
+#          #  Arcadia.new_debug_msg(self, _cmd_)
+#          @cmd = open(_cmd_,"r"){|f|
+#            Arcadia.console(self, 'msg'=>f.read ,'level'=>'debug')
+#            #Arcadia.new_debug_msg(self, f.read)
+#          }
+#        end
+#      rescue Exception => e
+#        Arcadia.console(self, 'msg'=>e ,'level'=>'debug')
+#        #Arcadia.new_debug_msg(self, e)
+#      end
+#    end
+#  end
 
 end

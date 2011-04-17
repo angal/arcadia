@@ -1459,7 +1459,6 @@ class TkWidgetFactory
     else
       return TkScrollbar.new(_parent,Arcadia.style('scrollbar').update(_args), &b)
     end
-
   end
 
 end

@@ -107,20 +107,29 @@ class SearchInFilesListener
         #@progress_bar.on_cancel=proc{cancel}
         pattern = Regexp.new(@find.e_what.text)
         _files.each do |_filename|
-            File.open(_filename) do |file|
-              file.grep(pattern) do |line|
-                @search_output.add_result(_node, _filename, file.lineno.to_s, line)
-                break if progress_stop
+            next if File.ftype(_filename) != 'file'
+            begin
+              File.open(_filename) do |file|
+                file.grep(pattern) do |line|
+                  @search_output.add_result(_node, _filename, file.lineno.to_s, line)
+                  break if progress_stop
+                end
               end
+            rescue ArgumentError => e
+              # bynary file probably
+            rescue Exception => e
+              Arcadia.console(self, 'msg'=>"#{_filename} :#{e.class}: #{e.message}", 'level'=>'error')
+            ensure
+              progress_bar.progress
+              break if progress_stop
             end
-            progress_bar.progress
-            break if progress_stop
         end
       rescue Exception => e
         Arcadia.console(self, 'msg'=>e.message, 'level'=>'error')
         #Arcadia.new_error_msg(self, e.message)
       ensure
         progress_bar.destroy if progress_bar
+        @service.frame.show_anyway
       end
     end
   end
