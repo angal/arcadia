@@ -38,3 +38,4 @@ coderay.hightlight.directive.foreground=>>>hightlight.reserved.foreground
 coderay.hightlight.directive.style=bold
 coderay.hightlight.type.foreground=>>>hightlight.reserved.foreground
 coderay.hightlight.type.style=bold
+coderay.hightlight.operator.style=bold

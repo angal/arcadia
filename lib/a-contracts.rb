@@ -13,6 +13,14 @@
 
 class ArcadiaEvent < Event
   # note--they all have attr_accessor :file, and :dir
+  def go!
+    Arcadia.process_event(self)
+  end
+  
+  def shot!
+    Arcadia.broadcast_event(self)
+  end
+
 end
 
 class QuitEvent < ArcadiaEvent
@@ -55,6 +63,14 @@ class NeedRubyGemWizardEvent < ArcadiaEvent
   attr_accessor :gem_max_version
   attr_accessor :gem_events
 end
+
+class ArcadiaProblemEvent < ArcadiaEvent
+   DEPENDENCE_MISSING_TYPE = "DEPENDENCE_MISSING_TYPE"
+   RUNTIME_ERROR_TYPE = "RUNTIME_ERROR_TYPE"
+
+   attr_accessor :type, :level, :title, :detail
+end
+
 
 # +------------------------------------------+
 #     Generic Layout Event 
@@ -249,6 +265,7 @@ class RunCmdEvent < ArcadiaEvent
   attr_accessor :title
   attr_accessor :persistent
   attr_accessor :runner_name
+  attr_accessor :lang
 end
 
 class InputEvent < ArcadiaEvent

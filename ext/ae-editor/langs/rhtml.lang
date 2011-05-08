@@ -1,4 +1,5 @@
 language=rhtml
 scanner=coderay
+exts=erb,rhtml
 @include=coderay.tokens
 coderay.classes=inline_delimiter,tag,reserved,method,class,char,comment,instance_variable,constant,string,content,integer

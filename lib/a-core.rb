@@ -37,6 +37,7 @@ class Arcadia < TkApplication
 #    @splash.deiconify if @splash
 #    Tk.update
     @wf = TkWidgetFactory.new
+    ArcadiaProblemsShower.new(self)
     ArcadiaDialogManager.new(self)
     ArcadiaActionDispatcher.new(self)
     ArcadiaGemsWizard.new(self)
@@ -70,8 +71,10 @@ class Arcadia < TkApplication
       'expand'=> 1
     )
     #.place('x'=>0,'y'=>0,'relwidth'=>1,'relheight'=>1)
-    @mf_root.show_statusbar('none')
-    #@toolbar = @mf_root.add_toolbar
+    @mf_root.show_statusbar('status')
+    @mf_root.add_indicator().text=RUBY_PLATFORM
+    
+    #@toolbar_frame = @mf_root.add_toolbar
     self['toolbar']= ArcadiaMainToolbar.new(self, @mf_root.add_toolbar)
     @is_toolbar_show=self['conf']['user_toolbar_show']=='yes'
     @mf_root.show_toolbar(0,@is_toolbar_show)
@@ -120,22 +123,26 @@ class Arcadia < TkApplication
     begin
       @root.deiconify
     rescue RuntimeError => e
-      p "RuntimeError : #{e.message}"
+      #p "RuntimeError : #{e.message}"
+      Arcadia.runtime_error(e)
     end
     begin
       @root.focus(true)
     rescue RuntimeError => e
-      p "RuntimeError : #{e.message}"
+      #p "RuntimeError : #{e.message}"
+      Arcadia.runtime_error(e)
     end
     begin
       @root.geometry(geometry)
     rescue RuntimeError => e
-      p "RuntimeError : #{e.message}"
+      #p "RuntimeError : #{e.message}"
+      Arcadia.runtime_error(e)
     end
     begin
       @root.raise
     rescue RuntimeError => e
-      p "RuntimeError : #{e.message}"
+      #p "RuntimeError : #{e.message}"
+      Arcadia.runtime_error(e)
     end
     Tk.update_idletasks
     if self['conf']['geometry.state'] == 'zoomed'
@@ -556,12 +563,12 @@ class Arcadia < TkApplication
     load_key_binding
     @exts.each{|ext|
       @splash.next_step("... load #{ext} user controls ")  if @splash
-      load_user_control(self['menubar'], ext)
       load_user_control(self['toolbar'], ext)
+      load_user_control(self['menubar'], ext)
       load_key_binding(ext)
     }
-    load_user_control(self['menubar'],"","e")
     load_user_control(self['toolbar'],"","e")
+    load_user_control(self['menubar'],"","e")
     load_runners
     do_initialize
     #@layout.build_invert_menu
@@ -570,6 +577,7 @@ class Arcadia < TkApplication
   def load_runners
     self['runners'] = Hash.new
     self['runners_by_ext'] = Hash.new
+    self['runners_by_lang'] = Hash.new
     mr = Arcadia.menu_root('runcurr')
     return if mr.nil?
 
@@ -578,6 +586,9 @@ class Arcadia < TkApplication
         run[:file_exts].split(',').each{|ext|
           self['runners_by_ext'][ext.strip.sub('.','')]=run
         }
+      end
+      if run[:lang]
+        self['runners_by_lang'][run[:lang]]=run
       end
       if run[:runner] && self['runners'][run[:runner]]
         run = Hash.new.update(self['runners'][run[:runner]]).update(run)
@@ -913,6 +924,12 @@ class Arcadia < TkApplication
     end
   end
 
+  def  Arcadia.runner_for_lang(_lang=nil)
+    if @@instance
+      return @@instance['runners_by_lang'][_lang]  
+    end
+  end
+
   def  Arcadia.runner(_name=nil)
     if @@instance
       return @@instance['runners'][_name]  
@@ -983,7 +1000,7 @@ class Arcadia < TkApplication
     @ruby_interpreter=Gem.ruby if !defined?(@ruby_interpreter)
     @ruby_interpreter
   end
-    
+
   def Arcadia.which(_command=nil)
     return nil if _command.nil?
     _ret = nil
@@ -1009,11 +1026,28 @@ class Arcadia < TkApplication
         end
       }
     end
-    # gem bin check
+    # gem path check
+    gem_path = Gem.path
+    gem_path.each{|_path|
+      _file = File.join(_path,'bin',_command)
+      if FileTest.exist?(_file)
+        _ret = _file
+        break
+      end      
+    } if gem_path && gem_path.kind_of?(Array)
+    # gem specific bin check
     if _ret.nil?
-      _ret = Gem.bin_path(_command)
+      begin
+        _ret = Gem.bin_path(_command)
+      rescue
+        _ret = nil
+      end
     end
     _ret
+  end
+
+  def Arcadia.[](_name)
+    @@instance[_name]
   end
   
   def Arcadia.menu_root(_menu_root_name, _menu_root=nil)
@@ -1075,6 +1109,10 @@ class Arcadia < TkApplication
         return @@instance['toolbar'].items[_name]
 	  end
   end
+
+  def Arcadia.runtime_error(_e, _title="Runtime Error")
+    ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::RUNTIME_ERROR_TYPE,"title"=>"#{_title}:#{_e.message}", "detail"=>_e.backtrace).go!
+  end 
 
 end
 
@@ -1141,6 +1179,7 @@ end
 
 class ArcadiaMainToolbar < ArcadiaUserControl
   SUF='user_toolbar'
+  attr_reader :frame
   class UserItem < UserItem
     attr_accessor :frame
     attr_accessor :menu_button
@@ -1335,7 +1374,8 @@ class ArcadiaMainMenu < ArcadiaUserControl
     begin
       @menu.configure(Arcadia.style('menu'))
     rescue RuntimeError => e
-      p "RuntimeError : #{e.message}"
+      #p "RuntimeError : #{e.message}"
+      Arcadia.runtime_error(e)
     end
   end
 
@@ -1480,7 +1520,8 @@ class ArcadiaMainMenu < ArcadiaUserControl
       @menu.add_menu(menu_spec_tools)
       @menu.add_menu(menu_spec_help)
     rescue RuntimeError => e
-      p "RuntimeError : #{e.message}"
+      #p "RuntimeError : #{e.message}"
+      Arcadia.runtime_error(e)
     end
 #    #@menu.bind_append("1", proc{
 #      chs = TkWinfo.children(@menu)
@@ -1718,6 +1759,35 @@ class ArcadiaAboutSplash < TkToplevel
     bind("Double-Button-1", proc{self.destroy})
     info = TkApplication.sys_info
     set_sysinfo(info)
+    Arcadia.attach_listener(self, ArcadiaProblemEvent)
+  end
+  
+  def problem_str
+    @problems_nums > 1 ? "#{@problems_nums} problems found!" : "#{@problems_nums} problem found!"
+  end
+  
+  def on_arcadia_problem(_event)
+    if !defined?(@problems_nums)
+      @problems_nums=0
+      #@problem_str = proc{@problems_nums > 1 ? "#{@problems_nums} problems found!" : "#{@problem_nums} problem found!"}
+      @tkAlert = TkLabel.new(self){
+        image TkPhotoImage.new('data' =>ALERT_GIF)
+        background  'black'
+        place('x'=> 10,'y' => 150)
+      }
+
+      @tkLabelProblems = TkLabel.new(self){
+        text  ''
+        background  'black'
+        foreground  'red'
+        font Arcadia.instance['conf']['splash.problems.font']
+        justify  'left'
+        anchor 'w'
+        place('width' => '210','x' => 28,'y' => 150,'height' => 25)
+      }      
+    end
+    @problems_nums=@problems_nums+1
+    @tkLabelProblems.text=problem_str if @tkLabelProblems
   end
 
   def set_sysinfo(_info)
@@ -1754,6 +1824,173 @@ class ArcadiaAboutSplash < TkToplevel
     @progress.numeric = @max
     labelStep(_txt) if _txt
   end
+end
+
+class ArcadiaProblemsShower
+  def initialize(_arcadia)
+    @arcadia = _arcadia
+    @showed = false
+    @problems = Array.new 
+    @seq = 0
+    @dmc=0
+    @rec=0
+    Arcadia.attach_listener(self, ArcadiaProblemEvent)
+    Arcadia.attach_listener(self, InitializeEvent)
+  end
+  
+  def on_arcadia_problem(_event)
+    @problems << _event
+    if @showed
+      append_problem(_event)
+      @b_err.configure('text'=> button_text)
+    end
+  end
+  
+  def on_after_initialize(_event)
+    if @problems.count > 0   
+      show_problems
+    end
+  end
+  
+  def show_problems
+    begin
+      initialize_gui
+      @problems.each{|e|
+        append_problem(e)
+      }
+      @showed=true
+    rescue RuntimeError => e
+      Arcadia.detach_listener(self, ArcadiaProblemEvent)
+      Arcadia.detach_listenerdetach_listener(self, InitializeEvent)      
+    end
+  end
+
+  def button_text
+    @problems.count > 1 ? "#{@problems.count} problems" : "#{@problems.count} problem"
+  end
+
+  
+  def initialize_gui
+    # float_frame
+    args = {'width'=>600, 'height'=>300, 'x'=>400, 'y'=>100}
+    @ff = @arcadia.layout.new_float_frame(args).hide
+    @ff.title("Arcadia problems")
+
+    #tree
+	 @tree = BWidgetTreePatched.new(@ff.frame, Arcadia.style('treepanel')){
+      showlines false
+      deltay 22
+     # opencmd do_open_folder_cmd
+     # closecmd do_close_folder_cmd
+     # selectcommand do_select_item
+     # crosscloseimage  TkPhotoImage.new('dat' => PLUS_GIF)
+     # crossopenimage  TkPhotoImage.new('dat' => MINUS_GIF)
+    }
+    @tree.extend(TkScrollableWidget).show(0,0)
+    
+
+    
+
+    # call button
+    command = proc{@ff.show}
+    
+    
+    b_style = Arcadia.style('toolbarbutton')
+    b_style["relief"]='groove'
+#    b_style["borderwidth"]=2
+    b_style["highlightbackground"]='red'
+    
+    b_text = button_text
+    
+    @b_err = Tk::BWidget::Button.new(@arcadia['toolbar'].frame, b_style){
+        image  TkPhotoImage.new('data' => ALERT_GIF)
+        compound 'left'
+        padx  2
+        command command if command
+        #width 100
+        #height 20
+        #helptext  _hint if _hint
+        text b_text
+    }.pack('side' =>'left','before'=>@arcadia['toolbar'].items.values[0].item_obj, :padx=>2, :pady=>0)
+    
+  end
+  
+  
+  def new_sequence_value
+    @seq+=1
+  end
+  
+  def append_problem(e)
+    parent_node='root'
+    case e.type
+      when ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE
+        parent_node='dependences_missing_node'
+        text = "Dependences missings"
+        if !@tree.exist?(parent_node)
+          @tree.insert('end', 'root' ,parent_node, {
+              'text' =>  text ,
+              'helptext' => text,
+              'drawcross'=>'auto',
+              'deltax'=>-1,
+              'image'=> TkPhotoImage.new('dat' => BROKEN_GIF)
+            }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
+          )       
+        
+        end
+        @dmc+=1
+        @tree.itemconfigure('dependences_missing_node','text'=>"#{text} (#{@dmc})" )
+      when ArcadiaProblemEvent::RUNTIME_ERROR_TYPE
+        parent_node='runtime_error_node'
+        text = "Runtime errors"
+        if !@tree.exist?(parent_node)
+          @tree.insert('end', 'root' ,parent_node, {
+              'text' =>  text ,
+              'helptext' => text,
+              'drawcross'=>'auto',
+              'deltax'=>-1,
+              'image'=> TkPhotoImage.new('dat' => ERROR_GIF)
+            }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
+          )        
+        end
+        @rec+=1
+        @tree.itemconfigure('runtime_error_node','text'=>"#{text} (#{@rec})" )
+    end
+    title_node="node_#{new_sequence_value}"
+    detail_node="detail_of_#{title_node}"
+
+    @tree.insert('end', parent_node ,title_node, {
+        'text' =>  e.title ,
+        'helptext' => e.title,
+        'drawcross'=>'auto',
+        'deltax'=>-1,
+        'image'=> TkPhotoImage.new('dat' => ITEM_GIF)
+      }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
+    )
+    if e.detail.kind_of?(Array)
+      e.detail.each_with_index{|line,i|
+        @tree.insert('end', title_node , "#{detail_node}_#{i}" , {
+            'text' =>  line ,
+            'helptext' => i.to_s,
+            'drawcross'=>'auto',
+            'deltax'=>-1,
+            'image'=> TkPhotoImage.new('dat' => ITEM_DETAIL_GIF)
+          }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
+        )
+         
+      }
+    else  
+      @tree.insert('end', title_node , detail_node , {
+          'text' =>  e.detail ,
+          'helptext' => e.title,
+          'drawcross'=>'auto',
+          'deltax'=>-1,
+          'image'=> TkPhotoImage.new('dat' => ITEM_DETAIL_GIF)
+        }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
+      )
+    end
+        
+
+  end  
 end
 
 class ArcadiaActionDispatcher
@@ -1927,30 +2164,28 @@ class ArcadiaGemsWizard
     @arcadia = _arcadia
     Arcadia.attach_listener(self, NeedRubyGemWizardEvent)
   end
-  
-  def on_need_ruby_gem_wizard(_event)
-    # ... todo implamentation
-    msg = "Appears that gem : '#{_event.gem_name}' required by : '#{_event.extension_name}' is not installed!\n Do you want to try install it now?" 
-    ans = Tk.messageBox('icon' => 'error', 'type' => 'yesno',
-      'title' => "(Arcadia) Extensions '#{_event.extension_name}'",
-      'message' => msg)
-      if  ans == 'yes'
-        _event.add_result(self, 'installed'=>try_to_install_gem(_event.gem_name,_event.gem_repository))
-      else
-        _event.add_result(self, 'installed'=>false)
-      end
-  end
-  
-#  def try_to_install_gem(name, repository=nil, version = '>0')
-#    ret = false
-#    require 'rubygems/command.rb'
-#    require 'rubygems/dependency_installer.rb'
-#    
-#    inst.install name, version
-#    # TODO WIZARD
-#    # TODO accept repository, too
-#  end
 
+  def on_need_ruby_gem_wizard(_event)
+    msg = "Appears that gem : '#{_event.gem_name}' required by : '#{_event.extension_name}' is not installed!\n Install it from gem?" 
+
+    ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>"Gem '#{_event.gem_name}' missing!", "detail"=>msg).go!
+    
+#    Arcadia.process_event(ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>"Gem '#{_event.gem_name}' missing!", "detail"=>msg))
+  end
+
+  
+#  def on_need_ruby_gem_wizard(_event)
+#    msg = "Appears that gem : '#{_event.gem_name}' required by : '#{_event.extension_name}' is not installed!\n Do you want to try install it now?" 
+#    ans = Tk.messageBox('icon' => 'error', 'type' => 'yesno',
+#      'title' => "(Arcadia) Extensions '#{_event.extension_name}'",
+#      'message' => msg)
+#      if  ans == 'yes'
+#        _event.add_result(self, 'installed'=>try_to_install_gem(_event.gem_name,_event.gem_repository))
+#      else
+#        _event.add_result(self, 'installed'=>false)
+#      end
+#  end
+  
   def try_to_install_gem(name, repository=nil, version = '>0')
     ret = false
     
@@ -3195,13 +3430,29 @@ class MonitorLastUsedDir
 
 end
 
+require 'tk/clipboard'
+
 class FocusEventManager
   def initialize
     Arcadia.attach_listener(self, FocusEvent)
+    Arcadia.attach_listener(self, InputEvent)
+  end
+  
+  def on_input(_event)
+    case _event
+      when InputEnterEvent
+        @last_focus_widget = _event.receiver
+      when InputExitEvent
+        @last_focus_widget = nil
+    end  
   end
   
   def on_focus(_event)
-    _event.focus_widget=Tk.focus
+    if @last_focus_widget
+      _event.focus_widget = @last_focus_widget
+    else
+      _event.focus_widget=Tk.focus
+    end
     case _event
       when CutTextEvent
         do_cut(_event.focus_widget)
@@ -3225,15 +3476,36 @@ class FocusEventManager
   end
   
   def do_cut(_focused_widget)
-    _focused_widget.text_cut if _focused_widget.respond_to?(:text_cut)
+    if _focused_widget.respond_to?(:text_cut)
+      _focused_widget.text_cut
+    elsif _focused_widget.kind_of?(Tk::Entry)
+      if _focused_widget.selection_present
+        i1= _focused_widget.index("sel.first")
+        i2= _focused_widget.index("sel.last")
+        TkClipboard::set(_focused_widget.value[i1.to_i..i2.to_i-1])
+        _focused_widget.delete(i1,i2)
+      end
+    end
   end
   
   def do_copy(_focused_widget)
-    _focused_widget.text_copy if _focused_widget.respond_to?(:text_copy)
+    if _focused_widget.respond_to?(:text_copy)
+      _focused_widget.text_copy
+    elsif _focused_widget.kind_of?(Tk::Entry)
+      if _focused_widget.selection_present
+        i1= _focused_widget.index("sel.first")
+        i2= _focused_widget.index("sel.last")
+        TkClipboard::set(_focused_widget.value[i1.to_i..i2.to_i-1])
+      end
+    end
   end
 
   def do_paste(_focused_widget)
-    _focused_widget.text_paste if _focused_widget.respond_to?(:text_paste)
+    if _focused_widget.respond_to?(:text_paste)
+      _focused_widget.text_paste
+    elsif _focused_widget.kind_of?(Tk::Entry)
+      _focused_widget.insert(_focused_widget.index("insert"), TkClipboard::get)
+    end      
   end
 
   def do_undo(_focused_widget)
@@ -3253,7 +3525,12 @@ class FocusEventManager
   end
 
   def do_select_all(_focused_widget)
-    _focused_widget.tag_add('sel','1.0','end') if _focused_widget.respond_to?(:tag_add)
+    if _focused_widget.respond_to?(:tag_add)
+      _focused_widget.tag_add('sel','1.0','end')
+    elsif _focused_widget.kind_of?(Tk::Entry)
+      _focused_widget.selection_from('0')
+      _focused_widget.selection_to('end')
+    end    
   end
 
   def do_invert_selection(_focused_widget)
@@ -3289,6 +3566,14 @@ class FocusEventManager
           _focused_widget.delete(r[0][0],r[0][1])
           _focused_widget.insert(r[0][0],target_text.send(_method))
         end
+      end
+    elsif _focused_widget.kind_of?(Tk::Entry)
+      if _focused_widget.selection_present
+        i1= _focused_widget.index("sel.first")
+        i2= _focused_widget.index("sel.last")
+        target_text = _focused_widget.value[i1.to_i..i2.to_i-1]
+        _focused_widget.delete(i1,i2)
+        _focused_widget.insert(i1,target_text.send(_method))
       end
     end
   end

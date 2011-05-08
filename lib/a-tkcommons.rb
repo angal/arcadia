@@ -810,20 +810,24 @@ class TkBaseTitledFrame < TkFrame
 
   def __add_button(_label,_proc=nil,_image=nil, _side= 'right', _frame=nil)
     return if _frame.nil?
-    last = @last_for_frame[_frame]
-    @last_for_frame[_frame] = TkButton.new(_frame, Arcadia.style('titletoolbarbutton')){
-      text  _label if _label
-      image  TkPhotoImage.new('dat' => _image) if _image
-      font 'helvetica 8 bold'
-      padx 0
-      pady 0
-      if last
-        pack('side'=> _side,'anchor'=> 'e', 'after'=>last)
-      else
-        pack('side'=> _side,'anchor'=> 'e')
-      end
-      bind('1',_proc) if _proc
-    }
+    begin
+      last = @last_for_frame[_frame]
+      @last_for_frame[_frame] = TkButton.new(_frame, Arcadia.style('titletoolbarbutton')){
+        text  _label if _label
+        image  TkPhotoImage.new('dat' => _image) if _image
+        font 'helvetica 8 bold'
+        padx 0
+        pady 0
+        if last
+          pack('side'=> _side,'anchor'=> 'e', 'after'=>last)
+        else
+          pack('side'=> _side,'anchor'=> 'e')
+        end
+        bind('1',_proc) if _proc
+      }
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e)
+    end
   end
   private :__add_button
 
@@ -1454,10 +1458,14 @@ class TkWidgetFactory
   end
 
   def scrollbar(_parent,_args=nil, &b)
-    if @use_tile
-      return Tk::Tile::Scrollbar.new(_parent,{:style=>"Arcadia.TScrollbar"}.update(_args), &b)
-    else
-      return TkScrollbar.new(_parent,Arcadia.style('scrollbar').update(_args), &b)
+    begin
+      if @use_tile
+        return Tk::Tile::Scrollbar.new(_parent,{:style=>"Arcadia.TScrollbar"}.update(_args), &b)
+      else
+        return TkScrollbar.new(_parent,Arcadia.style('scrollbar').update(_args), &b)
+      end
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
     end
   end
 
@@ -1468,14 +1476,33 @@ end
 class TkArcadiaText < TkText
   def initialize(parent=nil, keys={})
     super(parent, keys)
-    self.bind_append("<Copy>"){Arcadia.process_event(CopyTextEvent.new(self));break}
-    self.bind_append("<Cut>"){Arcadia.process_event(CutTextEvent.new(self));break}
-    self.bind_append("<Paste>"){Arcadia.process_event(PasteTextEvent.new(self));break}
-    self.bind_append("<Undo>"){Arcadia.process_event(UndoTextEvent.new(self));break}
-    self.bind_append("<Redo>"){Arcadia.process_event(RedoTextEvent.new(self));break}
+#    self.bind_append("<Copy>"){Arcadia.process_event(CopyTextEvent.new(self));break}
+#    self.bind_append("<Cut>"){Arcadia.process_event(CutTextEvent.new(self));break}
+#    self.bind_append("<Paste>"){Arcadia.process_event(PasteTextEvent.new(self));break}
+#    self.bind_append("<Undo>"){Arcadia.process_event(UndoTextEvent.new(self));break}
+#    self.bind_append("<Redo>"){Arcadia.process_event(RedoTextEvent.new(self));break}
   end
 end
 
+module TkInputThrow
+  def self.extended(_widget)
+    _widget.__initialize_throw(_widget)
+  end
+
+  def self.included(_widget)
+    _widget.__initialize_throw(_widget)
+  end
+
+  def __initialize_throw(_widget)
+    #_widget.bind_append("Enter", proc{p "Enter on #{_widget}";Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>_widget))})
+    _widget.bind_append("<Copy>"){Arcadia.process_event(CopyTextEvent.new(_widget));break}
+    _widget.bind_append("<Cut>"){Arcadia.process_event(CutTextEvent.new(_widget));break}
+    _widget.bind_append("<Paste>"){Arcadia.process_event(PasteTextEvent.new(_widget));break}
+    _widget.bind_append("<Undo>"){Arcadia.process_event(UndoTextEvent.new(_widget));break}
+    _widget.bind_append("<Redo>"){Arcadia.process_event(RedoTextEvent.new(_widget));break}
+    _widget.bind_append("1", proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>_widget))})
+  end
+end
 
 module TkAutoPostMenu
 
@@ -1510,6 +1537,7 @@ module TkAutoPostMenu
     @event_posting_on = false
     @m_show = Hash.new
     chs.each{|ch|
+      next if ch.kind_of?(String)
       ch.menu.bind_append("Map", proc{ @m_show[ch.menu] = true })
       ch.menu.bind_append("Unmap", proc{ @m_show[ch.menu] = false })
       ch.bind_append("Enter", proc{|x,y,rx,ry|
@@ -1569,14 +1597,23 @@ module TkAutoPostMenu
         @posting_on=true if @event_posting_on
         if @last_post && @last_post != ch.menu
           @last_post.unpost
+       #   @last_post.bind_remove("1")
           @last_post = nil
         end
         @last_post=ch.menu #if ch.state == 'active'
         ch.configure('state'=>'normal')
         @last_clicked = ch.menu
+        
+#        ch.menu.bind_append("1", proc{|mx,my,mrx,mry|
+#          if ch.menu.index("active").nil?
+#            ch.menu.activate(ch.menu.index("@#{mry}")) 
+#          end
+#        }, "%X %Y %x %y")
+        
         #@last_post.unpost
         #@last_post.post(0,0)
         #@last_post.set_focus
+        @posting_on=true  if @event_posting_on
 
       }, "%X %Y %x %y")
 
@@ -1595,11 +1632,6 @@ module TkAutoPostMenu
         }
         @posting_on = one_post if @event_posting_on
       }).start
-    })
-
-
-    _widget.bind_append("1", proc{
-      @posting_on=true  if @event_posting_on
     })
 
   end
@@ -1653,7 +1685,8 @@ module TkScrollableWidget
         begin
           @v_scroll.set(first,last) #if TkWinfo.mapped?(@v_scroll)
         rescue Exception => e
-          p "#{e.message}"
+          Arcadia.runtime_error(e)
+          #p "#{e.message}"
         end
       elsif delta == 1 || delta == 0
         hide_v_scroll
@@ -1676,7 +1709,8 @@ module TkScrollableWidget
         begin
           @h_scroll.set(first,last) #if TkWinfo.mapped?(@h_scroll)
         rescue Exception => e
-          p "#{e.message}"
+          Arcadia.runtime_error(e)
+          #p "#{e.message}"
         end
       elsif  delta == 1 || delta == 0
         hide_h_scroll
@@ -1717,7 +1751,8 @@ module TkScrollableWidget
     begin
       arm_scroll_binding
     rescue  Exception => e
-      p "#{e.message}"
+      Arcadia.runtime_error(e)
+      #p "#{e.message}"
     end
   end
 
@@ -1765,7 +1800,8 @@ module TkScrollableWidget
           end
         end
       rescue RuntimeError => e
-        p "RuntimeError : #{e.message}"
+        #p "RuntimeError : #{e.message}"
+        Arcadia.runtime_error(e)
       end
     end
   end
@@ -1785,7 +1821,8 @@ module TkScrollableWidget
           end
         end
       rescue RuntimeError => e
-        p "RuntimeError : #{e.message}"
+        #p "RuntimeError : #{e.message}"
+        Arcadia.runtime_error(e)
       end
     end
   end
@@ -1797,7 +1834,8 @@ module TkScrollableWidget
         @v_scroll.unpack
         @v_scroll_on = false
       rescue RuntimeError => e
-        p "RuntimeError : #{e.message}"
+        Arcadia.runtime_error(e)
+        #p "RuntimeError : #{e.message}"
       end
 
     end
@@ -1810,7 +1848,8 @@ module TkScrollableWidget
         @h_scroll.unpack
         @h_scroll_on = false
       rescue RuntimeError => e
-        p "RuntimeError : #{e.message}"
+        Arcadia.runtime_error(e)
+        #p "RuntimeError : #{e.message}"
       end
     end
   end

@@ -51,7 +51,7 @@ class DirProjects < ArcadiaExt
       padx 0
       pady 0
       background Arcadia.conf('panel.background')
-    }.place('x'=>32,'height'=> 28)
+    }.place('x'=>32,'height'=> 20)
 
     @button_box.add(Arcadia.style('toolbarbutton').update({
       'name'=>'new_proj',
@@ -92,9 +92,10 @@ class DirProjects < ArcadiaExt
       justify  'left'
       indicatoron 0
       offrelief 'raised'
-      image TkPhotoImage.new('dat' => SYNCICON20_GIF)
+      image TkPhotoImage.new('dat' => SYNC_GIF)
       #pack('anchor'=>'n')
-      place('x' => 0,'y' => 0,'height' => 26, 'width' => 26)
+      #place('x' => 0,'y' => 0,'height' => 26, 'width' => 26)
+      place('x' => 0,'y' => 0)
     }
 
     Tk::BWidget::DynamicHelp::add(@cb_sync, 
@@ -143,10 +144,13 @@ class DirProjects < ArcadiaExt
       opencmd do_open_folder_cmd
       closecmd do_close_folder_cmd
       selectcommand do_select_item
+      crosscloseimage  TkPhotoImage.new('dat' => PLUS_GIF)
+      crossopenimage  TkPhotoImage.new('dat' => MINUS_GIF)
     }
-    @htree.extend(TkScrollableWidget).show(0,26)
+    @htree.extend(TkScrollableWidget).show(0,22)
     self.pop_up_menu_tree
     @image_kdir = TkPhotoImage.new('dat' => ICON_FOLDER_OPEN_GIF)
+    #@image_kdir = TkPhotoImage.new('dat' => FOLDER2_GIF)
     @image_kdir_closed = TkPhotoImage.new('dat' => FOLDER_GIF)
 	  self.load_projects
     @htree.areabind_append('KeyPress',proc{|k| 
@@ -155,7 +159,7 @@ class DirProjects < ArcadiaExt
 
     do_double_click = proc{
         _selected = @htree.selected
-        if File.ftype(node2file(_selected)) == 'directory'
+        if _selected &&  File.ftype(node2file(_selected)) == 'directory'
           if !_selected.nil? && @htree.open?(node2file(_selected))
             @htree.close_tree(node2file(_selected))
           elsif !_selected.nil?
@@ -198,7 +202,7 @@ class DirProjects < ArcadiaExt
 	end
 
   def node2file(_node)
-    if _node[0..0]=='{' && _node[-1..-1]=='}'
+    if !_node.nil? &&  _node[0..0]=='{' && _node[-1..-1]=='}'
       return _node[1..-2]
     else
       return _node
@@ -749,31 +753,53 @@ class DirProjects < ArcadiaExt
   end
 
   def add_node(_parent, _node, _kind)
-    return if @htree.exist?(_node)
-    @node_parent[_node] = _parent
-#    _name = _node.split(File::SEPARATOR)[-1]
-    _name = File.basename(_node)
-    _drawcross = 'auto'
-    if _kind == "project" || _kind == "directory"
-      begin
-        num = Dir.entries(_node).length-2
-        if num > 0
-          _drawcross = 'always'
+    if @htree.exist?(_node)
+      if ['project','directory'].include?(_kind) && @node_parent[_node]!=_parent && !_node.include?('phantom_')
+        _phantom_node =  "phantom_#{_node}"
+        j = 0
+        while @htree.exist?(_phantom_node)
+          _phantom_node= "phantom_#{j}_#{_node}"
+          j = j +1
         end
-      rescue  Errno::EACCES
+        _name = File.basename(_node)
+        selectable = _kind == 'project'
+        _drawcross = 'auto'
+          @htree.insert('end', _parent ,_phantom_node, {
+            'text' =>  _name ,
+            'helptext' => _node,
+            'drawcross'=>_drawcross,
+            'selectable'=>selectable,
+            'deltax'=>-1,
+            'image'=> image(_kind, _node)
+          }.update(Arcadia.style('treeitem').update({'fill'=>Arcadia.conf('inactiveforeground')}))
+        )
       end
-    end
-    @htree.insert('end', _parent ,_node, {
-      'text' =>  _name ,
-      'helptext' => _node,
-      'drawcross'=>_drawcross,
-      'deltax'=>-1,
-      'image'=> image(_kind, _node)
-    }.update(Arcadia.style('treeitem'))
-    )
-    if _kind == "project" || _kind == "directory"
-      if @opened_folder.include?(_node)
-        do_open_folder(_node, true)
+    else
+      @node_parent[_node] = _parent
+  #    _name = _node.split(File::SEPARATOR)[-1]
+      _name = File.basename(_node)
+      _drawcross = 'auto'
+      if _kind == "project" || _kind == "directory"
+        begin
+          num = Dir.entries(_node).length-2
+          if num > 0
+            _drawcross = 'always'
+          end
+        rescue  Errno::EACCES
+        end
+      end
+      @htree.insert('end', _parent ,_node, {
+        'text' =>  _name ,
+        'helptext' => _node,
+        'drawcross'=>_drawcross,
+        'deltax'=>-1,
+        'image'=> image(_kind, _node)
+      }.update(Arcadia.style('treeitem'))
+      )
+      if _kind == "project" || _kind == "directory"
+        if @opened_folder.include?(_node)
+          do_open_folder(_node, true)
+        end
       end
     end
   end

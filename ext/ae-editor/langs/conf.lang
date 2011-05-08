@@ -1,5 +1,6 @@
 scanner=re
 language=conf
+exts=conf,lang,pers,tokens
 re.classes=key,value,operator,comment,link
 re.key=(.*)\=
 re.value=\=(.*)

@@ -775,25 +775,13 @@ class RubyDebugServer
       ObserverCallback.new(self,_caller,:rdebug_server_update)
     end
     @arcadia = _arcadia
+    @rdebug_file = _caller.rdebug_file
     @quit_confirm_request = false
     @alive = false
   end
 
   def start_session_new(_filename, _host='localhost', _remote_port='8989')
-    if Arcadia.is_windows?
-      #if RubyWhich.new.which("rdebug.bat") != []
-      if Arcadia.which("rdebug.bat")
-        rdebug_cmd = "rdebug.bat" 
-      #elsif RubyWhich.new.which("rdebug.cmd") != []
-      elsif Arcadia.which("rdebug.cmd")
-        rdebug_cmd = "rdebug.cmd"
-      else
-        rdebug_cmd = "rdebug"
-      end
-      commandLine = "#{rdebug_cmd} --host #{_host} --port #{_remote_port} -sw #{_filename}"
-    else
-      commandLine = "rdebug --host #{_host} --port #{_remote_port} -sw #{_filename}"
-    end
+    commandLine = "#{@rdebug_file} --host #{_host} --port #{_remote_port} -sw #{_filename}"
     #Arcadia.process_event(SystemExecEvent.new(self, 'command'=>commandLine))
     Arcadia.process_event(RunCmdEvent.new(self, 'cmd'=>commandLine, 'file'=>_filename))
   end
@@ -808,20 +796,8 @@ class RubyDebugServer
   
   def start_session(_debug_event, _host='localhost', _remote_port='8989')
     _filename = _debug_event.file
-    if Arcadia.is_windows?
-      #if RubyWhich.new.which("rdebug.bat") != []
-      if Arcadia.which("rdebug.bat")
-        rdebug_cmd = "rdebug.bat" 
-      #elsif RubyWhich.new.which("rdebug.cmd") != []
-      elsif Arcadia.which("rdebug.cmd")
-        rdebug_cmd = "rdebug.cmd"
-      else
-        rdebug_cmd = "rdebug"
-      end
-      commandLine = "#{rdebug_cmd} --host #{_host} --port #{_remote_port} -sw '#{_filename}'"
-    else
-      commandLine = "rdebug --host #{_host} --port #{_remote_port} -sw #{_filename}"
-    end
+    commandLine = "#{Arcadia.ruby} #{@rdebug_file} --host #{_host} --port #{_remote_port} -sw '#{_filename}'"
+    #p commandLine
     begin
       @alive = true
       if Arcadia.is_windows?
@@ -840,7 +816,7 @@ class RubyDebugServer
           end
           set_alive(false)
           notify(RDS_QUIET)
-          if _debug_event.persistent == false && _debug_event.file[-2..-1] == '~~'
+          if _debug_event.persistent == false && File.basename(_debug_event.file)[0..1] == '~~'
              File.delete(_debug_event.file) if File.exist?(_debug_event.file)
           end
 
@@ -866,7 +842,7 @@ class RubyDebugServer
             notify(RDS_QUIET)
             Kernel.system('y')
 
-            if _debug_event.persistent == false && _debug_event.file[-2..-1] == '~~'
+            if _debug_event.persistent == false && File.basename(_debug_event.file)[0..1] == '~~'
                File.delete(_debug_event.file) if File.exist?(_debug_event.file)
             end
 
@@ -1428,11 +1404,25 @@ end
 class RubyDebug < ArcadiaExt
   attr_reader :rds
   attr_reader :rdc
+  attr_reader :rdebug_file
   def on_before_build(_event)
     #if RubyWhich.new.which("rdebug") != []
     @breakpoints = Hash.new
     @static_breakpoints = Array.new
-    if Arcadia.which("rdebug") || ((Arcadia.which("rdebug.bat") || Arcadia.which("rdebug.cmd"))&& Arcadia.is_windows?)
+    if Arcadia.is_windows?
+      @rdebug_file = Arcadia.which("rdebug.bat")
+      if !@rdebug_file
+        @rdebug_file = Arcadia.which("rdebug.cmd")
+      end
+      if !@rdebug_file
+        @rdebug_file = Arcadia.which("rdebug")
+      end      
+    else
+      @rdebug_file = Arcadia.which("rdebug")    
+    end
+    
+    
+    if @rdebug_file
       Arcadia.attach_listener(self, BufferEvent)
     else
       Arcadia.console(self, 'msg'=>"Warning: Extension ae-ruby-debug depend upon rdebug command (install it or update system path!)", 'level'=>'error')

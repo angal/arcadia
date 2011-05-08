@@ -134,9 +134,9 @@ class Shell < ArcadiaExt
   @@next_number = 0
   def on_run_cmd(_event)
     if _event.cmd
-      p "_event.cmd = #{_event.cmd}"
+      #p "_event.cmd = #{_event.cmd}"
       begin
-        output_mark = Arcadia.console(self,'msg'=>"Running #{_event.title}...", 'level'=>'debug') # info?
+        output_mark = Arcadia.console(self,'msg'=>"Running #{_event.title} as #{_event.lang}...", 'level'=>'debug') # info?
         start_time = Time.now
         @arcadia['pers']['run.file.last']=_event.file if _event.persistent
         @arcadia['pers']['run.cmd.last']=_event.cmd if _event.persistent
@@ -223,13 +223,20 @@ class Shell < ArcadiaExt
                 
                 if stderr
                   if @stderr_blocking
+                    current_buffer = '<<current buffer>>'
                     output_dump = stderr.read
                     if output_dump && output_dump.length > 0 
+                      if !_event.persistent
+                        output_dump.gsub!(_event.file, current_buffer)
+                      end
                       output_mark = Arcadia.console(self,'msg'=>output_dump, 'level'=>'error', 'mark'=>output_mark)
                       _event.add_result(self, 'output'=>output_dump)
                     end
                   else
                     stderr.each do |output_dump|
+                      if !_event.persistent
+                        output_dump.gsub!(_event.file, current_buffer)
+                      end
                       output_mark = Arcadia.console(self,'msg'=>output_dump, 'level'=>'error', 'mark'=>output_mark)
                       _event.add_result(self, 'output'=>output_dump)
                     end
@@ -255,8 +262,15 @@ class Shell < ArcadiaExt
 #                _event.add_result(self, 'output'=>_readed)
 #              }
               #p "da cancellare #{ _event.file } #{_event.file[-2..-1] == '~~'} #{_event.persistent == false}  #{File.exist?(_event.file)}"
-              if _event.persistent == false && _event.file[-2..-1] == '~~'
-                File.delete(_event.file) if File.exist?(_event.file)
+              if _event.persistent == false && File.exist?(_event.file) 
+                if File.basename(_event.file)[0..1] == '~~'
+                  File.delete(_event.file)
+                elsif File.basename(File.dirname(_event.file))[0..1] == '~~'
+                  Dir["#{File.dirname(_event.file)}/*"].each{|file|
+                    File.delete(file)
+                  }
+                  Dir.delete(File.dirname(_event.file))
+                end
               end
             rescue Exception => e
               output_mark = Arcadia.console(self,'msg'=>e.to_s, 'level'=>'debug', 'mark'=>output_mark)

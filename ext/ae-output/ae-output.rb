@@ -28,7 +28,7 @@ class OutputView
     {'wrap'=>  'none'}.update(Arcadia.style('edit'))
     )
     @text.extend(TkScrollableWidget).show
-
+    @text.extend(TkInputThrow)
     @text.tag_configure('simple_msg',
     #   'background' => '#d9d994',
     'borderwidth'=>1,
@@ -54,7 +54,7 @@ class OutputView
     'background'=>Arcadia.conf('hightlight.sel.background'),
     'foreground'=>Arcadia.conf('hightlight.sel.foreground')
     )
-    pop_up_menu
+    pop_up_menu        
   end
 
   def pop_up_menu
@@ -227,14 +227,14 @@ class Output < ArcadiaExt
         #if _row >= _from_row
         _end = 0
         #m = /([\.\/]*[\/A-Za-z_\-\.]*[\.\/\w\d]*\.rb):(\d*)/.match(l)
-        re = Regexp.new('([\w\:]*[\.\/]*[\/A-Za-z_\-\.]*[\.\/\w\d]*):(\d*)')
+        re = Regexp.new('([\w\:]*[\.\/]*[\/A-Za-z_\-\.]*[\.\/\w\d]*[(<<current buffer>>)]*):(\d*)')
         m = re.match(l)
         #m = /([\.\/]*[\/A-Za-z_\-\.]*[\.\/\w\d]*):(\d*)/.match(l)
         while m
           _txt = m.post_match
           if m[1] && m[2]
             _file = m[1]
-            if File.exist?(_file)
+            if File.exist?(_file) || _file=="<<current buffer>>"  
                _line = m[2]
               _ibegin = _row.to_s+'.'+(m.begin(1)+_end).to_s
               _iend = _row.to_s+'.'+(m.end(2)+_end).to_s
@@ -256,6 +256,9 @@ class Output < ArcadiaExt
   end
 
   def file_binding(_file, _line, _ibegin, _iend)
+    if _file == '<<current buffer>>'
+      _file = "*CURR"
+    end
     _line = '0' if _line.nil? || _line.strip.length == 0
     tag_name = next_tag_name
     @main_frame.text.tag_configure(tag_name,
@@ -265,7 +268,8 @@ class Output < ArcadiaExt
     'underline'=>true
     )
     @main_frame.text.tag_add(tag_name,_ibegin,_iend)
-    @main_frame.text.tag_bind(tag_name,"Double-ButtonPress-1",
+    #@main_frame.text.tag_bind(tag_name,"Double-ButtonPress-1",
+    @main_frame.text.tag_bind(tag_name,"ButtonPress-1",
     proc{
       Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>_file, 'row'=>_line))
     }

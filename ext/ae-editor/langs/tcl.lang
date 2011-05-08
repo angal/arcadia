@@ -1,4 +1,5 @@
 language=tcl
+exts=tcl
 scanner=re
 re.classes=number,method_name,class_name,module_name,keyword,instance_variable,global_variable,symbol,operator,string,comment
 re.keyword=\b(and|or|unless|end|in|begin|defined?|ensure|redo|super|until|BEGIN|break|do|false|next|rescue|then|when|END|case|else|for|nil|retry|true|while|alias|elsif|if|not|return|undef|yield|require|include)([\(\s\n])|\b(self)([.,+\(\s])|__LINE__|__FILE__|[\s]*def[\s]|[\s]*module[\s]|[\s]*class[\s]

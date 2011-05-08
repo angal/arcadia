@@ -623,6 +623,7 @@ class SafeCompleteCode
       end
       _ret.sort
     rescue Exception => e
+      Arcadia.runtime_error(e)
       #Arcadia.console(self, 'msg'=>e.to_s, 'level'=>'error')
     ensure
       File.delete(temp_file) if File.exist?(temp_file)
@@ -631,9 +632,10 @@ class SafeCompleteCode
 
   def create_modified_temp_file(_base_file=nil)
     if _base_file
-      _file = _base_file+'~~'
+    File.basename(_base_file)
+      _file = File.join(File.dirname(_base_file),'~~'+File.basename(_base_file))
     else
-      _file = File.join(Arcadia.instance.local_dir,'buffer~~')
+      _file = File.join(Arcadia.instance.local_dir,'~~buffer')
     end
     f = File.new(_file, "w")
     begin
@@ -1108,26 +1110,47 @@ class AgEditor
     @buffer = text_value
     pop_up_menu
     @text.extend(TkScrollableWidget).show
+    @text.extend(TkInputThrow)
     begin
       @text_cursor = @text.cget('cursor')
     rescue RuntimeError => e
-      p "RuntimeError : #{e.message}"
+      Arcadia.runtime_error(e)
+      #p "RuntimeError : #{e.message}"
     end
   end
 
   def create_temp_file
     if @file
       n=0
-      while File.exist?("#{@file}#{n*'_'}~~")
+      while File.exist?("#{File.join(File.dirname(@file),'~~'+File.basename(@file))}#{n*'_'}")
         n+=1
       end
-      _file = "#{@file}#{n*'_'}~~"
+      _file = "#{File.join(File.dirname(@file),'~~'+File.basename(@file))}#{n*'_'}"
+#      while File.exist?("~~#{@file}#{n*'_'}")
+#        n+=1
+#      end
+#      _file = "~~#{@file}#{n*'_'}"
     else
-      n=0
-      while File.exist?(File.join(Arcadia.instance.local_dir,"buffer#{n}~~"))
-        n+=1
+      if @lang == 'java'
+        m = Regexp::new(/(class[\s][\s]*)[A-Za-z0-9_]*[\s]*/).match(text_value)
+        if m && m.length > 0
+          a = m[0].split
+          if a && a.length > 1            
+            tmp_dir = "~~#{a[1].strip.downcase}"
+            Dir.mkdir(File.join(Arcadia.instance.local_dir,tmp_dir))
+            basename = File.join(tmp_dir,"#{a[1].strip}.java")
+            
+          end
+        end
+        basename = "~~buffer.java" if basename.nil?        
+      else
+        n=0
+        while File.exist?(File.join(Arcadia.instance.local_dir,"~~buffer#{n}"))
+          n+=1
+        end
+        basename = "~~buffer#{n}"
       end
-      _file = File.join(Arcadia.instance.local_dir,"buffer#{n}~~")
+      _file = File.join(Arcadia.instance.local_dir, basename)
     end
     f = File.new(_file, "w")
     begin
@@ -1161,9 +1184,9 @@ class AgEditor
     Arcadia.console(self, 'msg'=>_custom_text)
 
     if @file
-      _file = @file+'~~'
+      _file = "#{File.join(File.dirname(@file),'~~'+File.basename(@file))}"
     else
-      _file = 'buffer~~'
+      _file = File.join(Arcadia.instance.local_dir,'~~buffer')
     end
     f = File.new(_file, "w")
     begin
@@ -1789,14 +1812,14 @@ class AgEditor
     
     @text.tag_bind('selected', 'Enter', proc{@text.tag_remove('selected','1.0','end')})
 
-    @text.bind("Enter", proc{do_enter})
+    @text.bind_append("Enter", proc{do_enter})
 
     @text.bind("<Modified>"){|e|
       check_modify
     }
     activate_key_binding
     @text.bind_append("1"){
-      Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@text))
+      #Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@text))
       refresh_outline
     }
   end
@@ -1808,11 +1831,12 @@ class AgEditor
   end
 
   def run_buffer
-    if !@file
-      Arcadia.process_event(RunCmdEvent.new(self, {'file'=>'*CURR', 'runner_name'=>'ruby_file', 'persistent'=>false}))
+    if !@file      
+      @lang='ruby' if !@lang
+      RunCmdEvent.new(self, {'file'=>'*CURR', 'persistent'=>false, 'lang'=>@lang}).go!
     else
       save if !@read_only
-      Arcadia.process_event(RunCmdEvent.new(self, {'file'=>@file}))
+      RunCmdEvent.new(self, {'file'=>@file, 'lang'=>@lang}).go!
     end
   end
   
@@ -2068,7 +2092,8 @@ class AgEditor
     begin
       @text.tag_configure(_name, h)
     rescue RuntimeError => e
-      p "RuntimeError : #{e.message}"
+      Arcadia.runtime_error(e)
+      #p "RuntimeError : #{e.message}"
     end
   end
 
@@ -2112,7 +2137,8 @@ class AgEditor
     begin
       @text.tag_configure(_name, h)
     rescue RuntimeError => e
-      p "RuntimeError : #{e.message}"
+      Arcadia.runtime_error(e)
+      #p "RuntimeError : #{e.message}"
     end
   end
 
@@ -2753,6 +2779,7 @@ class AgEditor
     @controller.change_tab_reset_modify(@page_frame) if _reset_tab
     @set_mod = false
     @file_last_access_time = File.mtime(@file) if @file
+    update_toolbar
   end
 
   def pos_to_index(_txt, _pos)
@@ -2868,25 +2895,24 @@ class AgEditor
       end
       _line_end=row('end')
       line_end_chars  = _line_end.to_s.length  
-      if @last_line_end_chars != line_end_chars
-        if @line_num_rx_e.nil?
+      if @last_line_end_chars != line_end_chars || @need_recalc
+        if @line_num_rx_e.nil? || @need_recalc
           @line_num_rx_e, @line_num_ry_e, @line_num_width_e, @line_num_heigth_e = @text_line_num.bbox("0.1 lineend - 1 chars");
-          if @line_num_rx_e.nil?
-            @line_num_rx_e = 0
-          end
           if @line_num_width_e.nil?
-            linfo_x, linfo_y, linfo_w, linfo_h, linfo_b  = @text_line_num.dlineinfo('0.1')
-            if linfo_w
-              @line_num_width_e = linfo_w.to_f/(line_end_chars+1.5)
-            end
+            @line_num_width_e = @font.split()[-1].strip.to_i
+            @need_recalc = true            
+#            linfo_x, linfo_y, linfo_w, linfo_h, linfo_b  = @text_line_num.dlineinfo('0.1')            
+#            if linfo_w
+#              @line_num_width_e = linfo_w.to_f/(line_end_chars+1.5)
+#            end
+          else
+            @need_recalc = false   
           end
         end
         
         
-        if @line_num_rx_e && @line_num_width_e && line_end_chars >0 
-          actual_width = @line_num_rx_e + @line_num_width_e
+        if @line_num_width_e && line_end_chars >0 
           need_width = (line_end_chars+1)*@line_num_width_e
-          delta = actual_width - need_width
           @fm1.resize_left(need_width)
           @last_line_end_chars = line_end_chars
         else
@@ -3142,7 +3168,7 @@ class AgEditor
     @is_ruby = _ext=='rb'|| _ext=='rbw'
     @classbrowsing = @is_ruby || has_ctags?
     @codeinsight = @is_ruby
-    @lang_hash = @controller.languages_hash(_ext)
+    @lang_hash = @controller.language_hash_by_ext(_ext)
     if @lang_hash
       @lang = @lang_hash['language']
     else
@@ -3510,6 +3536,8 @@ class AgMultiEditor < ArcadiaExt
       if _event.cmd.nil?
         if _event.runner_name
           runner = Arcadia.runner(_event.runner_name)
+        elsif _event.lang && Arcadia.runner_for_lang(_event.lang)
+          runner = Arcadia.runner_for_lang(_event.lang)
         else
           runner = Arcadia.runner_for_file(_event.file)
         end
@@ -3558,6 +3586,7 @@ class AgMultiEditor < ArcadiaExt
       CLOSE_DOCUMENT_GIF)
     frame.root.add_sep(self.name, 1)
     @buffer_menu = frame.root.add_menu_button(self.name, 'files', DOCUMENT_COMBO_GIF, 'right', {'relief'=>:raised, 'borderwidth'=>1}).cget('menu')
+    load_languages_hash
   end
 
   def add_buffer_menu_item(_filename, is_file=true)
@@ -3577,7 +3606,7 @@ class AgMultiEditor < ArcadiaExt
         end
       }
     end
-
+    
     @buffer_menu.insert(index,:radio,
       :label=>File.basename(_filename),
      # :variable=>TkVariable.new(_filename),
@@ -3648,7 +3677,7 @@ class AgMultiEditor < ArcadiaExt
     return nil if _ext.nil?
     scanner = nil
     @highlight_scanner_hash = Hash.new if !defined?(@highlight_scanner_hash)
-    lh = languages_hash(_ext)
+    lh = language_hash_by_ext(_ext)
     if lh && lh['language'] && lh['scanner']  
       if @highlight_scanner_hash[lh['language']].nil?
         case lh['scanner']
@@ -3663,39 +3692,77 @@ class AgMultiEditor < ArcadiaExt
     scanner
   end
 
-  def languages_hash(_ext=nil)
-    @langs_hash = Hash.new if !defined?(@langs_hash)
-    return nil if _ext.nil?
-    if @langs_hash[_ext].nil?
-      #_ext='' if _ext.nil?
-      lang_file = File.dirname(__FILE__)+'/langs/'+_ext+'.lang'
-      if File.exist?(lang_file)
-        @langs_hash[_ext] = properties_file2hash(lang_file)
-      elsif File.exist?(lang_file+'.bind')
-        b= properties_file2hash(lang_file+'.bind')
-        if b 
-          if @langs_hash[b['bind']].nil?
-            lang_file_bind = File.dirname(__FILE__)+'/langs/'+b['bind']+".lang"
-            if File.exist?(lang_file_bind)
-              @langs_hash[b['bind']]=properties_file2hash(lang_file_bind)
-              @langs_hash[_ext]=@langs_hash[b['bind']]
-            end
-          else
-            @langs_hash[_ext]=@langs_hash[b['bind']]
+  def load_languages_hash
+    @langs_hash_by_ext = Hash.new
+    @langs_hash_by_lang = Hash.new
+    lang_files_dir = "#{File.dirname(__FILE__)}/langs"
+    files = Dir["#{lang_files_dir}/*"].sort
+  	 files.each{|lang_file|
+      af = lang_file.split('.')
+      if af[-1] == 'lang'
+    	   lang_props = properties_file2hash(lang_file)
+        if lang_props && lang_props['@include'] != nil
+          include_file = "#{lang_files_dir}/#{lang_props['@include']}"
+          if File.exist?(include_file)
+            include_hash = properties_file2hash(include_file)
+            lang_props = include_hash.merge(lang_props)
           end
-        end
+        end 
+        self.resolve_properties_link(lang_props, Arcadia.instance['conf']) if lang_props
+        lang = lang_props['language']
+        lang_exts = lang_props['exts'].split(',').collect{|x| x.strip} if lang_props['exts']
+        @langs_hash_by_lang[lang] = lang_props if lang
+        lang_exts.each{|ext|
+          @langs_hash_by_ext[ext] = lang_props
+        } if lang_exts
+      
+      
+      
       end
-      if @langs_hash[_ext] && @langs_hash[_ext]['@include'] != nil
-        include_file = "#{File.dirname(__FILE__)}/langs/#{@langs_hash[_ext]['@include']}"
-        if File.exist?(include_file)
-          include_hash = properties_file2hash(include_file)
-          @langs_hash[_ext] = include_hash.merge(@langs_hash[_ext])
-        end
-      end 
-      self.resolve_properties_link(@langs_hash[_ext], Arcadia.instance['conf']) if @langs_hash[_ext]
-    end
-    @langs_hash[_ext]
+    }
   end
+
+  def language_hash_by_ext(_ext=nil)
+    @langs_hash_by_ext[_ext]
+  end
+
+  def language_hash_by_lang(_lang=nil)
+    @langs_hash_by_lang[_lang]
+  end
+
+#  def languages_hash(_ext=nil)
+#    @langs_hash = Hash.new if !defined?(@langs_hash)
+#    return nil if _ext.nil?
+#    if @langs_hash[_ext].nil?
+#      #_ext='' if _ext.nil?
+#      lang_file = File.dirname(__FILE__)+'/langs/'+_ext+'.lang'
+#      if File.exist?(lang_file)
+#        @langs_hash[_ext] = properties_file2hash(lang_file)
+#      elsif File.exist?(lang_file+'.bind')
+#        b= properties_file2hash(lang_file+'.bind')
+#        if b 
+#          if @langs_hash[b['bind']].nil?
+#            lang_file_bind = File.dirname(__FILE__)+'/langs/'+b['bind']+".lang"
+#            if File.exist?(lang_file_bind)
+#              @langs_hash[b['bind']]=properties_file2hash(lang_file_bind)
+#              @langs_hash[_ext]=@langs_hash[b['bind']]
+#            end
+#          else
+#            @langs_hash[_ext]=@langs_hash[b['bind']]
+#          end
+#        end
+#      end
+#      if @langs_hash[_ext] && @langs_hash[_ext]['@include'] != nil
+#        include_file = "#{File.dirname(__FILE__)}/langs/#{@langs_hash[_ext]['@include']}"
+#        if File.exist?(include_file)
+#          include_hash = properties_file2hash(include_file)
+#          @langs_hash[_ext] = include_hash.merge(@langs_hash[_ext])
+#        end
+#      end 
+#      self.resolve_properties_link(@langs_hash[_ext], Arcadia.instance['conf']) if @langs_hash[_ext]
+#    end
+#    @langs_hash[_ext]
+#  end
 
 
   def pop_up_menu
@@ -3901,7 +3968,15 @@ class AgMultiEditor < ArcadiaExt
               @last_transient_file = nil
             end
           end
-          self.open_file(_event.file, _index)
+          if _event.file == '*CURR'
+            er = raised
+            if er && _index != nil
+              er.text_see(_index)
+              er.mark_selected(_index)
+            end   
+          else
+            self.open_file(_event.file, _index)
+          end
         elsif _event.text
           if _event.title 
             _tab_name = self.tab_name(_event.title)
@@ -4024,8 +4099,13 @@ class AgMultiEditor < ArcadiaExt
   def clear_temp_files
     files = Dir[File.join(Arcadia.instance.local_dir,"*")]
     files.each{|f|
-      if File.stat(f).file? && f[-2..-1] == '~~'
+      if File.stat(f).file? && File.basename(f)[0..1] == '~~'
         File.delete(f)
+      elsif File.stat(f).directory? && File.basename(f)[0..1] == '~~'
+        Dir[File.join(f,"*")].each{|file|
+          File.delete(file)
+        }
+        Dir.delete(f)        
       end
     }
   end
@@ -4345,6 +4425,8 @@ class AgMultiEditor < ArcadiaExt
     change_frame_caption(_new_caption)
     _title = @tabs_file[_name] != nil ? File.basename(@tabs_file[_name]) :_name
     Arcadia.broadcast_event(BufferRaisedEvent.new(self, 'title'=>_title, 'file'=>@tabs_file[_name], 'lang'=>_lang ))
+    Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>_e.text)) if _e
+
     #EditorContract.instance.buffer_raised(self, 'title'=>_title, 'file'=>@tabs_file[_name])
   end
   
@@ -4418,9 +4500,10 @@ class AgMultiEditor < ArcadiaExt
       begin
         @tabs_editor[_tab_name].load_file(_filename)
       rescue RuntimeError => e
-        Arcadia.dialog(self,'type'=>'ok', 'level'=>'error','title' => 'RuntimeError', 'msg'=>"RuntimeError : #{e.message}")
+        #Arcadia.dialog(self,'type'=>'ok', 'level'=>'error','title' => 'RuntimeError', 'msg'=>"RuntimeError : #{e.message}")
         #p "RuntimeError : #{e.message}"
         close_editor(@tabs_editor[_tab_name], true)
+        Arcadia.runtime_error(e)
       end
     end
     editor = @tabs_editor[_tab_name]
@@ -4459,6 +4542,8 @@ class AgMultiEditor < ArcadiaExt
         case _lang
           when 'ruby', nil
             lang_sign = '*.rb'
+          when 'python'
+            lang_sign = '*.py'
           when 'java'
             lang_sign = '*.java'
         end
@@ -4490,9 +4575,11 @@ class AgMultiEditor < ArcadiaExt
       @tabs_editor[_buffer_name]=_e
     end
     if raised != @tabs_editor[resolve_tab_name(_buffer_name)]
-      @main_frame.enb.move(resolve_tab_name(_buffer_name), 1)
+      @main_frame.enb.move(resolve_tab_name(_buffer_name), 0)
       @main_frame.enb.raise(resolve_tab_name(_buffer_name)) if frame_visible?
       @main_frame.enb.see(resolve_tab_name(_buffer_name))
+    else
+      @main_frame.enb.move(resolve_tab_name(_buffer_name), 0)
     end
     return _tab
   end
@@ -4658,7 +4745,9 @@ class Findview < TkFloatTitledFrame
     }
     @e_what_entry = TkWinfo.children(@e_what)[0]
 
-    @e_what_entry.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_what_entry))})
+    #@e_what_entry.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_what_entry))})
+    @e_what_entry.extend(TkInputThrow)
+
 
     y0 = y0 + d
     TkLabel.new(self.frame, Arcadia.style('label')){
@@ -4677,9 +4766,8 @@ class Findview < TkFloatTitledFrame
       place('relwidth' => 1, 'width'=>-16,'x' => 8,'y' => y0,'height' => 19)
     }
     @e_with_entry = TkWinfo.children(@e_with)[0]
-
-    @e_with_entry.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_with_entry))})
-    
+    #@e_with_entry.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_with_entry))})
+    @e_with_entry.extend(TkInputThrow)
     y0 = y0 + d
     @cb_reg = TkCheckButton.new(self.frame, Arcadia.style('checkbox')){|_cb_reg|
       text  'Use Regular Expression'
@@ -4876,7 +4964,8 @@ class Finder < Findview
     if (_editor != @editor_caller)
       @last_index='insert'
       @editor_caller = _editor
-      _title = File.basename(_editor.file) 
+      _title = '?'
+      _title = File.basename(_editor.file) if _editor.file  
       title(_title)
       @goto_line_dialog.title(_title) if @goto_line_dialog
     end
@@ -4980,7 +5069,8 @@ class GoToLine < TkFloatTitledFrame
       #relief  'ridge'
       place('relwidth' => 1, 'width'=>-16,'x' => 8,'y' => y0,'height' => 19)
    	}
-    @e_line.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_line))})
+    #@e_line.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_line))})
+    @e_line.extend(TkInputThrow)
     
    	y0 = y0 + d
    	y0 = y0 + d

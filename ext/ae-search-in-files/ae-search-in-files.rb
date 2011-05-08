@@ -258,7 +258,8 @@ class FindFrame < TkFloatTitledFrame
     }
     @e_what_entry = TkWinfo.children(@e_what)[0]
     # this means "after each key press 
-    @e_what_entry.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_what_entry))})
+    #@e_what_entry.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_what_entry))})
+    @e_what_entry.extend(TkInputThrow)
     
     y0 = y0 + d
     TkLabel.new(self.frame, Arcadia.style('label')){
@@ -277,7 +278,8 @@ class FindFrame < TkFloatTitledFrame
       place('relwidth' => 1, 'width'=>-16,'x' => 8,'y' => y0,'height' => 19)
     }
     @e_filter_entry = TkWinfo.children(@e_filter)[0]
-    @e_filter_entry.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_filter_entry))})
+    #@e_filter_entry.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_filter_entry))})
+    @e_filter_entry.extend(TkInputThrow)
 
     @e_filter.insert('end', '*.*')
     @e_filter.insert('end', '*.rb')

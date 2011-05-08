@@ -1,5 +1,7 @@
 language=ruby
 
+exts=rb,rbw
+
 scanner=coderay
 #scanner=re
 re.classes=number,method_name,class_name,module_name,keyword,instance_variable,global_variable,symbol,operator,string,comment
