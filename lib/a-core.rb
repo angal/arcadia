@@ -71,6 +71,7 @@ class Arcadia < TkApplication
       'expand'=> 1
     )
     #.place('x'=>0,'y'=>0,'relwidth'=>1,'relheight'=>1)
+    
     @mf_root.show_statusbar('status')
     @mf_root.add_indicator().text=RUBY_PLATFORM
     
@@ -792,7 +793,7 @@ class Arcadia < TkApplication
     begin
       a = geometry_to_a(_geometry)
       toolbar_height = @root.winfo_height-@root.winfo_screenheight
-      a[3] = (a[3].to_i - toolbar_height.abs).to_s
+      a[3] = (a[3].to_i - toolbar_height.abs).abs.to_s
       geometry_from_a(a)
     rescue
       return _geometry
@@ -1858,10 +1859,16 @@ class ArcadiaProblemsShower
       @problems.each{|e|
         append_problem(e)
       }
+      if @tree.exist?('dependences_missing_node')
+        @tree.open_tree('dependences_missing_node', true)
+      end
+      if @tree.exist?('runtime_error_node')
+        @tree.open_tree('runtime_error_node', true)
+      end
       @showed=true
     rescue RuntimeError => e
       Arcadia.detach_listener(self, ArcadiaProblemEvent)
-      Arcadia.detach_listenerdetach_listener(self, InitializeEvent)      
+      Arcadia.detach_listener(self, InitializeEvent)      
     end
   end
 
