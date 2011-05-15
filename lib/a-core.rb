@@ -18,6 +18,7 @@ class Arcadia < TkApplication
   include Observable
   attr_reader :layout
   attr_reader :wf
+  attr_reader :mf_root
   def initialize
     super(
       ApplicationParams.new(
@@ -72,9 +73,22 @@ class Arcadia < TkApplication
     )
     #.place('x'=>0,'y'=>0,'relwidth'=>1,'relheight'=>1)
     
-    @mf_root.show_statusbar('status')
-    @mf_root.add_indicator().text=RUBY_PLATFORM
     
+    
+    @mf_root.show_statusbar('status')
+#    TkWinfo.children(@mf_root).each{|frame|
+#      if frame.path.include?('status')
+#        TkWinfo.children(frame).each{|f|
+#          if f.path.include?('indf')
+#            f.pack('side'=>'left','fill'=>'x')
+#            break
+#          end
+#        }
+#        break
+#      end
+#    }
+    #@mf_root.add_indicator().text=RUBY_PLATFORM
+    Arcadia.new_statusbar_item("Platform").text=RUBY_PLATFORM
     #@toolbar_frame = @mf_root.add_toolbar
     self['toolbar']= ArcadiaMainToolbar.new(self, @mf_root.add_toolbar)
     @is_toolbar_show=self['conf']['user_toolbar_show']=='yes'
@@ -1051,6 +1065,18 @@ class Arcadia < TkApplication
     @@instance[_name]
   end
   
+  def Arcadia.new_statusbar_item(_help=nil)
+    _other =  @@last_status_item if defined?(@@last_status_item) 
+    @@last_status_item=@@instance.mf_root.add_indicator()
+    if _other
+      @@last_status_item.pack('before'=>_other)
+    end
+    if _help
+      Tk::BWidget::DynamicHelp::add(@@last_status_item, 'text'=>_help)
+    end
+    @@last_status_item
+  end
+  
   def Arcadia.menu_root(_menu_root_name, _menu_root=nil)
     if @@instance['menu_roots'] == nil
       @@instance['menu_roots'] = Hash.new
@@ -1831,6 +1857,7 @@ class ArcadiaProblemsShower
   def initialize(_arcadia)
     @arcadia = _arcadia
     @showed = false
+    @visible = false
     @problems = Array.new 
     @seq = 0
     @dmc=0
@@ -1894,12 +1921,16 @@ class ArcadiaProblemsShower
      # crossopenimage  TkPhotoImage.new('dat' => MINUS_GIF)
     }
     @tree.extend(TkScrollableWidget).show(0,0)
-    
-
-    
-
     # call button
-    command = proc{@ff.show}
+    command = proc{
+      if @visible
+        @ff.hide
+        @visible = false
+      else
+        @ff.show
+        @visible = true
+      end
+    }
     
     
     b_style = Arcadia.style('toolbarbutton')

@@ -136,7 +136,11 @@ class CtagsSourceStructure < SourceStructure
       @last_node.rif_end = (node.rif.to_i-1).to_s
       
       if ['class','module','interface','package'].include?(fields['kind'])
-        @classes[name]=node
+        if fields['class'] != nil
+          @classes["#{fields['class']}.#{name}"]=node
+        else
+          @classes[name]=node          
+        end
         @last_class_node = node
       end
       node.sortable =  !['package','field'].include?(fields['kind'])
@@ -881,6 +885,8 @@ class AgEditorOutline
       deltay 18
       dragenabled true
       selectcommand proc{ _tree_goto.call(self) } 
+      crosscloseimage  TkPhotoImage.new('dat' => ARROWRIGHT_GIF)      
+      crossopenimage  TkPhotoImage.new('dat' => ARROWDOWN_GIF)
     }
     @tree_exp.extend(TkScrollableWidget)
     self.show
@@ -916,7 +922,7 @@ class AgEditorOutline
           _image = @image_class
       elsif _son.kind == 'module'
           _image = @image_module
-      elsif _son.kind == 'method'
+      elsif _son.kind == 'method' || _son.kind == 'procedure'
           _image = @image_method
       elsif _son.kind == 'singleton method'
           _image = @image_singleton_method
@@ -1011,6 +1017,7 @@ class AgEditor
   attr_reader :highlighting
   attr_reader :last_tmp_file
   attr_reader :lang
+  attr_reader :file_info  
   def initialize(_controller, _page_frame)
     @controller = _controller
     @page_frame = _page_frame
@@ -1030,6 +1037,7 @@ class AgEditor
     @spaces_show = false
     @line_numbers_visible = @controller.conf('line-numbers') == 'yes'
     @id = -1
+    @file_info = Hash.new
   end
   
   def modified_from_opening?
@@ -2778,7 +2786,9 @@ class AgEditor
   def reset_modify(_reset_tab=true)
     @controller.change_tab_reset_modify(@page_frame) if _reset_tab
     @set_mod = false
-    @file_last_access_time = File.mtime(@file) if @file
+    @file_info['mtime'] = File.mtime(@file) if @file
+    #@file_last_access_time = File.mtime(@file) if @file
+    @controller.refresh_status
     update_toolbar
   end
 
@@ -3094,10 +3104,10 @@ class AgEditor
 
   def modified_by_others?
     ret = false 
-    if @file_last_access_time && @file 
+    if @file_info['mtime'] && @file 
       if File.exist?(@file)
         ftime = File.mtime(@file)
-        ret = @file_last_access_time != ftime
+        ret = @file_info['mtime'] != ftime
       else
         ret = true
       end
@@ -3108,9 +3118,9 @@ class AgEditor
   def reset_file_last_access_time
     if @file
       if File.exist?(@file)
-        @file_last_access_time = File.mtime(@file)
+        @file_info['mtime'] = File.mtime(@file)
       else
-        @file_last_access_time = nil
+        @file_info['mtime'] = nil
         @file = nil
       end
     end
@@ -3119,9 +3129,9 @@ class AgEditor
   def check_file_last_access_time
     if @file
       file_exist = File.exist?(@file)
-      if @file_last_access_time && file_exist
+      if @file_info['mtime'] && file_exist
         ftime = File.mtime(@file)
-        if @file_last_access_time != ftime
+        if @file_info['mtime'] != ftime
           msg = 'File "'+@file+'" is changed! Reload?'
           ans = Tk.messageBox('icon' => 'error', 'type' => 'yesno',
             'title' => '(Arcadia) Libs', 'parent' => @text,
@@ -3129,7 +3139,7 @@ class AgEditor
           if ans == 'yes'
             reload
           else
-            @file_last_access_time = ftime
+            @file_info['mtime'] = ftime
           end
         end
       elsif !file_exist
@@ -3451,6 +3461,8 @@ class AgMultiEditor < ArcadiaExt
     @raw_buffer_name = Hash.new 
     @editor_seq=-1
     @editors =Array.new
+    initialize_status
+    #@statusbar_item.pack('side'=>'left','anchor'=>'e','expand'=>'yes')
     Arcadia.attach_listener(self, BufferEvent)
     Arcadia.attach_listener(self, DebugEvent)
   #  Arcadia.attach_listener(self, RunRubyFileEvent)
@@ -3458,7 +3470,6 @@ class AgMultiEditor < ArcadiaExt
   # Arcadia.attach_listener(self, StartDebugEvent)
     Arcadia.attach_listener(self, FocusEvent)
   end
-  
   
 #  def on_before_run_ruby_file(_event)
 #    _filename = _event.file
@@ -4423,11 +4434,38 @@ class AgMultiEditor < ArcadiaExt
       _e.update_toolbar
     end
     change_frame_caption(_new_caption)
+	refresh_status
     _title = @tabs_file[_name] != nil ? File.basename(@tabs_file[_name]) :_name
     Arcadia.broadcast_event(BufferRaisedEvent.new(self, 'title'=>_title, 'file'=>@tabs_file[_name], 'lang'=>_lang ))
     Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>_e.text)) if _e
 
     #EditorContract.instance.buffer_raised(self, 'title'=>_title, 'file'=>@tabs_file[_name])
+  end
+  
+  def initialize_status
+    @statusbar_items = Hash.new
+    @statusbar_items['file_size'] = Arcadia.new_statusbar_item("File size")
+    @statusbar_items['file_mtime'] = Arcadia.new_statusbar_item("File modification time")
+    @statusbar_items['file_name'] = Arcadia.new_statusbar_item("File name")
+#    @statusbar_item = Arcadia.new_statusbar_item
+#    @statusbar_item.relief('flat')
+  end
+
+  
+  def refresh_status
+    #@statusbar_item.text("#{_title} | #{_e.file_info['mtime'].strftime("%d/%m/%Y %H:%m:%S") if _e}")
+    if raised && raised.file
+      size = File.size(raised.file)
+      if size > 1024
+        size_str = "#{size/1024} kb"
+      else
+        size_str = "#{size} b"      
+      end
+      @statusbar_items['file_name'].text(File.basename(raised.file))
+      @statusbar_items['file_mtime'].text =  raised.file_info['mtime'].localtime
+      @statusbar_items['file_size'].text = size_str 
+      #@statusbar_item.text("#{File.basename(raised.file)} | #{raised.file_info['mtime'].localtime} | #{size_str}")
+    end
   end
   
   def editor_of(_filename)
@@ -4648,6 +4686,7 @@ class AgMultiEditor < ArcadiaExt
           'msg'=>message)
       if r=="yes"
         _editor.reset_file_last_access_time
+        refresh_status
         ret = !_editor.modified_by_others?
       else
         ret = false
