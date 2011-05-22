@@ -91,13 +91,15 @@ class FilesHistrory < ArcadiaExt
 
   def on_build(_event)
     @h_stack = Array.new
-    @cb_sync = TkCheckButton.new(self.frame.hinner_frame, Arcadia.style('checkbox')){
+
+    @panel = self.frame.root.add_panel(self.frame.name, "sync");
+    @cb_sync = TkCheckButton.new(@panel, Arcadia.style('checkbox').update('background'=>@panel.background)){
       text  'Sync'
       justify  'left'
       indicatoron 0
-      offrelief 'raised'
-      image TkPhotoImage.new('dat' => SYNCICON20_GIF)
-      place('x' => 0,'y' => 0,'height' => 26)
+      offrelief 'flat'
+      image TkPhotoImage.new('dat' => SYNC_GIF)
+      pack
     }
 
     Tk::BWidget::DynamicHelp::add(@cb_sync, 
@@ -139,11 +141,13 @@ class FilesHistrory < ArcadiaExt
 	  @htree = BWidgetTreePatched.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
       showlines false
       deltay 18
+      crosscloseimage  TkPhotoImage.new('dat' => PLUS_GIF)
+      crossopenimage  TkPhotoImage.new('dat' => MINUS_GIF)
       opencmd proc{|node| do_open_folder.call(node)} 
       selectcommand proc{ do_select_item.call(self) } 
 #      place('relwidth' => 1,'relheight' => '1', 'x' => '0','y' => '22', 'height' => -22)
     }
-    @htree.extend(TkScrollableWidget).show(0,26)
+    @htree.extend(TkScrollableWidget).show(0,0)
 
     do_double_click = proc{
         #_selected = @htree.selection_get[0]

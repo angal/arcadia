@@ -12,19 +12,25 @@ require "tk"
 class OutputView
   attr_reader :text
   def initialize(parent=nil)
-    left_frame = TkFrame.new(parent.frame.hinner_frame, Arcadia.style('panel')).place('x' => '0','y' => '0','relheight' => '1','width' => '25')
-    right_frame = TkFrame.new(parent.frame.hinner_frame, Arcadia.style('panel')).place('x' => '25','y' => '0','relheight' => '1','relwidth' => '1','width' => '-25')
+    #left_frame = TkFrame.new(parent.frame.hinner_frame, Arcadia.style('panel')).place('x' => '0','y' => '0','relheight' => '1','width' => '25')
+    #right_frame = TkFrame.new(parent.frame.hinner_frame, Arcadia.style('panel')).place('x' => '25','y' => '0','relheight' => '1','relwidth' => '1','width' => '-25')
 
-    @button_u = Tk::BWidget::Button.new(left_frame, Arcadia.style('toolbarbutton')){
-      image  TkPhotoImage.new('dat' => CLEAR_GIF)
-      helptext 'Clear'
-      #foreground 'blue'
-      command proc{parent.main_frame.text.delete('1.0','end')}
-      #relief 'groove'
-      pack('side' =>'top', 'anchor'=>'n',:padx=>0, :pady=>0)
-    }
+    parent.frame.root.add_button(
+      parent.name,
+      'Clear',
+      proc{parent.main_frame.text.delete('1.0','end')}, 
+      CLEAR_GIF)
 
-    @text = TkArcadiaText.new(right_frame,
+#    @button_u = Tk::BWidget::Button.new(left_frame, Arcadia.style('toolbarbutton')){
+#      image  TkPhotoImage.new('dat' => CLEAR_GIF)
+#      helptext 'Clear'
+#      #foreground 'blue'
+#      command proc{parent.main_frame.text.delete('1.0','end')}
+#      #relief 'groove'
+#      pack('side' =>'top', 'anchor'=>'n',:padx=>0, :pady=>0)
+#    }
+
+    @text = TkArcadiaText.new(parent.frame.hinner_frame,
     {'wrap'=>  'none'}.update(Arcadia.style('edit'))
     )
     @text.extend(TkScrollableWidget).show

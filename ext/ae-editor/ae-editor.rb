@@ -94,6 +94,7 @@ class SourceStructure
 end
 
 class CtagsSourceStructure < SourceStructure
+  SUPPORTED_LANG = ['Ant','Asm','Asp','Awk','Basic','BETA','C','C++','C#','Cobol','DosBatch','Eiffel','Erlang','Flex','Fortran','HTML','Java','JavaScript','Lisp','Lua','Make','MatLab','OCaml','Pascal','Perl','PHP','Python','REXX','Ruby','Scheme','Sh','SLang','SML','SQL','Tcl','Tex','Vera','Verilog','VHDL','Vim','YACC']
   def initialize(_file, _ctags_string='ctags', _language=nil)
     super()
     @file = _file
@@ -151,14 +152,18 @@ class CtagsSourceStructure < SourceStructure
   end
   
   def ctags
-    if @language != nil
+    if @language != nil && SUPPORTED_LANG.include?(@language)
       @ctags_string = "#{@ctags_string} --language-force=#{@language}"
     end
     _cmd_ = "|#{@ctags_string} --fields=+a+f+m+i+k+K+n+s+S+t+z -uf - #{@file}"
     to_ret = ''
-    open(_cmd_, "r"){|f| 
-      to_ret = f.readlines
-    }
+    begin
+      open(_cmd_, "r"){|f| 
+        to_ret = f.readlines
+      }
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e)
+    end
     to_ret
   end
 end
@@ -749,16 +754,17 @@ end
 
 class AgEditorOutlineToolbar
   attr_accessor :sync
-  def initialize(_frame, _controller)
+  def initialize(_controller)
     @controller = _controller
-    @cb_sync = TkCheckButton.new(_frame, Arcadia.style('checkbox')){
+    @panel = @controller.frame(1).root.add_panel(@controller.frame(1).name, "sync");
+    @cb_sync = TkCheckButton.new(@panel, Arcadia.style('checkbox').update('background'=>@panel.background)){
       text  'Sync'
       justify  'left'
       indicatoron 0
-      offrelief 'raised'
-      image TkPhotoImage.new('dat' => SYNCICON20_GIF)
-      place('x' => 0,'y' => 0,'height' => 26, 'width' => 26)
-    }
+      offrelief 'flat'
+      image TkPhotoImage.new('dat' => SYNC_GIF)
+      pack
+    }        
     Tk::BWidget::DynamicHelp::add(@cb_sync, 
       'text'=>'Link open editors with content in the Navigator')
 
@@ -900,7 +906,7 @@ class AgEditorOutline
   
   def show
     #@tree_scroll_wrapper.show(0,26)
-    @tree_exp.show(0,26)
+    @tree_exp.show(0,0)
     Tk.update
   end
 
@@ -1843,7 +1849,7 @@ class AgEditor
       @lang='ruby' if !@lang
       RunCmdEvent.new(self, {'file'=>'*CURR', 'persistent'=>false, 'lang'=>@lang}).go!
     else
-      save if !@read_only
+      save if !@read_only && modified?
       RunCmdEvent.new(self, {'file'=>@file, 'lang'=>@lang}).go!
     end
   end
@@ -3587,7 +3593,7 @@ class AgMultiEditor < ArcadiaExt
 
   def on_build(_event)
     @main_frame = AgMultiEditorView.new(self.frame.hinner_frame)
-    @outline_bar = AgEditorOutlineToolbar.new(self.frame(1).hinner_frame, self)
+    @outline_bar = AgEditorOutlineToolbar.new(self)
     create_find # this is the "find within current file" one
     pop_up_menu
     frame.root.add_button(
@@ -4612,12 +4618,16 @@ class AgMultiEditor < ArcadiaExt
       #@tabs_file[_buffer_name]= nil
       @tabs_editor[_buffer_name]=_e
     end
-    if raised != @tabs_editor[resolve_tab_name(_buffer_name)]
-      @main_frame.enb.move(resolve_tab_name(_buffer_name), 0)
-      @main_frame.enb.raise(resolve_tab_name(_buffer_name)) if frame_visible?
-      @main_frame.enb.see(resolve_tab_name(_buffer_name))
-    else
-      @main_frame.enb.move(resolve_tab_name(_buffer_name), 0)
+    begin
+      if raised != @tabs_editor[resolve_tab_name(_buffer_name)]
+        @main_frame.enb.move(resolve_tab_name(_buffer_name), 0)
+        @main_frame.enb.raise(resolve_tab_name(_buffer_name)) if frame_visible?
+        @main_frame.enb.see(resolve_tab_name(_buffer_name))
+      else
+        @main_frame.enb.move(resolve_tab_name(_buffer_name), 0)
+      end
+    rescue Exception => e
+      Arcadia.runtime_error(e)
     end
     return _tab
   end

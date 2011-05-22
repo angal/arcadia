@@ -51,7 +51,7 @@ class DirProjects < ArcadiaExt
       padx 0
       pady 0
       background Arcadia.conf('panel.background')
-    }.place('x'=>32,'height'=> 20)
+    }.place('x'=>0,'height'=> 20)
 
     @button_box.add(Arcadia.style('toolbarbutton').update({
       'name'=>'new_proj',
@@ -86,16 +86,14 @@ class DirProjects < ArcadiaExt
     )
 
     #--- button_box
-    
-    @cb_sync = TkCheckButton.new(self.frame.hinner_frame, Arcadia.style('checkbox')){
+    @panel = self.frame.root.add_panel(self.frame.name, "sync");
+    @cb_sync = TkCheckButton.new(@panel, Arcadia.style('checkbox').update('background'=>@panel.background)){
       text  'Sync'
       justify  'left'
       indicatoron 0
-      offrelief 'raised'
+      offrelief 'flat'
       image TkPhotoImage.new('dat' => SYNC_GIF)
-      #pack('anchor'=>'n')
-      #place('x' => 0,'y' => 0,'height' => 26, 'width' => 26)
-      place('x' => 0,'y' => 0)
+      pack
     }
 
     Tk::BWidget::DynamicHelp::add(@cb_sync, 

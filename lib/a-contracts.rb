@@ -67,7 +67,6 @@ end
 class ArcadiaProblemEvent < ArcadiaEvent
    DEPENDENCE_MISSING_TYPE = "DEPENDENCE_MISSING_TYPE"
    RUNTIME_ERROR_TYPE = "RUNTIME_ERROR_TYPE"
-
    attr_accessor :type, :level, :title, :detail
 end
 

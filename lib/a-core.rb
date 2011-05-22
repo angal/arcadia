@@ -1233,7 +1233,7 @@ class ArcadiaMainToolbar < ArcadiaUserControl
       if _args['menu_button'] && _args['menu_button'] == 'yes'
         @menu_button = TkMenuButton.new(_args['frame'], Arcadia.style('toolbarbutton')){|mb|
           indicatoron false
-          menu TkMenu.new(mb, Arcadia.style('titlemenu'))
+          menu TkMenu.new(mb, Arcadia.style('menu'))
           image TkPhotoImage.new('dat' => MENUBUTTON_ARROW_DOWN_GIF)
           padx 0
           pady 0
@@ -1850,6 +1850,7 @@ class ArcadiaAboutSplash < TkToplevel
   def last_step(_txt = nil)
     @progress.numeric = @max
     labelStep(_txt) if _txt
+    Arcadia.detach_listener(self, ArcadiaProblemEvent)
   end
 end
 
@@ -1857,7 +1858,8 @@ class ArcadiaProblemsShower
   def initialize(_arcadia)
     @arcadia = _arcadia
     @showed = false
-    @visible = false
+    @initialized = false
+    #@visible = false
     @problems = Array.new 
     @seq = 0
     @dmc=0
@@ -1868,13 +1870,18 @@ class ArcadiaProblemsShower
   
   def on_arcadia_problem(_event)
     @problems << _event
-    if @showed
-      append_problem(_event)
-      @b_err.configure('text'=> button_text)
+    if @initialized 
+      if !@showed
+        show_problems
+      else
+        append_problem(_event)
+        @b_err.configure('text'=> button_text)
+      end
     end
   end
   
   def on_after_initialize(_event)
+    @initialized = true
     if @problems.count > 0   
       show_problems
     end
@@ -1923,16 +1930,15 @@ class ArcadiaProblemsShower
     @tree.extend(TkScrollableWidget).show(0,0)
     # call button
     command = proc{
-      if @visible
+      if @ff.visible?
         @ff.hide
-        @visible = false
+        #@visible = false
       else
         @ff.show
-        @visible = true
+        #@visible = true
       end
     }
-    
-    
+        
     b_style = Arcadia.style('toolbarbutton')
     b_style["relief"]='groove'
 #    b_style["borderwidth"]=2

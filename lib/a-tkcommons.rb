@@ -788,6 +788,7 @@ class TkBaseTitledFrame < TkFrame
 
     @buttons = Hash.new
     @menu_buttons = Hash.new
+    @panels = Hash.new
     @last_for_frame = Hash.new
     self.head_buttons
   end
@@ -802,6 +803,10 @@ class TkBaseTitledFrame < TkFrame
 
   def add_fixed_menu_button(_name='default',_image=nil, _side= 'right', _args=nil)
     __add_menu_button(_name, _image, _side, _args, @button_frame)
+  end
+
+  def add_fixed_panel(_name='default',_side= 'right', _args=nil)
+    __add_panel(_name, _side, _args, @button_frame)
   end
 
   def add_fixed_sep(_width=0)
@@ -855,6 +860,27 @@ class TkBaseTitledFrame < TkFrame
   end
   private :__add_menu_button
 
+  def __add_panel(_name='default', _side= 'right', _args=nil, _frame=nil)
+    return if _frame.nil?
+    args = Arcadia.style('panel').update('background'=>_frame.background, 'highlightbackground'=>_frame.background)
+    args.update(_args) if _args
+    begin
+      last = @last_for_frame[_frame]
+      @last_for_frame[_frame] = @panels[_name]= TkFrame.new(_frame, args){
+        padx 0
+        pady 0
+        if last
+          pack('side'=> _side,'anchor'=> 'e', 'after'=>last)
+        else
+          pack('side'=> _side,'anchor'=> 'e')
+        end
+      }
+      @panels[_name]
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e)
+    end
+  end
+  private :__add_panel
 
   def __add_sep(_width=0, _frame=nil)
     return if _width <= 0 || _frame.nil?
@@ -1194,6 +1220,11 @@ class TkTitledFrameAdapter < TkTitledFrame
   def add_menu_button(_sender_name, _name='default',_image=nil, _side= 'right', _args=nil)
     forge_transient_adapter(_sender_name)
     __add_menu_button(_name, _image, _side, _args, @transient_frame_adapter[_sender_name])
+  end
+
+  def add_panel(_sender_name, _name='default',_side= 'right', _args=nil)
+    forge_transient_adapter(_sender_name)
+    __add_panel(_name, _side, _args, @transient_frame_adapter[_sender_name])
   end
 
   def add_sep(_sender_name, _width=0)
