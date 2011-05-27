@@ -621,6 +621,7 @@ class Arcadia < TkApplication
         :command ,{
           :image => Arcadia.file_icon(run[:file_exts]),
           :label => _run_title,
+          :font => Arcadia.conf('menu.font'),
           :compound => 'left',
           :command => _command
         }
@@ -644,6 +645,7 @@ class Arcadia < TkApplication
         :command ,{
           :image => Arcadia.file_icon(run[:file_exts]),
           :label => _run_title,
+          :font => Arcadia.conf('menu.font'),
           :compound => 'left',
           :command => _command
         }
@@ -1087,12 +1089,22 @@ class Arcadia < TkApplication
     @@instance['menu_roots'][_menu_root_name]
   end
 
+  def Arcadia.res_image(_name)
+    if @@instance['res_images'] == nil
+      @@instance['res_images'] = Hash.new
+    end 
+    if @@instance['res_images'][_name].nil?
+      @@instance['res_images'][_name] = TkPhotoImage.new('data' => _name)
+    end
+    @@instance['res_images'][_name]
+  end
   
   def Arcadia.file_icon(_file_name)
     _file_name = '' if _file_name.nil?
     if @@instance['file_icons'] == nil
       @@instance['file_icons'] = Hash.new 
-      @@instance['file_icons']['default']= TkPhotoImage.new('dat' => FILE_ICON_DEFAULT)
+      @@instance['file_icons']['default']= res_image(FILE_ICON_DEFAULT)
+      #TkPhotoImage.new('dat' => FILE_ICON_DEFAULT)
     end
     _base_name= File.basename(_file_name)
     if _base_name.include?('.')
@@ -1104,7 +1116,8 @@ class Arcadia < TkApplication
       file_icon_name="FILE_ICON_#{file_dn.upcase}"
       begin
         if eval("defined?(#{file_icon_name})")
-          @@instance['file_icons'][file_dn]= TkPhotoImage.new('dat' => eval(file_icon_name))
+          @@instance['file_icons'][file_dn]=res_image(eval(file_icon_name)) 
+          #TkPhotoImage.new('dat' => eval(file_icon_name))
         else
           @@instance['file_icons'][file_dn]= @@instance['file_icons']['default']
         end
@@ -1212,7 +1225,7 @@ class ArcadiaMainToolbar < ArcadiaUserControl
     attr_accessor :menu_button
     def initialize(_sender, _args)
       super(_sender, _args)
-      _image = TkPhotoImage.new('data' => @image_data) if @image_data
+      _image = Arcadia.res_image(@image_data) if @image_data
       _command = @command #proc{Arcadia.process_event(@event_class.new(_sender, @event_args))} if @event_class
       _hint = @hint
       _font = @font
@@ -1234,7 +1247,7 @@ class ArcadiaMainToolbar < ArcadiaUserControl
         @menu_button = TkMenuButton.new(_args['frame'], Arcadia.style('toolbarbutton')){|mb|
           indicatoron false
           menu TkMenu.new(mb, Arcadia.style('menu'))
-          image TkPhotoImage.new('dat' => MENUBUTTON_ARROW_DOWN_GIF)
+          image Arcadia.res_image(MENUBUTTON_ARROW_DOWN_GIF)
           padx 0
           pady 0
           pack('side'=> 'left','anchor'=> 's','pady'=>3)
@@ -1367,27 +1380,26 @@ class ArcadiaMainMenu < ArcadiaUserControl
     attr_accessor :type
     def initialize(_sender, _args)
       super(_sender, _args)
-      _command = @command #proc{ Arcadia.process_event(@event_class.new(_sender, @event_args)) } if @event_class
-      #_menu = @menu[@parent]
       item_args = Hash.new
-      item_args['image']=TkPhotoImage.new('data' => @image_data) if @image_data
-      item_args['label']=@caption
-      item_args['underline']=@underline.to_i if @underline != nil
-      item_args['compound']='left'
-      item_args['command']=_command
-      if @type.nil? && _commnad.nil? && @name == '-'
+      item_args[:image]=Arcadia.res_image(@image_data) if @image_data
+      item_args[:label]=@caption
+      item_args[:font]=Arcadia.conf('menu.font')
+      item_args[:underline]=@underline.to_i if @underline != nil
+      item_args[:compound]='left'
+      item_args[:command]=@command
+      if @type.nil? && @commnad.nil? && @name == '-'
         @type=:separator
         item_args.clear
       elsif @type.nil?
         @type=:command
       end
-      @item_obj = @menu.insert('end', @type ,item_args)  
+      @item_obj = @menu.insert('end', @type ,item_args)
       @index = @menu.index('last')
     end
 
     def enable=(_value)
       if _value
-        @item_obj.entryconfigure(@index, 'state'=>'normal')
+        @item_obj.entryconfigure(@index,'state'=>'normal')
       else
         @item_obj.entryconfigure(@index,'state'=>'disable')
       end
@@ -1600,6 +1612,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
 #          @last_post=nil
 #        end
 #      })
+
      @menu.extend(TkAutoPostMenu)      
      @menu.event_posting_on
   end

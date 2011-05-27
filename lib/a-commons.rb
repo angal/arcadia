@@ -553,7 +553,7 @@ module Configurable
           if (_strip_line.length > 0)&&(_strip_line[0,1]!='#')
             var_plat = _line.split('::')
             if var_plat.length > 1
-              if (RUBY_PLATFORM.include?(var_plat[0]))
+              if (RUBY_PLATFORM =~ Regexp::new(var_plat[0]))
                 _line = var_plat[1]
                 var_plat[2..-1].collect{|x| _line=_line+'::'+x} if var_plat.length > 2
               else
