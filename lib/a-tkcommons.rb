@@ -1445,8 +1445,8 @@ class TkWidgetFactory
     #TScrollbar
     Tk::Tile::Style.configure("Arcadia.TScrollbar", Arcadia.style('scrollbar'))
     Tk::Tile::Style.map("Arcadia.TScrollbar",
-    :background=>[:pressed, '#694418', :disabled, '#333333', :active, Arcadia.style('scrollbar')['activebackground']],
-    :arrowcolor=>[:pressed, '#FEF7CB', :disabled, Arcadia.style('scrollbar')['background'], :active, Arcadia.style('scrollbar')['activebackground']],
+    :background=>[:pressed, Arcadia.style('scrollbar')['activebackground'], :disabled, Arcadia.style('scrollbar')['background'], :active, Arcadia.style('scrollbar')['activebackground']],
+    :arrowcolor=>[:pressed, Arcadia.style('scrollbar')['background'], :disabled, Arcadia.style('scrollbar')['highlightbackground'], :active, Arcadia.style('scrollbar')['background']],
     :relief=>[:pressed, :sunken])
 
     Tk::Tile::Style.layout(Tk::Tile.style('Vertical', "Arcadia.TScrollbar"),

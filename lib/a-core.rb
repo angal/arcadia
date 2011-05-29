@@ -3,7 +3,7 @@
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
 #   &require_dir_ref=..
-#   &require_omissis=conf/arcadia.init
+#   &require_omissis=#{Dir.pwd}/conf/arcadia.init
 #   &require_omissis=tk
 #   &require_omissis=tk/label
 #   &require_omissis=tk/toplevel
@@ -538,6 +538,7 @@ class Arcadia < TkApplication
     #Tk.tk_call "eval","option add *font #{self['conf']['font']}"
     Tk.tk_call "eval","option add *activebackground #{self['conf']['activebackground']}"
     Tk.tk_call "eval","option add *activeforeground #{self['conf']['activeforeground']}"
+    Tk.tk_call "eval","option add *highlightcolor  #{self['conf']['background']}"
   end
 
   def prepare
@@ -1098,7 +1099,16 @@ class Arcadia < TkApplication
     end
     @@instance['res_images'][_name]
   end
-  
+
+  def Arcadia.lang_icon(_lang=nil)
+    icon = "FILE_ICON_#{_lang.upcase if _lang}" 
+    if _lang && eval("defined?(#{icon})")
+      res_image(eval(icon))
+    else
+      res_image(FILE_ICON_DEFAULT)
+    end
+  end
+    
   def Arcadia.file_icon(_file_name)
     _file_name = '' if _file_name.nil?
     if @@instance['file_icons'] == nil

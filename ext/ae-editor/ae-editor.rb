@@ -3,7 +3,7 @@
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
 #   &require_dir_ref=../..
-#   &require_omissis=conf/arcadia.init
+#   &require_omissis=#{Dir.pwd}/conf/arcadia.init
 
 require 'tk'
 require 'tktext'
@@ -169,6 +169,41 @@ class CtagsSourceStructure < SourceStructure
 end
 
 
+class RubyCtagsSourceStructure < CtagsSourceStructure
+  attr_reader :injected_row
+  
+  def initialize(_file, _ctags_string='ctags')
+    super(_file, _ctags_string, 'Ruby')
+  end
+  
+  def scheletor_from_node(_node, _source='', _injected_source='', _injected_class='')
+    _hinner_source = ''
+    #_sons = _node.sons.sort
+    _sons = _node.sons
+    for inode in 0.._sons.length - 1
+      _son = _sons[inode]
+      if _son.kind == 'class'
+         _hinner_source = "#{_hinner_source}#{_son.helptext}\n"
+      elsif _son.kind == 'module'
+         _hinner_source = "#{_hinner_source}#{_son.helptext}\n"
+      elsif _son.kind == 'method' && _son.label != 'initialize'         
+         _hinner_source = "#{_hinner_source}  def #{_son.label}\n"
+         _hinner_source = "#{_hinner_source}  end\n"
+      elsif _son.kind == 'singleton method'
+         _hinner_source = "#{_hinner_source}  def #{_son.label}\n"
+         _hinner_source = "#{_hinner_source}  end\n"
+      end
+      _hinner_source= scheletor_from_node(_son, _hinner_source, _injected_source, _injected_class)
+    end
+    _source = "#{_source}#{_hinner_source}" if _hinner_source.strip.length>0
+    if _node.kind == 'class' && _node.label == _injected_class
+      _source = "#{_source}  def initialize\n  #{_injected_source}  end\n"
+      @injected_row = _source.split("\n").length-2
+    end
+    _source = "#{_source}end\n" if _node.kind == 'class' || _node.kind == 'module'
+    _source
+  end
+end
 
 class RubySourceStructure < SourceStructure
   attr_reader :injected_row
@@ -318,12 +353,22 @@ end
 class SafeCompleteCode
   attr_reader :modified_row, :modified_col
   attr_reader :filter
-  def initialize(_source, _row, _col, _file=nil)
-    @source = _source
-    @file = _file
+  def initialize(_editor, _row, _col)
+    @editor = _editor
+    @source = _editor.text_value
+    #@file = _file
     @row = _row.to_i
     @col = _col.to_i
-    @ss = RubySourceStructure.new(_source)
+    if _editor && _editor.has_ctags?
+      tmp_file = _editor.create_temp_file
+      begin
+        @ss = RubyCtagsSourceStructure.new(tmp_file, _editor.ctags_string)
+      ensure
+        File.delete(tmp_file)
+      end
+    else
+      @ss = RubySourceStructure.new(_source)
+    end
     @filter=''
     @words = Array.new
     process_source
@@ -445,6 +490,7 @@ class SafeCompleteCode
     source_array = @source.split("\n")
     #---------------------------------
     focus_line = source_array[@row-1]
+    focus_line = focus_line[0..@col] if focus_line
     focus_line = '' if focus_line.nil?
     focus_world = ''
     if focus_line && focus_line.strip.length > 0
@@ -470,7 +516,7 @@ class SafeCompleteCode
     end
     @class_node = @ss.class_node_by_line(@row)
     #---------------------------------
-    @modified_source = "#{@modified_source}Dir.chdir('#{File.dirname(@file)}')\n" if @file
+    @modified_source = "#{@modified_source}Dir.chdir('#{File.dirname(@editor.file)}')\n" if @editor.file
     @modified_row = @modified_row+1
     source_array.each_with_index{|line,j|
       # 0) if a comment I do not consider it
@@ -485,7 +531,7 @@ class SafeCompleteCode
         m = /&require_omissis=[\s]*(.)*/.match(line)
         if m 
           require_omissis=line.split('&require_omissis=')[1].strip
-          @modified_source = "#{@modified_source}require '#{require_omissis}'\n"
+          @modified_source = "#{@modified_source}require \"#{require_omissis}\"\n"
           @modified_row = @modified_row+1
         end   
         
@@ -515,12 +561,15 @@ class SafeCompleteCode
             re = Regexp::new('[\s\n\t\;]('+focus_world.strip+')[\s\t]*=(.)*')
             source_array.each_with_index  do |line,j|
               #m = /[\s\n\t\;](#{focus_world})[\s\t]*=(.)*/.match(line)
-              
-              m = re.match("\s#{line}")
-              if m
-                @dec_line = line
-                @class_dec_line_node = @ss.class_node_by_line(j+1)
+              if j >= @row-1
                 break
+              else
+                m = re.match("\s#{line}")
+                if m
+                  @dec_line = line
+                  @class_dec_line_node = @ss.class_node_by_line(j+1)
+                  break
+                end
               end
             end
         		rescue Exception => e
@@ -563,8 +612,6 @@ class SafeCompleteCode
         else
           @modified_source = "#{@modified_source}$SAFE = 3\n"
           if @dec_line
-            
-            
             @modified_source = "#{@modified_source}#{declaration(@dec_line)}\n"
             @modified_row = @modified_row+1
           end
@@ -612,9 +659,9 @@ class SafeCompleteCode
   end
   
   def candidates(_show_error = false)
-    temp_file = create_modified_temp_file(@file)
+    temp_file = create_modified_temp_file(@editor.file)
     begin
-      Arcadia.is_windows??ruby='rubyw':ruby='ruby'
+      Arcadia.is_windows??ruby='rubyw':ruby=Arcadia.ruby
       _cmp_s = "|#{ruby} '#{temp_file}'"
       _ret = nil
       open(_cmp_s,"r") do  |f|
@@ -800,6 +847,7 @@ end
 class AgEditorOutline
   attr_reader :last_row
   attr_reader :tree_exp
+  attr_reader :ss
   def initialize(_editor, _frame, _bar, _lang=nil)
     @editor = _editor
     @frame = _frame
@@ -1136,10 +1184,10 @@ class AgEditor
   def create_temp_file
     if @file
       n=0
-      while File.exist?("#{File.join(File.dirname(@file),'~~'+File.basename(@file))}#{n*'_'}")
+      while File.exist?("#{File.join(File.dirname(@file),'~~'+File.basename(@file))}#{'_'*n}")
         n+=1
       end
-      _file = "#{File.join(File.dirname(@file),'~~'+File.basename(@file))}#{n*'_'}"
+      _file = "#{File.join(File.dirname(@file),'~~'+File.basename(@file))}#{'_'*n}"
 #      while File.exist?("~~#{@file}#{n*'_'}")
 #        n+=1
 #      end
@@ -1151,9 +1199,9 @@ class AgEditor
           a = m[0].split
           if a && a.length > 1            
             tmp_dir = "~~#{a[1].strip.downcase}"
-            Dir.mkdir(File.join(Arcadia.instance.local_dir,tmp_dir))
-            basename = File.join(tmp_dir,"#{a[1].strip}.java")
-            
+            full_tmp_dir = File.join(Arcadia.instance.local_dir,tmp_dir) 
+            Dir.mkdir(full_tmp_dir) if !File.exist?(full_tmp_dir)
+            basename = File.join(tmp_dir,"#{a[1].strip}.java")            
           end
         end
         basename = "~~buffer.java" if basename.nil?        
@@ -1230,7 +1278,7 @@ class AgEditor
     @do_complete = @do_complete && @controller.accept_complete_code
     if @do_complete
       line, col = @text.index('insert').split('.')
-      mss = SafeCompleteCode.new(text_value, line.to_i, col.to_i, @file)
+      mss = SafeCompleteCode.new(self, line.to_i, col.to_i)
       candidates = mss.candidates
       raise_complete_code(candidates, line.to_s, col.to_s, mss.filter) if candidates && candidates.length > 0 
     end
@@ -1268,6 +1316,16 @@ class AgEditor
       _target = @text.get('insert - 1 chars wordstart','insert')
       if _target.strip == '('
         _target = @text.get('insert - 2 chars wordstart','insert')
+      else
+        _line = @text.get("insert linestart",'insert lineend')
+        ei = _line.index(_target)
+        j=1
+        pre_target = ''
+        while ei-j>=0 && _line[ei-j..ei-j]!="\s"
+          pre_target = _line[ei-j..ei-j] + pre_target
+          j+=1
+        end
+        _target= pre_target + _target       
       end
       if _target.strip.length > 0 && _target != '.'
         extra_len = _target.length.+@
@@ -3180,11 +3238,19 @@ class AgEditor
     @controller.ctags_string
   end
 
-  def initialize_editing(_ext='rb')
-    @is_ruby = _ext=='rb'|| _ext=='rbw'
+  def initialize_editing(_ext=nil, _lang=nil)
+    if _lang 
+      @is_ruby = _lang=='ruby'
+    else
+      @is_ruby = _ext=='rb' || _ext=='rbw'
+    end
     @classbrowsing = @is_ruby || has_ctags?
     @codeinsight = @is_ruby
-    @lang_hash = @controller.language_hash_by_ext(_ext)
+    if _lang
+      @lang_hash = @controller.language_hash_by_lang(_lang)
+    else
+      @lang_hash = @controller.language_hash_by_ext(_ext)
+    end
     if @lang_hash
       @lang = @lang_hash['language']
     else
@@ -3661,6 +3727,7 @@ class AgMultiEditor < ArcadiaExt
 
   def on_initialize(_event)
     self.open_last_files
+    reset_status if @main_frame.enb.pages.empty?
   end
 
   def on_exit_query(_event)
@@ -4440,7 +4507,7 @@ class AgMultiEditor < ArcadiaExt
       _e.update_toolbar
     end
     change_frame_caption(_new_caption)
-	refresh_status
+    refresh_status
     _title = @tabs_file[_name] != nil ? File.basename(@tabs_file[_name]) :_name
     Arcadia.broadcast_event(BufferRaisedEvent.new(self, 'title'=>_title, 'file'=>@tabs_file[_name], 'lang'=>_lang ))
     Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>_e.text)) if _e
@@ -4457,6 +4524,11 @@ class AgMultiEditor < ArcadiaExt
 #    @statusbar_item.relief('flat')
   end
 
+  def reset_status
+    @statusbar_items['file_name'].text = '?'
+    @statusbar_items['file_mtime'].text =  '?'
+    @statusbar_items['file_size'].text = '?' 
+  end
   
   def refresh_status
     #@statusbar_item.text("#{_title} | #{_e.file_info['mtime'].strftime("%d/%m/%Y %H:%m:%S") if _e}")
@@ -4583,20 +4655,19 @@ class AgMultiEditor < ArcadiaExt
       end
       if _title == nil
         _title =  _title_new
-        case _lang
-          when 'ruby', nil
-            lang_sign = '*.rb'
-          when 'python'
-            lang_sign = '*.py'
-          when 'java'
-            lang_sign = '*.java'
-        end
+        if _lang
+          _image = Arcadia.lang_icon(_lang)
+        else
+          _image = Arcadia.lang_icon('Ruby')
+        end  
+        _ext = language_hash_by_lang(_lang)
       else
-        lang_sign = _title
+        _image = Arcadia.file_icon(_title)
       end
       _tab = @main_frame.enb.insert('end', _buffer_name ,
         'text'=> _title,
-        'image'=> Arcadia.file_icon(lang_sign),
+        'image'=> _image,
+ #       'image'=> Arcadia.file_icon(lang_sign),
         'background'=> Arcadia.style("tabpanel")["background"],
         'foreground'=> Arcadia.style("tabpanel")["foreground"],
         'raisecmd'=>proc{do_buffer_raise(_buffer_name, _title)}
@@ -4611,9 +4682,9 @@ class AgMultiEditor < ArcadiaExt
       @editor_seq=@editor_seq+1
       _e.id=@editor_seq
       @editors[@editor_seq]=_e
-      ext = Arcadia.file_extension(lang_sign)
+      ext = Arcadia.file_extension(_title)
       ext='rb' if ext.nil?
-      _e.initialize_editing(ext)
+      _e.initialize_editing(ext, _lang)
       _e.text.set_focus
       #@tabs_file[_buffer_name]= nil
       @tabs_editor[_buffer_name]=_e
@@ -4732,6 +4803,7 @@ class AgMultiEditor < ArcadiaExt
       @main_frame.enb.raise(@main_frame.enb.pages[_index-1]) if TkWinfo.mapped?(@main_frame.enb)
     else
       frame.root.top_text('') if TkWinfo.mapped?(frame.hinner_frame)
+      reset_status
     end
   end
 
