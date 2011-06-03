@@ -2,7 +2,7 @@
 version 0.10.0
 
 by Antonio Galeone
-on Feb 12, 2011
+on Jun 03, 2011
 
 
 == About
@@ -16,16 +16,18 @@ Some of Arcadia ide project features include:
 * Working on any platform where ruby and tcl-tk work.
 * Highly extensibility architecture.
 
-== In this release 0.9.3
+== In this release 0.10.0
     
 [Improvements]
   - bugs fixed
+  - added initial basic support for other languages (python,java)
 
 == Dependencies
   - rubygems
   - ruby-tk
   - tcl/tk
   - tk-tile (if tcl/tk < 8.5)
+  - ctags
   - ack (optional)
   - gem coderay
   - gem ruby-debug (ruby-debug19 on ruby 1.9)
@@ -36,16 +38,13 @@ Some of Arcadia ide project features include:
 There are two way:
 1. exec as root on command line "gem install arcadia"
    or as user "sudo gem install arcadia"
-2. using archive distribution
-   a. untar (on unix) (tar -xzf) arcadia-<version>.tar.gz
-   b. unzip (on windows) arcadia-<version>.zip
 
 == How to run
-* exec on command line "arcadia" or "ruby <path/>arcadia"
+* exec on command line "arcadia"
 
 
 == Short User guide
-Application layout is splitted in vertical and horizontal resizing frames. 
+Application layout is splitted in vertical and horizontal resizable frames. 
 On vertical and horizontal  splitter appear two button for left or right 
 one shot frame close. 
 Every frame has a title, a button to expand or resizing it and a menu-button 
@@ -55,6 +54,7 @@ for the dynamic layout functions.
 The toolbar button are in order:
 - new, open, save, find
   (relatively to edit/find operation)
+  after "new" there is a menubutton to choose a type of file
 - run current, run last 
   (for execute the raised file in the editor or the last runned file)  
   after "run current" there is a menubutton to choose a configurated runner to apply at current file
@@ -71,7 +71,7 @@ These are same editor short-cut:
 - Ctrl-v  => paste copied text
 - Ctrl-x  => cut selected text
 - Ctrl-g  => show go to line dialog
-- Ctrl-o  => shoe open file dialog
+- Ctrl-o  => show open file dialog
 - Ctrl-z  => undo
 - Ctrl-r  => redo
 - Ctrl-f  => copy the selected text on input combobox of find dialog and moves focus
@@ -115,8 +115,8 @@ under ~/.arcadia  directory. The format of property definition are:
 I have tested arcadia with ruby 1.8.4, 1.8.5, 1.8.6, 1.8.7, 1.9.1, 1.9.2 on 
 
 * Archlinux
-* Fedora
 * Ubuntu
+* Fedora
 * FreeBsd6.x, FreeBsd7.x, 
 * Vector linux 5.*,
 * Windows 2000/XP/7, 

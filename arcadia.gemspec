@@ -4,15 +4,15 @@
 require 'rubygems'
   SPEC = Gem::Specification.new do |s|
   s.name = "arcadia"
-  s.version = "0.9.3"
-  s.date = "2011-12-02"
+  s.version = "0.10.0"
+  s.date = "2011-06-03"
   s.author = "Antonio Galeone"
   s.email = "antonio-galeone@rubyforge.org"
   s.homepage = "http://arcadia.rubyforge.org"
   s.rubyforge_project = "arcadia"  
   s.platform = Gem::Platform::RUBY
-  s.description = "Arcadia Ruby Ide"
-  s.summary = "An light Ide for Ruby written in Ruby using the classic tcl/tk GUI toolkit."
+  s.description = "Arcadia Ide"
+  s.summary = "Light Editor Ide written in Ruby using the classic tcl/tk GUI toolkit."
     candidates = Dir.glob("{lib,ext/*,tcl}/**/*")
     candidates << "README"
     candidates << "bin/arcadia"
