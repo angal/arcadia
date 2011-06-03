@@ -1,0 +1,6 @@
+# Tcl autoload index file, version 2.0
+
+set auto_index(::ttk::getOpenFile) [list source [file join $dir fsdialog.tcl]]
+set auto_index(::ttk::getSaveFile) [list source [file join $dir fsdialog.tcl]]
+set auto_index(::ttk::getAppendFile) [list source [file join $dir fsdialog.tcl]]
+set auto_index(::ttk::chooseDirectory) [list source [file join $dir fsdialog.tcl]]

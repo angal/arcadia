@@ -96,7 +96,7 @@ class WrapperContainer < TkFrame
     frame = TkFrame.new(self, Arcadia.style('panel')).pack('side' =>'left', 'anchor'=>'n', :padx=>2, :pady=>2)
 
     @button_u = Tk::BWidget::Button.new(frame, Arcadia.style('toolbarbutton') ){
-      image  TkPhotoImage.new('dat' => CURSOR_GIF)
+      image  Arcadia.image_res(CURSOR_GIF)
       helptext 'Select'
       text 'C'
       #foreground 'blue'
@@ -119,7 +119,7 @@ class WrapperContainer < TkFrame
         _self.new_wrapper if _owner.selected_wrapper.class.is_top
 
       }
-      image  TkPhotoImage.new('dat' => WIDGET_COPY_GIF)
+      image  Arcadia.image_res(WIDGET_COPY_GIF)
       helptext 'Copy current selected'
       text 'C'
       #foreground 'blue'
@@ -231,7 +231,7 @@ class WrapperContainer < TkFrame
         }
         text value.class_wrapped.to_s
         helptext  value.class_wrapped.to_s
-        image TkPhotoImage.new( 'dat' => _image )
+        image Arcadia.image_res(_image)
         #foreground 'blue'
         command _command
         #font $arcadia['conf']['main.component.font']

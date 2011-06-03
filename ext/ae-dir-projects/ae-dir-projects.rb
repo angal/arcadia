@@ -51,14 +51,15 @@ class DirProjects < ArcadiaExt
       padx 0
       pady 0
       background Arcadia.conf('panel.background')
-    }.place('x'=>0,'height'=> 20)
-
+    }.place('x'=>0)
+    TkWinfo.parent(@button_box).configure(:background => Arcadia.conf('panel.background'))
+    
     @button_box.add(Arcadia.style('toolbarbutton').update({
       'name'=>'new_proj',
       'anchor' => 'nw',
       'command'=>proc{self.do_new_project},
       'helptext'=>'New dir Project',
-      'image'=> TkPhotoImage.new('dat' => NEW_GIF)})
+      'image'=> Arcadia.image_res(NEW_GIF)})
     )
 
     @button_box.add(Arcadia.style('toolbarbutton').update({
@@ -66,7 +67,7 @@ class DirProjects < ArcadiaExt
       'anchor' => 'nw',
       'command'=>proc{self.do_open_project},
       'helptext'=>'Open dir as Project',
-      'image'=> TkPhotoImage.new('dat' => OPEN_PROJECT_GIF)})
+      'image'=> Arcadia.image_res(OPEN_PROJECT_GIF)})
     )
 
     @button_box.add(Arcadia.style('toolbarbutton').update({
@@ -74,7 +75,7 @@ class DirProjects < ArcadiaExt
       'anchor' => 'nw',
       'command'=>proc{self.do_goto_parent_folder},
       'helptext'=>'Go to parent folder',
-      'image'=> TkPhotoImage.new('dat' => PARENTFOLDER_GIF)})
+      'image'=> Arcadia.image_res(PARENTFOLDER_GIF)})
     )
     
     @button_box.add(Arcadia.style('toolbarbutton').update({
@@ -82,7 +83,7 @@ class DirProjects < ArcadiaExt
       'anchor' => 'nw',
       'command'=>proc{self.do_search_files},
       'helptext'=>'Search in files from current folder',
-      'image'=> TkPhotoImage.new('dat' => SEARCH_FILES_GIF)})
+      'image'=> Arcadia.image_res(SEARCH_FILES_GIF)})
     )
 
     #--- button_box
@@ -92,7 +93,7 @@ class DirProjects < ArcadiaExt
       justify  'left'
       indicatoron 0
       offrelief 'flat'
-      image TkPhotoImage.new('dat' => SYNC_GIF)
+      image Arcadia.image_res(SYNC_GIF)
       pack
     }
 
@@ -134,22 +135,19 @@ class DirProjects < ArcadiaExt
     
     do_open_folder_cmd = proc{|_node| do_open_folder(_node)}
     do_close_folder_cmd = proc{|_node| do_close_folder(_node)}
-    
-#	  @htree = Tk::BWidget::Tree.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
-	  @htree = BWidgetTreePatched.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
+    @htree = BWidgetTreePatched.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
       showlines false
       deltay 18
       opencmd do_open_folder_cmd
       closecmd do_close_folder_cmd
       selectcommand do_select_item
-      crosscloseimage  TkPhotoImage.new('dat' => PLUS_GIF)
-      crossopenimage  TkPhotoImage.new('dat' => MINUS_GIF)
+      crosscloseimage  Arcadia.image_res(PLUS_GIF)
+      crossopenimage  Arcadia.image_res(MINUS_GIF)
     }
     @htree.extend(TkScrollableWidget).show(0,22)
     self.pop_up_menu_tree
-    @image_kdir = TkPhotoImage.new('dat' => ICON_FOLDER_OPEN_GIF)
-    #@image_kdir = TkPhotoImage.new('dat' => FOLDER2_GIF)
-    @image_kdir_closed = TkPhotoImage.new('dat' => FOLDER_GIF)
+    @image_kdir = Arcadia.image_res(ICON_FOLDER_OPEN_GIF)
+    @image_kdir_closed = Arcadia.image_res(FOLDER_GIF)
 	  self.load_projects
     @htree.areabind_append('KeyPress',proc{|k| 
         key_press(k)

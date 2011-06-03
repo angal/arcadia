@@ -182,7 +182,7 @@ class Output < ArcadiaExt
     else
       @main_frame.text.insert("end","\n")
       _index_begin = @main_frame.text.index('end')
-      TkTextImage.new(@main_frame.text, _index_begin, 'padx'=>0, 'pady'=>0, 'image'=> TkPhotoImage.new('data' => ITEM_START_LOG_GIF))
+      TkTextImage.new(@main_frame.text, _index_begin, 'padx'=>0, 'pady'=>0, 'image'=> Arcadia.image_res(ITEM_START_LOG_GIF))
       @main_frame.text.insert("end"," +--- #{format_time(_event.time)} ---+\n", 'bord_msg')
     end
     if _event.append

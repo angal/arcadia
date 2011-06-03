@@ -35,7 +35,7 @@ class RubyDebugView
       'anchor' => 'nw',
       'command'=>proc{self.debug_send(:step_over)},
       'helptext'=>'step over',
-      'image'=> TkPhotoImage.new('dat' => D_NEXT_GIF),
+      'image'=> Arcadia.image_res(D_NEXT_GIF),
       'relief'=> _relief })
     )
     @debug_button_box.add(Arcadia.style('toolbarbutton').update({
@@ -44,7 +44,7 @@ class RubyDebugView
       'anchor' => 'nw',
       'command'=>proc{self.debug_send(:step_into)},
       'helptext'=>'step into',
-      'image'=> TkPhotoImage.new('dat' => D_STEP_INTO_GIF),
+      'image'=> Arcadia.image_res(D_STEP_INTO_GIF),
       'relief'=>_relief })
     )
     @debug_button_box.add(Arcadia.style('toolbarbutton').update({
@@ -53,7 +53,7 @@ class RubyDebugView
       'anchor' => 'nw',
       'helptext'=>'step out',
       'command'=>proc{self.debug_send(:step_out)},
-      'image'=> TkPhotoImage.new('dat' => D_STEP_OUT_GIF),
+      'image'=> Arcadia.image_res(D_STEP_OUT_GIF),
       'relief'=>_relief })
     )
     @debug_button_box.add(Arcadia.style('toolbarbutton').update({
@@ -61,7 +61,7 @@ class RubyDebugView
     #  'background' => 'white',
       'anchor' => 'nw',
       'helptext'=>'resume',
-      'image'=> TkPhotoImage.new('dat' => D_RESUME_GIF),
+      'image'=> Arcadia.image_res(D_RESUME_GIF),
       'command'=>proc{self.debug_send(:resume)},
       'relief'=>_relief })
     )
@@ -71,7 +71,7 @@ class RubyDebugView
     #  'background' => 'white',
       'anchor' => 'nw',
       'helptext'=>'quit',
-      'image'=> TkPhotoImage.new('dat' => D_QUIT_GIF),
+      'image'=> Arcadia.image_res(D_QUIT_GIF),
       'command'=>proc{self.debug_send(:quit)},
       'relief'=>_relief })
     )
@@ -92,6 +92,7 @@ class RubyDebugView
       state 'disabled'
       background Arcadia.conf('panel.background')
     }.place('height'=> _y)
+    TkWinfo.parent(@debug_button_box).configure(:background => Arcadia.conf('panel.background'))
     
 #    @debug_frame = TkFrame.new(@frame, Arcadia.style('panel')){ 
 #        border  2
@@ -213,9 +214,9 @@ class RubyDebugView
     @class_state = B_STATE_ON
     @global_state = B_STATE_OFF
     
-    _i_on = TkPhotoImage.new('dat' => ON_GIF)
-    _i_off = TkPhotoImage.new('dat' => OFF_GIF)
-    _i_freeze = TkPhotoImage.new('dat' => FREEZE_GIF)
+    _i_on = Arcadia.image_res(ON_GIF)
+    _i_off = Arcadia.image_res(OFF_GIF)
+    _i_freeze = Arcadia.image_res(FREEZE_GIF)
 
     _b_relief = 'groove'
     #------------------ loacal variables -------------------
@@ -836,6 +837,9 @@ class RubyDebugServer
 #            num.to_i > 1
 #          }
 #          Arcadia.process_event(SubProcessEvent.new(self,'pid'=>pid, 'name'=>"debugging :#{_filename}",'abort_action'=>abort_action, 'alive_check'=>alive_check))
+          if File.basename(Arcadia.ruby) != 'ruby'
+            commandLine="export PATH=#{Arcadia.instance.local_dir}/bin:$PATH && #{commandLine}"
+          end
           if Kernel.system(commandLine)
             set_alive(false)
             #p "alive=#{is_alive?}"

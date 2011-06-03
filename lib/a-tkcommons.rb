@@ -264,8 +264,12 @@ end
 class TkFrameAdapter < TkFrame
   include TkMovable
   attr_reader :frame
-  def initialize(scope_parent=nil, *args)
-    super(scope_parent, *args)
+  def initialize(scope_parent=nil, args=nil)
+    newargs =  Arcadia.style('panel')
+    if !args.nil?
+      newargs.update(args) 
+    end
+    super(scope_parent, newargs)
     @scope_parent = scope_parent
     @movable = true
     #ObjectSpace.define_finalizer(self, self.method(:detach_frame).to_proc)
@@ -330,10 +334,10 @@ class AGTkSplittedFrames < TkFrameAdapter
   attr_reader :frame1
   attr_reader :frame2
   def initialize(parent=nil, frame=nil, length=10, slen=5, user_control=true, keys=nil)
-    if keys.nil?
-      keys = Hash.new
-    end
-    keys.update(Arcadia.style('panel'))
+#    if keys.nil?
+#      keys = Hash.new
+#    end
+#    keys.update(Arcadia.style('panel'))
     super(parent, keys)
     @parent = parent
     @slen = slen
@@ -819,7 +823,7 @@ class TkBaseTitledFrame < TkFrame
       last = @last_for_frame[_frame]
       @last_for_frame[_frame] = TkButton.new(_frame, Arcadia.style('titletoolbarbutton')){
         text  _label if _label
-        image  TkPhotoImage.new('dat' => _image) if _image
+        image  Arcadia.image_res(_image) if _image
         font 'helvetica 8 bold'
         padx 0
         pady 0
@@ -845,7 +849,7 @@ class TkBaseTitledFrame < TkFrame
       menu TkMenu.new(mb, Arcadia.style('titlemenu'))
       if _image
         indicatoron false
-        image TkPhotoImage.new('dat' => _image)
+        image Arcadia.image_res(_image)
       else
         indicatoron true
       end
@@ -1014,13 +1018,13 @@ class TkTitledFrame < TkBaseTitledFrame
     if @state == 'normal'
       if p.kind_of?(AGTkSplittedFrames)
         p.maximize(@parent)
-        @bmaxmin.image(TkPhotoImage.new('dat' => W_NORM_GIF))
+        @bmaxmin.image(Arcadia.image_res(W_NORM_GIF))
       end
       @state = 'maximize'
     else
       if p.kind_of?(AGTkSplittedFrames)
         p.minimize(@parent)
-        @bmaxmin.image(TkPhotoImage.new('dat' =>W_MAX_GIF))
+        @bmaxmin.image(Arcadia.image_res(W_MAX_GIF))
       end
       @state = 'normal'
     end
@@ -1186,8 +1190,7 @@ class TkTitledFrameAdapter < TkTitledFrame
 
   def forge_transient_adapter(_name)
     if @transient_frame_adapter[_name].nil?
-      @transient_frame_adapter[_name] = TkFrameAdapter.new(Arcadia.layout.root,
-      Arcadia.style('frame').update({'background'=>  Arcadia.conf('titlelabel.background')}))
+      @transient_frame_adapter[_name] = TkFrameAdapter.new(Arcadia.layout.root, {'background'=>  Arcadia.conf('titlelabel.background')})
       __attach_adapter(@transient_frame_adapter[_name])
       @transient_frame_adapter[_name].raise
     end
@@ -1251,7 +1254,7 @@ class TkResizingTitledFrame < TkFrame
     super(parent, *args)
     @resizing_label=TkLabel.new(self, Arcadia.style('label')){
       text '-'
-      image TkPhotoImage.new('dat'=>EXPAND_LIGHT_GIF)
+      image Arcadia.image_res(EXPAND_LIGHT_GIF)
     }.pack('side'=> 'right','anchor'=> 's')
     start_resizing(@resizing_label, self)
   end
@@ -1274,7 +1277,7 @@ class TkFloatTitledFrame < TkBaseTitledFrame
 
     @resizing_label=TkLabel.new(self, Arcadia.style('label')){
       text '-'
-      image TkPhotoImage.new('dat'=>EXPAND_LIGHT_GIF)
+      image Arcadia.image_res(EXPAND_LIGHT_GIF)
     }.pack('side'=> 'right','anchor'=> 's')
     start_moving(@right_label, self)
     start_moving(frame, self)
@@ -1353,9 +1356,9 @@ class TkProgressframe < TkFloatTitledFrame
     :relief=>'flat',
     :maximum=>_max).place('width' => '150','x' => 25,'y' => 30,'height' => 15)
 
-    @buttons_frame = TkFrame.new(self).pack('fill'=>'x', 'side'=>'bottom')
+    @buttons_frame = TkFrame.new(self, Arcadia.style('panel')).pack('fill'=>'x', 'side'=>'bottom')
 
-    @b_cancel = TkButton.new(@buttons_frame){|_b_go|
+    @b_cancel = TkButton.new(@buttons_frame, Arcadia.style('button')){|_b_go|
       default  'disabled'
       text  'Cancel'
       overrelief  'raised'
@@ -1431,8 +1434,6 @@ class TkWidgetFactory
         require 'tkextlib/tile'
         if Tk::Tile::Style.theme_names.include?(Arcadia.conf('tile.theme'))
           Tk::Tile::Style.theme_use(Arcadia.conf('tile.theme'))
-        else
-          @use_tile = false
         end
       rescue
         @use_tile = false

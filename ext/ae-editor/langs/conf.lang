@@ -1,14 +1,14 @@
 scanner=re
 language=conf
 exts=conf,lang,pers,tokens
-re.classes=key,value,operator,comment,link
+re.classes=key,value,link,operator,comment
+re.comment=#(.*)
 re.key=(.*)\=
 re.value=\=(.*)
 re.operator=\=
-re.comment=#
 re.link=>>>
-re_op.to_line_end=comment
-re_op.only_first=operator
+#re_op.to_line_end=comment
+#re_op.only_first=operator
 
 re.hightlight.comment.foreground=>>>hightlight.comment.foreground
 re.hightlight.key.foreground=>>>hightlight.symbol.foreground

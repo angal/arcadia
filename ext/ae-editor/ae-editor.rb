@@ -809,7 +809,7 @@ class AgEditorOutlineToolbar
       justify  'left'
       indicatoron 0
       offrelief 'flat'
-      image TkPhotoImage.new('dat' => SYNC_GIF)
+      image Arcadia.image_res(SYNC_GIF)
       pack
     }        
     Tk::BWidget::DynamicHelp::add(@cb_sync, 
@@ -939,8 +939,8 @@ class AgEditorOutline
       deltay 18
       dragenabled true
       selectcommand proc{ _tree_goto.call(self) } 
-      crosscloseimage  TkPhotoImage.new('dat' => ARROWRIGHT_GIF)      
-      crossopenimage  TkPhotoImage.new('dat' => ARROWDOWN_GIF)
+      crosscloseimage  Arcadia.image_res(ARROWRIGHT_GIF)      
+      crossopenimage  Arcadia.image_res(ARROWDOWN_GIF)
     }
     @tree_exp.extend(TkScrollableWidget)
     self.show
@@ -964,10 +964,10 @@ class AgEditorOutline
   end
 
   def build_tree_from_node(_node, _label_match=nil)
-    @image_class = TkPhotoImage.new('dat' => TREE_NODE_CLASS_GIF)
-    @image_module =  TkPhotoImage.new('dat' => TREE_NODE_MODULE_GIF)
-    @image_method =  TkPhotoImage.new('dat' => TREE_NODE_METHOD_GIF)
-    @image_singleton_method =  TkPhotoImage.new('dat' => TREE_NODE_SINGLETON_METHOD_GIF)
+    @image_class = Arcadia.image_res(TREE_NODE_CLASS_GIF)
+    @image_module =  Arcadia.image_res(TREE_NODE_MODULE_GIF)
+    @image_method =  Arcadia.image_res(TREE_NODE_METHOD_GIF)
+    @image_singleton_method =  Arcadia.image_res(TREE_NODE_SINGLETON_METHOD_GIF)
     
     _sorted_sons = _node.sons.sort 
     for inode in 0.._sorted_sons.length - 1
@@ -1319,13 +1319,15 @@ class AgEditor
       else
         _line = @text.get("insert linestart",'insert lineend')
         ei = _line.index(_target)
-        j=1
-        pre_target = ''
-        while ei-j>=0 && _line[ei-j..ei-j]!="\s"
-          pre_target = _line[ei-j..ei-j] + pre_target
-          j+=1
-        end
-        _target= pre_target + _target       
+        if !ei.nil?
+          j=1
+          pre_target = ''
+          while ei-j>=0 && _line[ei-j..ei-j]!="\s"
+            pre_target = _line[ei-j..ei-j] + pre_target
+            j+=1
+          end
+          _target= pre_target + _target
+        end       
       end
       if _target.strip.length > 0 && _target != '.'
         extra_len = _target.length.+@
@@ -2382,7 +2384,7 @@ class AgEditor
           if _data.length > 0
             _b = TkButton.new(@text, 
               'command'=>proc{_b.destroy},
-              'image'=> TkPhotoImage.new('data' => _data),
+              'image'=> Arcadia.image_res(_data),
               'relief'=>'groove')
             TkTextWindow.new(@text, _r[0][1], 'window'=> _b)
           end
@@ -3399,19 +3401,44 @@ class ReHighlightScanner < HighlightScanner
   end
 
 
-  def find_tag(_tag, _row, _txt)
+  def find_tag(_tag, _row, _line_txt)
+    _txt = _line_txt
     to_ret = []
     _re = @h_re[_tag]
     m = _re.match(_txt)
     _end = 0
+#    index = _line_txt.index("oldaccel1")
+#    stampa = index && index >0
+#    stampa=true
+#    p "_line_txt=#{_line_txt}" if stampa
+#    p "_tag=#{_tag}" if stampa
     while m && (_txt=m.post_match)
       if !defined?(_old_txt) || _txt != _old_txt
-        _old_txt = _txt 
-        _ibegin = _row.to_s+'.'+(m.begin(0)+_end).to_s
-        _end = m.end(0) + _end
-        _iend = _row.to_s+'.'+(_end.to_s)
-        to_ret << [_ibegin, _iend]
-        if @op_only_first.include?(_tag)
+        b1 = _line_txt[m.begin(0)+_end-1..m.begin(0)+_end-1]
+        b2 = _line_txt[m.begin(0)+_end..m.begin(0)+_end]
+        e1 = _line_txt[m.end(0)+_end..m.end(0)+_end]        
+        e2 = _line_txt[m.end(0)-1+_end..m.end(0)+_end-1]
+        achar = ["\s","\t","\n",nil,')',']','}','',':','=',">","<"]
+        
+        ok = (achar.include?(b1)||achar.include?(b2)) && (achar.include?(e1)||achar.include?(e2))
+        ok = ok || _line_txt[m.begin(0)+_end..m.end(0)+_end-1].strip.length==1
+        
+        
+
+#        p "" if stampa
+#        p "_line_txt[m.begin(0)+_end..m.begin(0)+_end]=#{_line_txt[m.begin(0)+_end..m.begin(0)+_end]}"   if stampa
+#        p "_line_txt[m.end(0)+_end..m.end(0)+_end]=#{_line_txt[m.end(0)+_end..m.end(0)+_end]}"   if stampa
+#        p "_line_txt[m.begin(0)+_end..m.end(0)+_end]=#{_line_txt[m.begin(0)+_end..m.end(0)+_end]}"   if stampa
+#        p "ok=#{ok}"  if stampa
+        
+        if ok
+          _old_txt = _txt
+          _ibegin = _row.to_s+'.'+(m.begin(0)+_end).to_s
+          _end = m.end(0) + _end  
+          _iend = _row.to_s+'.'+(_end.to_s)
+          to_ret << [_ibegin, _iend]
+        end
+        if @op_only_first.include?(_tag) && ok
           m = nil
         else
           m = _re.match(_txt)
@@ -3527,6 +3554,10 @@ class AgMultiEditor < ArcadiaExt
   def on_before_build(_event)
     Arcadia.is_windows? ? @ctags_string="lib/ctags.exe" : @ctags_string='ctags'
     @has_ctags = !Arcadia.which(@ctags_string).nil?
+    if !@has_ctags
+      msg = "\"ctags\" package is required by class browsing, without it only ruby language is supported!" 
+      ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>"Ctags missing!", "detail"=>msg).go!
+    end
     @breakpoints =Array.new
     @tabs_file =Hash.new
     @tabs_editor =Hash.new
@@ -3681,7 +3712,7 @@ class AgMultiEditor < ArcadiaExt
         if type != 'separator'
           #label = @buffer_menu.entrycget(j,'label')
           #if label > _filename
-          value = @buffer_menu.entrycget(j,'value')
+          value = @buffer_menu.entrycget(j,'value').to_s
           if value > _filename
             index=j
             break
@@ -4052,14 +4083,19 @@ class AgMultiEditor < ArcadiaExt
               @last_transient_file = nil
             end
           end
+          if _event.select_index.nil?
+            select_index = true
+          else
+            select_index = _event.select_index
+          end
           if _event.file == '*CURR'
             er = raised
             if er && _index != nil
               er.text_see(_index)
-              er.mark_selected(_index)
+              er.mark_selected(_index) if select_index
             end   
           else
-            self.open_file(_event.file, _index)
+            self.open_file(_event.file, _index, select_index)
           end
         elsif _event.text
           if _event.title 
@@ -4076,7 +4112,7 @@ class AgMultiEditor < ArcadiaExt
           self.open_file(_event.file)
         end
       when CloseBufferEvent
-        if _event.file 
+        if _event.file
           self.close_file(_event.file)
         end
       when SaveAsBufferEvent
@@ -4779,8 +4815,12 @@ class AgMultiEditor < ArcadiaExt
 
   def close_editor(_editor, _force=false)
     if _force || can_close_editor?(_editor)
+      file = _editor.file
+      index = _editor.text.index("@0,0")
+      r,c = index.split('.')
       _editor.destroy_outline
       close_buffer(_editor.page_frame)
+      BufferClosedEvent.new(self,'file'=>file,'row'=>r.to_i, 'col'=>c.to_i).shot!
     else
       return
     end

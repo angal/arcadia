@@ -90,15 +90,15 @@ class FilesHistrory < ArcadiaExt
   end
 
   def on_build(_event)
-    @h_stack = Array.new
-
+    @h_stack = Hash.new
+    @h_stack_changed = false
     @panel = self.frame.root.add_panel(self.frame.name, "sync");
     @cb_sync = TkCheckButton.new(@panel, Arcadia.style('checkbox').update('background'=>@panel.background)){
       text  'Sync'
       justify  'left'
       indicatoron 0
       offrelief 'flat'
-      image TkPhotoImage.new('dat' => SYNC_GIF)
+      image Arcadia.image_res(SYNC_GIF)
       pack
     }
 
@@ -141,8 +141,8 @@ class FilesHistrory < ArcadiaExt
 	  @htree = BWidgetTreePatched.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
       showlines false
       deltay 18
-      crosscloseimage  TkPhotoImage.new('dat' => PLUS_GIF)
-      crossopenimage  TkPhotoImage.new('dat' => MINUS_GIF)
+      crosscloseimage  Arcadia.image_res(PLUS_GIF)
+      crossopenimage  Arcadia.image_res(MINUS_GIF)
       opencmd proc{|node| do_open_folder.call(node)} 
       selectcommand proc{ do_select_item.call(self) } 
 #      place('relwidth' => 1,'relheight' => '1', 'x' => '0','y' => '22', 'height' => -22)
@@ -178,7 +178,7 @@ class FilesHistrory < ArcadiaExt
     Arcadia.attach_listener(self, OpenBufferEvent)
     #Arcadia.attach_listener(self, BufferRaisedEvent)
     self.frame.show
-    #Arcadia.attach_listener(self, CloseBufferEvent)
+    Arcadia.attach_listener(self, BufferClosedEvent)
 	end
 	
 	def history_file
@@ -188,6 +188,20 @@ class FilesHistrory < ArcadiaExt
     return @arcadia_history_file
 	end
 		
+  def on_before_open_buffer(_event)
+    if _event.file && _event.row.nil? &&File.exist?(_event.file)  
+      if @h_stack[_event.file]
+        r,c = @h_stack[_event.file].split('.')
+        _event.row=r.to_i
+        _event.col=c.to_i
+        if _event.select_index.nil?
+          _event.select_index=false
+        end
+      end
+    end
+  end
+
+
   def on_after_open_buffer(_event)
     if _event.file && File.exist?(_event.file)
       self.add2history(_event.file)
@@ -195,12 +209,12 @@ class FilesHistrory < ArcadiaExt
     end
   end
 
-#  def on_after_close_buffer(_event)
-#    if _event.file
-#      self.add2history(_event.file)
-#      add_to_tree(_event.file)
-#    end
-#  end
+  def on_buffer_closed(_event)
+    if _event.file && File.exist?(_event.file)
+      @h_stack_changed = @h_stack_changed || @h_stack[_event.file] != "#{_event.row}.0"
+      @h_stack[_event.file]="#{_event.row}.0"
+    end
+  end
 
   def node2file(_node)
     if _node[0..0]=='{' && _node[-1..-1]=='}'
@@ -307,8 +321,9 @@ class FilesHistrory < ArcadiaExt
       begin
         _lines = f.readlines.collect!{| line | line.chomp+"\n" }
         _lines.sort.each{|_line|
-          _file = _line.split(';')[0]
+          _file, _index = _line.split(';')
           if FileTest::exist?(_file)
+                @h_stack[File.expand_path(_file)]=_index
 						dir,fil =File.split(File.expand_path(_file))
 						dir = dir.downcase if Arcadia.is_windows?
 						fil = fil.downcase if Arcadia.is_windows?
@@ -331,12 +346,8 @@ class FilesHistrory < ArcadiaExt
 				}
     }
 
-    #@image_kdir = TkPhotoImage.new('dat' => BOOK_GIF)
-    @image_kdir = TkPhotoImage.new('dat' => ICON_FOLDER_OPEN_GIF)
-#    @image_kfile_rb = TkPhotoImage.new('dat' => RUBY_DOCUMENT_GIF)
-#    @image_kfile = TkPhotoImage.new('dat' => DOCUMENT_GIF)
-
-	  build_tree_from_node(root)
+    @image_kdir = Arcadia.image_res(ICON_FOLDER_OPEN_GIF)
+    build_tree_from_node(root)
   end
 
   def pop_up_menu_tree
@@ -485,8 +496,38 @@ class FilesHistrory < ArcadiaExt
     end
   end
 
+  def on_finalize(_event)
+    return if !@h_stack_changed 
+    if File.exist?(history_file)
+      f = File::open(history_file,'r')
+      begin
+        _lines = f.readlines.collect!{| line | line.chomp}
+      ensure
+        f.close unless f.nil?
+      end
+      f = File.new(history_file, "w")
+      begin
+        if f
+          _lines[0..-1].each{|_line|
+            _lfile = _line.split(';')
+            if _lfile
+              if @h_stack[_lfile[0]]
+                rif = "#{_lfile[0]};#{@h_stack[_lfile[0]]}"
+              else
+                rif = _line
+              end
+              f.syswrite(rif+"\n")
+            end
+          }
+        end
+      ensure
+        f.close unless f.nil?
+      end
+    end
+  end
 
   def add2history(_filename, _text_index='1.0')
+    return if !@h_stack[_filename].nil?
     if _filename && File.exist?(_filename)
       _filename = _filename.sub(Dir::pwd+'/',"")
       _filename = File.expand_path(_filename)

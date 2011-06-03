@@ -96,6 +96,7 @@ class NewBufferEvent < BufferEvent
 end
 
 class OpenBufferEvent < BufferEvent
+  attr_accessor :select_index
 end
 
 class OpenBufferTransientEvent < OpenBufferEvent
@@ -156,6 +157,8 @@ end
 class OneBufferExistEvent < BufferEvent
 end
 
+class BufferClosedEvent < BufferEvent
+end
 #  +---------------------------------------------+
 #         Debug event
 #  +---------------------------------------------+

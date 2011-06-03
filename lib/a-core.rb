@@ -47,14 +47,14 @@ class Arcadia < TkApplication
     #self.load_local_config(false)
     ObjectSpace.define_finalizer($arcadia, self.class.method(:finalize).to_proc)
     #_title = "Arcadia Ruby ide :: [Platform = #{RUBY_PLATFORM}] [Ruby version = #{RUBY_VERSION}] [TclTk version = #{tcltk_info.level}]"
-    _title = "Arcadia ide "
+    _title = "Arcadia"
     @root = TkRoot.new(
       'background'=> self['conf']['background']
       ){
       title _title
       withdraw
       protocol( "WM_DELETE_WINDOW", proc{Arcadia.process_event(QuitEvent.new(self))})
-      iconphoto(TkPhotoImage.new('dat'=>ARCADIA_RING_GIF))
+      iconphoto(Arcadia.image_res(ARCADIA_RING_GIF))
     }
     @on_event = Hash.new
 
@@ -76,20 +76,7 @@ class Arcadia < TkApplication
     
     
     @mf_root.show_statusbar('status')
-#    TkWinfo.children(@mf_root).each{|frame|
-#      if frame.path.include?('status')
-#        TkWinfo.children(frame).each{|f|
-#          if f.path.include?('indf')
-#            f.pack('side'=>'left','fill'=>'x')
-#            break
-#          end
-#        }
-#        break
-#      end
-#    }
-    #@mf_root.add_indicator().text=RUBY_PLATFORM
     Arcadia.new_statusbar_item("Platform").text=RUBY_PLATFORM
-    #@toolbar_frame = @mf_root.add_toolbar
     self['toolbar']= ArcadiaMainToolbar.new(self, @mf_root.add_toolbar)
     @is_toolbar_show=self['conf']['user_toolbar_show']=='yes'
     @mf_root.show_toolbar(0,@is_toolbar_show)
@@ -526,19 +513,25 @@ class Arcadia < TkApplication
     self.load_sysdefaultproperty
   end
 
-  def load_sysdefaultproperty
-#    colors = Hash.new
-#    colors['background']=self['conf']['background']
-#    colors['foreground']=self['conf']['foreground']
-#    
-#    TkPalette.set(colors)
-  
-    Tk.tk_call "eval","option add *background #{self['conf']['background']}"
-    Tk.tk_call "eval","option add *foreground #{self['conf']['foreground']}"
-    #Tk.tk_call "eval","option add *font #{self['conf']['font']}"
-    Tk.tk_call "eval","option add *activebackground #{self['conf']['activebackground']}"
-    Tk.tk_call "eval","option add *activeforeground #{self['conf']['activeforeground']}"
-    Tk.tk_call "eval","option add *highlightcolor  #{self['conf']['background']}"
+  def load_sysdefaultproperty  
+#    Tk.tk_call "eval","option add *background #{self['conf']['background']}"
+#    Tk.tk_call "eval","option add *foreground #{self['conf']['foreground']}"
+#    Tk.tk_call "eval","option add *activebackground #{self['conf']['activebackground']}"
+#    Tk.tk_call "eval","option add *activeforeground #{self['conf']['activeforeground']}"
+#    Tk.tk_call "eval","option add *highlightcolor  #{self['conf']['background']}"
+#    Tk.tk_call "eval","option add *relief #{self['conf']['relief']}"
+
+    if !Arcadia.is_windows? && File.basename(Arcadia.ruby) != 'ruby'
+      begin
+        if !FileTest.exist?("#{local_dir}/bin")
+          Dir.mkdir("#{local_dir}/bin")
+        end
+        system("ln -s #{Arcadia.ruby} #{local_dir}/bin/ruby") if !File.exist?("#{local_dir}/bin/ruby")
+      rescue Exception => e
+        Arcadia.runtime_error(e)
+      end
+    end
+    
   end
 
   def prepare
@@ -1071,6 +1064,9 @@ class Arcadia < TkApplication
   def Arcadia.new_statusbar_item(_help=nil)
     _other =  @@last_status_item if defined?(@@last_status_item) 
     @@last_status_item=@@instance.mf_root.add_indicator()
+    @@last_status_item.configure(:background=>Arcadia.conf("background"))
+    @@last_status_item.configure(:foreground=>Arcadia.conf("foreground"))
+    @@last_status_item.configure(:font=>Arcadia.conf("font"))
     if _other
       @@last_status_item.pack('before'=>_other)
     end
@@ -1090,22 +1086,22 @@ class Arcadia < TkApplication
     @@instance['menu_roots'][_menu_root_name]
   end
 
-  def Arcadia.res_image(_name)
-    if @@instance['res_images'] == nil
-      @@instance['res_images'] = Hash.new
+  def Arcadia.image_res(_name)
+    if @@instance['image_res'] == nil
+      @@instance['image_res'] = Hash.new
     end 
-    if @@instance['res_images'][_name].nil?
-      @@instance['res_images'][_name] = TkPhotoImage.new('data' => _name)
+    if @@instance['image_res'][_name].nil?
+      @@instance['image_res'][_name] = TkPhotoImage.new('data' => _name)
     end
-    @@instance['res_images'][_name]
+    @@instance['image_res'][_name]
   end
 
   def Arcadia.lang_icon(_lang=nil)
     icon = "FILE_ICON_#{_lang.upcase if _lang}" 
     if _lang && eval("defined?(#{icon})")
-      res_image(eval(icon))
+      image_res(eval(icon))
     else
-      res_image(FILE_ICON_DEFAULT)
+      image_res(FILE_ICON_DEFAULT)
     end
   end
     
@@ -1113,7 +1109,7 @@ class Arcadia < TkApplication
     _file_name = '' if _file_name.nil?
     if @@instance['file_icons'] == nil
       @@instance['file_icons'] = Hash.new 
-      @@instance['file_icons']['default']= res_image(FILE_ICON_DEFAULT)
+      @@instance['file_icons']['default']= image_res(FILE_ICON_DEFAULT)
       #TkPhotoImage.new('dat' => FILE_ICON_DEFAULT)
     end
     _base_name= File.basename(_file_name)
@@ -1126,7 +1122,7 @@ class Arcadia < TkApplication
       file_icon_name="FILE_ICON_#{file_dn.upcase}"
       begin
         if eval("defined?(#{file_icon_name})")
-          @@instance['file_icons'][file_dn]=res_image(eval(file_icon_name)) 
+          @@instance['file_icons'][file_dn]=image_res(eval(file_icon_name)) 
           #TkPhotoImage.new('dat' => eval(file_icon_name))
         else
           @@instance['file_icons'][file_dn]= @@instance['file_icons']['default']
@@ -1235,7 +1231,7 @@ class ArcadiaMainToolbar < ArcadiaUserControl
     attr_accessor :menu_button
     def initialize(_sender, _args)
       super(_sender, _args)
-      _image = Arcadia.res_image(@image_data) if @image_data
+      _image = Arcadia.image_res(@image_data) if @image_data
       _command = @command #proc{Arcadia.process_event(@event_class.new(_sender, @event_args))} if @event_class
       _hint = @hint
       _font = @font
@@ -1257,7 +1253,7 @@ class ArcadiaMainToolbar < ArcadiaUserControl
         @menu_button = TkMenuButton.new(_args['frame'], Arcadia.style('toolbarbutton')){|mb|
           indicatoron false
           menu TkMenu.new(mb, Arcadia.style('menu'))
-          image Arcadia.res_image(MENUBUTTON_ARROW_DOWN_GIF)
+          image Arcadia.image_res(MENUBUTTON_ARROW_DOWN_GIF)
           padx 0
           pady 0
           pack('side'=> 'left','anchor'=> 's','pady'=>3)
@@ -1316,69 +1312,7 @@ class ArcadiaMainToolbar < ArcadiaUserControl
     :orient=>'vertical',
     :background=>Arcadia.conf('button.highlightbackground')
     ).pack('side' =>'left', :padx=>2, :pady=>2, :fill=>'y',:anchor=> 'w')
-  end  
-
-#  def load_toolbar_buttons
-#    suf = 'toolbar_buttons'
-#    return if @arcadia['conf'][suf].nil?
-#    @buttons = Hash.new
-#    toolbar_buttons = @arcadia['conf'][suf].split(',')
-#    toolbar_buttons.each{|groups|
-#      if groups
-#        suf1 = suf+'.'+groups
-#        begin
-#          buttons = @arcadia['conf'][suf1].split(',')
-#          buttons.each{|button|
-#            suf2 = suf1+'.'+button
-#            name = @arcadia['conf'][suf2+'.name']
-#            text = @arcadia['conf'][suf2+'.text']
-#            image = @arcadia['conf'][suf2+'.image']
-#            font = @arcadia['conf'][suf2+'.font']
-#            background = @arcadia['conf'][suf2+'.background']
-#            foreground = @arcadia['conf'][suf2+'.foreground']
-#            hint = @arcadia['conf'][suf2+'.hint']
-#            action = @arcadia['conf'][suf2+'.action']
-#            actions = action.split('->')  if action
-#            if actions && actions.length>1
-#              _command = proc{
-#                action_obj = $arcadia[actions[0]]
-#                1.upto(actions.length-2) do |x|
-#                  action_obj = action_obj.send(actions[x])
-#                end
-#                action_obj.send(actions[actions.length-1])
-#              }
-#            elsif action
-#              _command = proc{$arcadia[action].call}
-#            end
-#            @buttons[name] = Tk::BWidget::Button.new(@frame){
-#              image  TkPhotoImage.new('data' => eval(image)) if image
-#              borderwidth 1
-#              font font if font
-#              background background if background
-#              foreground foreground if foreground
-#              command _command if action
-#              relief 'flat'
-#              helptext  hint if hint
-#              text text if text
-#              pack('side' =>'left', :padx=>2, :pady=>0)
-#            }
-#          }
-#        rescue Exception
-#          msg = 'Loading '+groups+'" -> '+buttons.to_s+ '" (' + $!.class.to_s + ") : " + $!.to_s + " at : "+$@.to_s
-#          if Tk.messageBox('icon' => 'error', 'type' => 'okcancel',
-#            'title' => '(Arcadia) Toolbar', 'parent' => @frame,
-#            'message' => msg) == 'cancel'
-#            raise
-#            exit
-#          else
-#            Tk.update
-#          end
-#        end
-#      end
-#      Tk::BWidget::Separator.new(@frame, :orient=>'vertical').pack('side' =>'left', :padx=>2, :pady=>2, :fill=>'y',:anchor=> 'w')
-#    }
-#  end
-
+  end
   
 end
 
@@ -1391,7 +1325,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
     def initialize(_sender, _args)
       super(_sender, _args)
       item_args = Hash.new
-      item_args[:image]=Arcadia.res_image(@image_data) if @image_data
+      item_args[:image]=Arcadia.image_res(@image_data) if @image_data
       item_args[:label]=@caption
       item_args[:font]=Arcadia.conf('menu.font')
       item_args[:underline]=@underline.to_i if @underline != nil
@@ -1674,7 +1608,7 @@ class RunnerManager < TkFloatTitledFrame
          'command'=>_close_command,
          'helptext'=>@runner_hash[:file],
          'background'=>'white',
-         'image'=> TkPhotoImage.new('data' => TRASH_GIF),
+         'image'=> Arcadia.image_res(TRASH_GIF),
          'relief'=>'flat').pack('side' =>'right','padx'=>0)
       pack('side' =>'top','anchor'=>'nw','fill'=>'x','padx'=>5, 'pady'=>5)
     end
@@ -1723,7 +1657,7 @@ class ArcadiaAboutSplash < TkToplevel
     overrideredirect(true)
     
     @tkLabel3 = TkLabel.new(self){
-      image  TkPhotoImage.new('format'=>'GIF','data' =>A_LOGO_GIF)
+      image  Arcadia.image_res(A_LOGO_GIF)
       background  _bgcolor
       place('x'=> 20,'y' => 20)
     }
@@ -1739,14 +1673,14 @@ class ArcadiaAboutSplash < TkToplevel
 #    }
 
     @tkLabel1 = TkLabel.new(self){
-      image  TkPhotoImage.new('format'=>'GIF','data' =>ARCADIA_JAP_GIF)
+      image  Arcadia.image_res(ARCADIA_JAP_GIF)
       background  _bgcolor
       justify  'left'
       place('x' => 90,'y' => 10)
     }
 
     @tkLabelRuby = TkLabel.new(self){
-      image TkPhotoImage.new('data' =>RUBY_DOCUMENT_GIF)
+      image Arcadia.image_res(RUBY_DOCUMENT_GIF)
       background  _bgcolor
       place('x'=> 210,'y' => 12)
     }
@@ -1821,7 +1755,7 @@ class ArcadiaAboutSplash < TkToplevel
       @problems_nums=0
       #@problem_str = proc{@problems_nums > 1 ? "#{@problems_nums} problems found!" : "#{@problem_nums} problem found!"}
       @tkAlert = TkLabel.new(self){
-        image TkPhotoImage.new('data' =>ALERT_GIF)
+        image Arcadia.image_res(ALERT_GIF)
         background  'black'
         place('x'=> 10,'y' => 150)
       }
@@ -1849,11 +1783,11 @@ class ArcadiaAboutSplash < TkToplevel
     Tk::BWidget::ProgressBar.new(self, :width=>150, :height=>10,
       :background=>'#000000',
       :troughcolor=>'#000000',
-      :foreground=>'#a11934',
+      :foreground=>'#666666',
       :variable=>@progress,
       :borderwidth=>0,
       :relief=>'flat',
-      :maximum=>_max).place('relwidth' => '1','y' => 146,'height' => 2)
+      :maximum=>_max).place('relwidth' => '1','y' => 144,'height' => 6)
   end
 
   def reset
@@ -1951,6 +1885,28 @@ class ArcadiaProblemsShower
      # crossopenimage  TkPhotoImage.new('dat' => MINUS_GIF)
     }
     @tree.extend(TkScrollableWidget).show(0,0)
+    
+    do_double_click = proc{
+      _selected = @tree.selected
+      _selected_text = @tree.itemcget(_selected, 'text')
+      if _selected_text
+        _file, _row, _other = _selected_text.split(':')
+        if File.exist?(_file)
+           begin
+             r = _row.strip.to_i
+             integer = true
+           rescue Exception => e
+             integer = false
+           end 
+           if integer
+             OpenBufferTransientEvent.new(self,'file'=>_file, 'row'=>r).go!
+           end
+        end
+      end
+    }
+    @tree.textbind_append('Double-1',do_double_click)
+
+    
     # call button
     command = proc{
       if @ff.visible?
@@ -1970,7 +1926,7 @@ class ArcadiaProblemsShower
     b_text = button_text
     
     @b_err = Tk::BWidget::Button.new(@arcadia['toolbar'].frame, b_style){
-        image  TkPhotoImage.new('data' => ALERT_GIF)
+        image  Arcadia.image_res(ALERT_GIF)
         compound 'left'
         padx  2
         command command if command
@@ -1999,7 +1955,7 @@ class ArcadiaProblemsShower
               'helptext' => text,
               'drawcross'=>'auto',
               'deltax'=>-1,
-              'image'=> TkPhotoImage.new('dat' => BROKEN_GIF)
+              'image'=> Arcadia.image_res(BROKEN_GIF)
             }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
           )       
         
@@ -2015,7 +1971,7 @@ class ArcadiaProblemsShower
               'helptext' => text,
               'drawcross'=>'auto',
               'deltax'=>-1,
-              'image'=> TkPhotoImage.new('dat' => ERROR_GIF)
+              'image'=> Arcadia.image_res(ERROR_GIF)
             }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
           )        
         end
@@ -2030,7 +1986,7 @@ class ArcadiaProblemsShower
         'helptext' => e.title,
         'drawcross'=>'auto',
         'deltax'=>-1,
-        'image'=> TkPhotoImage.new('dat' => ITEM_GIF)
+        'image'=> Arcadia.image_res(ITEM_GIF)
       }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
     )
     if e.detail.kind_of?(Array)
@@ -2040,7 +1996,7 @@ class ArcadiaProblemsShower
             'helptext' => i.to_s,
             'drawcross'=>'auto',
             'deltax'=>-1,
-            'image'=> TkPhotoImage.new('dat' => ITEM_DETAIL_GIF)
+            'image'=> Arcadia.image_res(ITEM_DETAIL_GIF)
           }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
         )
          
@@ -2051,7 +2007,7 @@ class ArcadiaProblemsShower
           'helptext' => e.title,
           'drawcross'=>'auto',
           'deltax'=>-1,
-          'image'=> TkPhotoImage.new('dat' => ITEM_DETAIL_GIF)
+          'image'=> Arcadia.image_res(ITEM_DETAIL_GIF)
         }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
       )
     end
@@ -2084,7 +2040,7 @@ class ArcadiaSh < TkToplevel
   def initialize
     super
     title 'ArcadiaSh'
-    iconphoto(TkPhotoImage.new('dat'=>ARCADIA_RING_GIF))
+    iconphoto(Arcadia.image_res(ARCADIA_RING_GIF))
     geometry = '800x200+10+10'
     geometry(geometry)
     @text = TkText.new(self, Arcadia.style('text')){
@@ -2920,14 +2876,14 @@ class ArcadiaLayout
       _menu.insert('end', :separator)
       _menu.insert('end',:command,
           :label=>"add column",
-          :image=>TkPhotoImage.new('dat'=>ADD_GIF),
+          :image=>Arcadia.image_res(ADD_GIF),
           :compound=>'left',
           :command=>proc{add_cols_runtime(_domain)},
           :hidemargin => true
       )
       _menu.insert('end',:command,
           :label=>"add row",
-          :image=>TkPhotoImage.new('dat'=>ADD_GIF),
+          :image=>Arcadia.image_res(ADD_GIF),
           :compound=>'left',
           :command=>proc{add_rows_runtime(_domain)},
           :hidemargin => true
@@ -2935,7 +2891,7 @@ class ArcadiaLayout
       if @panels.keys.length > 2
         _menu.insert('end',:command,
             :label=>"close",
-            :image=>TkPhotoImage.new('dat'=>CLOSE_FRAME_GIF),
+            :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
             :compound=>'left',
             :command=>proc{close_runtime(_domain)},
             :hidemargin => true
@@ -3085,7 +3041,7 @@ class ArcadiaLayout
           menu = @panels[dom]['root'].menu_button('ext').cget('menu')
           menu.insert('0',:command,
                 :label=>_ffw.title,
-                :image=>TkPhotoImage.new('dat'=>ARROW_LEFT_GIF),
+                :image=>Arcadia.image_res(ARROW_LEFT_GIF),
                 :compound=>'left',
                 :command=>proc{change_domain(dom, _ffw.name)},
                 :hidemargin => true
@@ -3108,7 +3064,7 @@ class ArcadiaLayout
         end
         mymenu.insert(index,:command,
            :label=>"close \"#{_ffw.title}\"",
-           :image=>TkPhotoImage.new('dat'=>CLOSE_FRAME_GIF),
+           :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
            :compound=>'left',
            :command=>proc{unregister_panel(_ffw, false, true)},
            :hidemargin => true
@@ -3173,7 +3129,7 @@ class ArcadiaLayout
           if _adapter
             adapter = _adapter
           else
-            adapter = TkFrameAdapter.new(self.root, Arcadia.style('frame'))
+            adapter = TkFrameAdapter.new(self.root)
           end
           adapter.attach_frame(root_frame)
           adapter.raise
@@ -3230,7 +3186,7 @@ class ArcadiaLayout
         if _adapter
           adapter = _adapter
         else
-          adapter = TkFrameAdapter.new(self.root, Arcadia.style('frame'))
+          adapter = TkFrameAdapter.new(self.root)
         end
         adapter.attach_frame(_panel)
         adapter.raise
@@ -3245,7 +3201,7 @@ class ArcadiaLayout
     else
       _ffw.domain = nil
       process_frame(_ffw)
-      return TkFrameAdapter.new(self.root, Arcadia.style('frame'))
+      return TkFrameAdapter.new(self.root)
 #
 #      Arcadia.dialog(self, 
 #        'type'=>'ok',

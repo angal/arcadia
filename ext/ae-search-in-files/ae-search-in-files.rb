@@ -157,7 +157,7 @@ class SearchOutput
     _proc_clear = proc{clear_tree}
     
     @button_u = Tk::BWidget::Button.new(left_frame, Arcadia.style('toolbarbutton')){
-      image  TkPhotoImage.new('dat' => CLEAR_GIF)
+      image  Arcadia.image_res(CLEAR_GIF)
       helptext 'Clear'
       foreground 'blue'
       command _proc_clear
