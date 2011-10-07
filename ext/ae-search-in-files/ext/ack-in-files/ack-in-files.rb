@@ -3,16 +3,11 @@
 #   by Roger D. Pack
 #
 
-class AckInFilesService < ArcadiaExt
-  def on_before_build(_event)
-    Arcadia.attach_listener(AckInFilesListener.new(self),AckInFilesEvent)
-  end
-end
+class AckInFiles <  SearchInFiles
 
-class AckInFilesListener <  SearchInFilesListener
-  def initialize(_service)
-    @service = _service
+  def on_before_build(_event)
     create_find 'Ack in files'
+    Arcadia.attach_listener(self, AckInFilesEvent)
   end
 
   def on_before_ack_in_files(_event)
@@ -23,9 +18,9 @@ class AckInFilesListener <  SearchInFilesListener
     return if @find.e_what.text.strip.length == 0  || @find.e_filter.text.strip.length == 0  || @find.e_dir.text.strip.length == 0
     @find.hide
     if !defined?(@search_output)
-      @search_output = SearchOutput.new(@service)
+      @search_output = SearchOutput.new(self)
     else
-      @service.frame.show
+      self.frame.show
     end
     begin
       # unfortunately, it uses regex instead of glob. Oh well.
@@ -40,13 +35,13 @@ class AckInFilesListener <  SearchInFilesListener
       _filter = @find.e_dir.text+'/**/'+@find.e_filter.text
       _node = @search_output.new_result(_search_title, '')
       progress_stop=false
-      @progress_bar = TkProgressframe.new(@service.arcadia.layout.root, 2)
+      @progress_bar = TkProgressframe.new(self.arcadia.layout.root, 2)
       @progress_bar.title('Running')
 
       answer = `#{command}`
       answer_lines = answer.split("\n")
       @progress_bar.destroy # destroy the old one
-      @progress_bar = TkProgressframe.new(@service.arcadia.layout.root, answer_lines.length)		  
+      @progress_bar = TkProgressframe.new(self.arcadia.layout.root, answer_lines.length)		  
       @progress_bar.title('Parsing')
       @progress_bar.on_cancel=proc{progress_stop=true}
 

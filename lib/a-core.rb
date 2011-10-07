@@ -23,7 +23,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.10.0',
+        '0.11.0',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -43,7 +43,7 @@ class Arcadia < TkApplication
     ArcadiaActionDispatcher.new(self)
     ArcadiaGemsWizard.new(self)
     MonitorLastUsedDir.new
-    FocusEventManager.new
+    @focus_event_manager = FocusEventManager.new
     #self.load_local_config(false)
     ObjectSpace.define_finalizer($arcadia, self.class.method(:finalize).to_proc)
     #_title = "Arcadia Ruby ide :: [Platform = #{RUBY_PLATFORM}] [Ruby version = #{RUBY_VERSION}] [TclTk version = #{tcltk_info.level}]"
@@ -177,7 +177,15 @@ class Arcadia < TkApplication
   def register(_ext)
     @exts_i << _ext
   end
+
+  def unregister(_ext)
+    @exts_i.delete(_ext)
+  end
   
+  def last_focused_text_widget
+    @focus_event_manager.last_focus_widget
+  end   
+      
   def show_hide_toolbar
     if @is_toolbar_show
     		@mf_root.show_toolbar(0,false)
@@ -203,12 +211,12 @@ class Arcadia < TkApplication
   def ext_source_must_be_loaded?(_name)
     ret = ext_active?(_name)
     if !ret
-    @exts_dip.each{|key,val|
-      if val == _name
-        ret = ret || ext_active?(key)
-      end
-      break if ret
-    }
+      @exts_dip.each{|key,val|
+        if val == _name
+          ret = ret || ext_active?(key)
+        end
+        break if ret
+      }
     end
     ret
   end
@@ -340,6 +348,17 @@ class Arcadia < TkApplication
 
   def do_initialize
     _build_event = Arcadia.process_event(InitializeEvent.new(self))
+  end
+  
+  def do_make_clones
+    Array.new.concat(@exts_i).each{|ext|
+      if ext.kind_of?(ArcadiaExtPlus)
+        a = ext.conf_array("#{ext.name}.clones")
+        a.each{|clone_name|
+          ext.clone(clone_name)
+        }
+      end
+    }
   end
   
   def load_maximized
@@ -514,12 +533,12 @@ class Arcadia < TkApplication
   end
 
   def load_sysdefaultproperty  
-#    Tk.tk_call "eval","option add *background #{self['conf']['background']}"
-#    Tk.tk_call "eval","option add *foreground #{self['conf']['foreground']}"
-#    Tk.tk_call "eval","option add *activebackground #{self['conf']['activebackground']}"
-#    Tk.tk_call "eval","option add *activeforeground #{self['conf']['activeforeground']}"
-#    Tk.tk_call "eval","option add *highlightcolor  #{self['conf']['background']}"
-#    Tk.tk_call "eval","option add *relief #{self['conf']['relief']}"
+    Tk.tk_call "eval","option add *background #{self['conf']['background']}"
+    Tk.tk_call "eval","option add *foreground #{self['conf']['foreground']}"
+    Tk.tk_call "eval","option add *activebackground #{self['conf']['activebackground']}"
+    Tk.tk_call "eval","option add *activeforeground #{self['conf']['activeforeground']}"
+    Tk.tk_call "eval","option add *highlightcolor  #{self['conf']['background']}"
+    Tk.tk_call "eval","option add *relief #{self['conf']['relief']}"
 
     if !Arcadia.is_windows? && File.basename(Arcadia.ruby) != 'ruby'
       begin
@@ -579,6 +598,7 @@ class Arcadia < TkApplication
     load_user_control(self['toolbar'],"","e")
     load_user_control(self['menubar'],"","e")
     load_runners
+    do_make_clones
     do_initialize
     #@layout.build_invert_menu
   end
@@ -686,6 +706,21 @@ class Arcadia < TkApplication
 
   end
   
+  def register_key_binding(_self_target, k, v)
+    value = v.strip
+    key_dits = k.split('[')
+    return if k.length == 0
+    key_event=key_dits[0]
+    if key_dits[1]
+      key_sym=key_dits[1][0..-2]
+    end
+    @root.bind_append(key_event){|e|
+      if key_sym == e.keysym
+        Arcadia.process_event(_self_target.instance_eval(value))
+      end
+    }
+  end
+  
   def load_key_binding(_ext='')
     return unless _ext && ext_active?(_ext)
     if _ext.length > 0 
@@ -701,18 +736,7 @@ class Arcadia < TkApplication
     end
     keybs=Arcadia.conf_group(suf)
     keybs.each{|k,v|
-      value = v.strip
-      key_dits = k.split('[')
-      next if k.length == 0
-      key_event=key_dits[0]
-      if key_dits[1]
-        key_sym=key_dits[1][0..-2]
-      end
-      @root.bind_append(key_event){|e|
-        if key_sym == e.keysym
-          Arcadia.process_event(_self_on_eval.instance_eval(value))
-        end
-      }
+      register_key_binding(_self_on_eval, k, v)
     }
   end
   
@@ -964,7 +988,26 @@ class Arcadia < TkApplication
   def Arcadia.conf_group(_path, _refresh=false)
     Configurable.properties_group(_path, Arcadia.instance['conf'], 'conf', _refresh)
   end
-  
+
+  def Arcadia.conf_group_copy(_path_source, _path_target, _suff = 'conf')
+    _target = conf_group(_path_source)
+    _postfix = _path_target.sub(_path_source,"")
+    _target.each{|k,v|
+      if ["frames.labels","frames.names","name"].include?(k)
+        v_a = v.split(',')
+        new_val = ''
+        v_a.each{|value|
+          if new_val.length > 0
+            new_val = "#{new_val},"
+          end
+          new_val = "#{new_val}#{value}#{_postfix}"
+        }
+        v = new_val
+      end
+      @@instance['conf']["#{_path_target}.#{k}"]=v
+    }
+  end
+ 
   def Arcadia.persistent(_property, _value=nil, _immediate=false)
     if @@instance
       if _value.nil?
@@ -1841,6 +1884,7 @@ class ArcadiaProblemsShower
     @initialized = true
     if @problems.count > 0   
       show_problems
+      @ff.show
     end
   end
   
@@ -2301,7 +2345,11 @@ class ArcadiaLayout
     @panels = Hash.new
     @panels['_domain_root_']= Hash.new
     @panels['_domain_root_']['root']= _frame
-    @panels['_domain_root_']['sons'] = 	Hash.new
+    @panels['_domain_root_']['sons'] = Hash.new
+    
+    @panels['nil'] = Hash.new
+    @panels['nil']['root'] = TkTitledFrameAdapter.new(self.root)
+    
     @autotab = _autotab
     @headed = false
     @wrappers=Hash.new
@@ -2874,14 +2922,14 @@ class ArcadiaLayout
   
   def add_commons_menu_items(_domain, _menu)
       _menu.insert('end', :separator)
-      _menu.insert('end',:command,
+      _menu.insert('end', :command,
           :label=>"add column",
           :image=>Arcadia.image_res(ADD_GIF),
           :compound=>'left',
           :command=>proc{add_cols_runtime(_domain)},
           :hidemargin => true
       )
-      _menu.insert('end',:command,
+      _menu.insert('end', :command,
           :label=>"add row",
           :image=>Arcadia.image_res(ADD_GIF),
           :compound=>'left',
@@ -2889,7 +2937,7 @@ class ArcadiaLayout
           :hidemargin => true
       )
       if @panels.keys.length > 2
-        _menu.insert('end',:command,
+        _menu.insert('end', :command,
             :label=>"close",
             :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
             :compound=>'left',
@@ -2977,12 +3025,12 @@ class ArcadiaLayout
       register_panel(ffw2, ffw2.hinner_frame)
       #@panels[_target_domain]['root'].top_text(tt2)
       #@panels[source_domain]['root'].top_text(tt1)
-      @panels[_target_domain]['root'].save_caption(ffw2.name, @panels[source_domain]['root'].last_caption(ffw2.name))
-      @panels[source_domain]['root'].save_caption(ffw1.name, @panels[_target_domain]['root'].last_caption(ffw1.name))
+      @panels[_target_domain]['root'].save_caption(ffw2.name, @panels[source_domain]['root'].last_caption(ffw2.name), @panels[source_domain]['root'].last_caption_image(ffw2.name))
+      @panels[source_domain]['root'].save_caption(ffw1.name, @panels[_target_domain]['root'].last_caption(ffw1.name), @panels[_target_domain]['root'].last_caption_image(ffw1.name))
       @panels[_target_domain]['root'].restore_caption(ffw2.name)
       @panels[source_domain]['root'].restore_caption(ffw1.name)
-      @panels[_target_domain]['root'].change_adapter(ffw2.name, @panels[source_domain]['root'].forge_transient_adapter(ffw2.name))
-      @panels[source_domain]['root'].change_adapter(ffw1.name, @panels[_target_domain]['root'].forge_transient_adapter(ffw1.name))
+      @panels[_target_domain]['root'].change_adapters(ffw2.name, @panels[source_domain]['root'].forge_transient_adapter(ffw2.name))
+      @panels[source_domain]['root'].change_adapters(ffw1.name, @panels[_target_domain]['root'].forge_transient_adapter(ffw1.name))
     elsif source_has_domain && @panels[source_domain]['sons'].length >= 1
       ffw2 = @panels[source_domain]['sons'][_source_name]
       unregister_panel(ffw2, false, false)
@@ -2990,13 +3038,16 @@ class ArcadiaLayout
       register_panel(ffw2, ffw2.hinner_frame)
       #@panels[_target_domain]['root'].top_text(tt2)
       #@panels[source_domain]['root'].top_text('')
-      @panels[_target_domain]['root'].save_caption(ffw2.name, @panels[source_domain]['root'].last_caption(ffw2.name))
+      @panels[_target_domain]['root'].save_caption(ffw2.name, @panels[source_domain]['root'].last_caption(ffw2.name), @panels[source_domain]['root'].last_caption_image(ffw2.name))
       @panels[_target_domain]['root'].restore_caption(ffw2.name)
-      @panels[_target_domain]['root'].change_adapter(ffw2.name, @panels[source_domain]['root'].forge_transient_adapter(ffw2.name))
+      @panels[_target_domain]['root'].change_adapters(ffw2.name, @panels[source_domain]['root'].forge_transient_adapter(ffw2.name))
     elsif !source_has_domain
       ffw2 = @wrappers[_source_name]
       ffw2.domain = _target_domain
       register_panel(ffw2, ffw2.hinner_frame)
+      if @panels['nil']['root'].transient_frame_adapter[ffw2.name]
+    	   @panels[ffw2.domain]['root'].change_adapters(ffw2.name, @panels['nil']['root'].transient_frame_adapter[ffw2.name])
+      end
       #@panels[_target_domain]['root'].top_text('')
     end
     # refresh -----
@@ -3074,7 +3125,6 @@ class ArcadiaLayout
     
   end
 
-  
   def build_invert_menu(refresh_commons_items=false)
     @panels.keys.each{|dom|
       if dom != '_domain_root_' && @panels[dom] && @panels[dom]['root']
@@ -3124,7 +3174,7 @@ class ArcadiaLayout
         root_frame = pan['root'].frame
         pan['root'].title(_title)
         pan['root'].restore_caption(_name)
-   	    pan['root'].change_adapter_name(_name)
+   	pan['root'].change_adapters_name(_name)
         if !root_frame.instance_of?(TkFrameAdapter) && num==0
           if _adapter
             adapter = _adapter
@@ -3155,7 +3205,7 @@ class ArcadiaLayout
             'raisecmd'=>proc{
   					    pan['root'].title(api.title)
   					    pan['root'].restore_caption(api.name) 
-  					    pan['root'].change_adapter_name(api.name)
+  					    pan['root'].change_adapters_name(api.name)
          	         Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>pan['sons'][api.name].extension_name, 'frame_name'=>pan['sons'][api.name].name))
 #               changed
 #               notify_observers('RAISE', api.name)
@@ -3177,12 +3227,12 @@ class ArcadiaLayout
           'raisecmd'=>proc{
             pan['root'].title(_title)            
             pan['root'].restore_caption(_name) 
-            pan['root'].change_adapter_name(_name)
+            pan['root'].change_adapters_name(_name)
       	     Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>_ffw.extension_name, 'frame_name'=>_ffw.name))
 #            changed
 #            notify_observers('RAISE', _name)
           }
-        		)
+        )
         if _adapter
           adapter = _adapter
         else
@@ -3201,7 +3251,7 @@ class ArcadiaLayout
     else
       _ffw.domain = nil
       process_frame(_ffw)
-      return TkFrameAdapter.new(self.root)
+       return TkFrameAdapter.new(self.root)
 #
 #      Arcadia.dialog(self, 
 #        'type'=>'ok',
@@ -3221,6 +3271,7 @@ class ArcadiaLayout
     _name = _ffw.name
     @panels[_domain_name]['sons'][_name].hinner_frame.detach_frame
     if delete_wrapper
+      @wrappers[_name].root.clear_transient_adapters(_name)
       @wrappers.delete(_name).hinner_frame.destroy 
     else
       @wrappers[_name].domain=nil
@@ -3235,7 +3286,7 @@ class ArcadiaLayout
       w.attach_frame(@panels[_domain_name]['root'].frame)
       @panels[_domain_name]['root'].title(t)
       @panels[_domain_name]['root'].restore_caption(n)
-      @panels[_domain_name]['root'].change_adapter_name(n)
+      @panels[_domain_name]['root'].change_adapters_name(n)
 
       @panels[_domain_name]['notebook'].destroy
       @panels[_domain_name]['notebook']=nil
@@ -3248,7 +3299,7 @@ class ArcadiaLayout
       #p "unregister #{_name} ------> 5"
     elsif @panels[_domain_name]['sons'].length == 0
       @panels[_domain_name]['root'].title('')
-      @panels[_domain_name]['root'].top_text('')
+      @panels[_domain_name]['root'].top_text_clear
     end
     build_invert_menu if refresh_menu
   end
@@ -3456,6 +3507,7 @@ end
 require 'tk/clipboard'
 
 class FocusEventManager
+  attr_reader :last_focus_widget
   def initialize
     Arcadia.attach_listener(self, FocusEvent)
     Arcadia.attach_listener(self, InputEvent)

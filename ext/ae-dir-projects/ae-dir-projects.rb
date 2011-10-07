@@ -21,7 +21,7 @@ class Project
   end
 end
 
-class DirProjects < ArcadiaExt
+class DirProjects < ArcadiaExtPlus
   attr_reader :htree
 
   def sync_on
@@ -918,6 +918,7 @@ class DirProjects < ArcadiaExt
 	def projects_file
     if !defined?(@arcadia_projects_file)
     		@arcadia_projects_file = @arcadia.local_dir+'/'+conf('file.name')
+    		@arcadia_projects_file = "#{@arcadia_projects_file}#{instance_index}" if instance_index > 0 
     		if !File.exist?(@arcadia_projects_file)
      			dir,fil =File.split(File.expand_path(@arcadia_projects_file))
      			if !File.exist?(dir)
@@ -930,7 +931,6 @@ class DirProjects < ArcadiaExt
           f.close unless f.nil?
         end
       end
-    		
     end
     return @arcadia_projects_file
 	end
@@ -980,6 +980,12 @@ class DirProjects < ArcadiaExt
     end
   end
 
+  def on_clear_cache_instance(_event)
+    if File.exist?(@arcadia_projects_file)
+      File.delete(@arcadia_projects_file)
+    end
+  end
+  
   def image(_kind, _label='.rb')
       if _kind == 'directory'
         return @image_kdir

@@ -194,7 +194,7 @@ class WrapperContainer < TkFrame
     @selected_class = nil
     @selected_require = nil
     @selected_class_obj = nil
-    Arcadia.instance.layout.domain(Arcadia.instance['conf']['palette.frame'])['root'].top_text('')
+    Arcadia.instance.layout.domain(Arcadia.instance['conf']['palette.frame'])['root'].top_text_clear
   end
 
   def add_palette(_lib_obj)

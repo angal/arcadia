@@ -23,8 +23,9 @@ class ArcadiaEvent < Event
 
 end
 
-class QuitEvent < ArcadiaEvent
+class ArcadiaSysEvent < ArcadiaEvent
 end
+
 
 # +------------------------------------------+
 #     Extention Event (raised only by Arcadia)
@@ -32,11 +33,11 @@ end
 #     Every extensions listen on these events
 # +------------------------------------------+
 
-class BuildEvent < ArcadiaEvent
+class BuildEvent < ArcadiaSysEvent
   attr_accessor :name
 end 
 
-class InitializeEvent < ArcadiaEvent
+class InitializeEvent < ArcadiaSysEvent
 end
 
 
@@ -44,15 +45,28 @@ end
 # before process FinalizeEvent during quiet face.
 # If listener(Extension) set can_exit property to false then 
 # arcadia abort the quiet face. 
-class ExitQueryEvent < ArcadiaEvent
+class ExitQueryEvent < ArcadiaSysEvent
   attr_accessor :can_exit
 end
 
-class FinalizeEvent < ArcadiaEvent
+class QuitEvent < ArcadiaSysEvent
 end
 
+class FinalizeEvent < ArcadiaSysEvent
+end
 
-class NeedRubyGemWizardEvent < ArcadiaEvent
+# used only by ArcadiaExtPlus
+class ClearCacheInstanceEvent < ArcadiaSysEvent
+end
+
+class DestroyInstanceEvent < ArcadiaSysEvent
+end
+
+class ActivateInstanceEvent < ArcadiaSysEvent
+  attr_accessor :name
+end
+
+class NeedRubyGemWizardEvent < ArcadiaSysEvent
   class Result < Result
     attr_accessor :installed
   end
@@ -64,23 +78,24 @@ class NeedRubyGemWizardEvent < ArcadiaEvent
   attr_accessor :gem_events
 end
 
-class ArcadiaProblemEvent < ArcadiaEvent
+class ArcadiaProblemEvent < ArcadiaSysEvent
    DEPENDENCE_MISSING_TYPE = "DEPENDENCE_MISSING_TYPE"
    RUNTIME_ERROR_TYPE = "RUNTIME_ERROR_TYPE"
    attr_accessor :type, :level, :title, :detail
 end
 
+# +------------------------------------------+
 
 # +------------------------------------------+
 #     Generic Layout Event 
 #     
 # +------------------------------------------+
-class LayoutRaisingFrameEvent < ArcadiaEvent
+class LayoutRaisingFrameEvent < ArcadiaSysEvent
   attr_accessor :extension_name
   attr_accessor :frame_name
 end
 
-class LayoutChangedFrameEvent < ArcadiaEvent
+class LayoutChangedFrameEvent < ArcadiaSysEvent
 end
 
 #  +---------------------------------------------+

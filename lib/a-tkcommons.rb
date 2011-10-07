@@ -785,6 +785,12 @@ class TkBaseTitledFrame < TkFrame
     }.place('x'=>0, 'y'=>0,'height'=>@title_height, 'relwidth'=>1)
     #.pack('fill'=> 'x','ipady'=> @title_height, 'side'=>'top')
     @frame = create_frame
+
+    @state_frame=TkFrame.new(@top){
+      #background  '#303b50'
+      background  Arcadia.conf('titlelabel.background')
+    }.pack('side'=> 'left','anchor'=> 'e')
+
     @button_frame=TkFrame.new(@top){
       #background  '#303b50'
       background  Arcadia.conf('titlelabel.background')
@@ -794,6 +800,7 @@ class TkBaseTitledFrame < TkFrame
     @menu_buttons = Hash.new
     @panels = Hash.new
     @last_for_frame = Hash.new
+    @last_for_state_frame = Hash.new
     self.head_buttons
   end
 
@@ -834,6 +841,8 @@ class TkBaseTitledFrame < TkFrame
         end
         bind('1',_proc) if _proc
       }
+      Tk::BWidget::DynamicHelp::add(@last_for_frame[_frame], 'text'=>_label) if _label
+      @last_for_frame[_frame]
     rescue RuntimeError => e
       Arcadia.runtime_error(e)
     end
@@ -902,6 +911,31 @@ class TkBaseTitledFrame < TkFrame
   end
   private :__add_sep
 
+  def __add_state_button(_label,_proc=nil,_image=nil, _side= 'left', _frame=nil)
+    return if _frame.nil?
+    begin
+      last = @last_for_state_frame[_frame]
+      @last_for_state_frame[_frame] = TkButton.new(_frame, Arcadia.style('titletoolbarbutton')){
+        text  _label if _label
+        image  Arcadia.image_res(_image) if _image
+        font 'helvetica 8 bold'
+        padx 0
+        pady 0
+        if last
+          pack('side'=> _side,'anchor'=> 'w', 'after'=>last)
+        else
+          pack('side'=> _side,'anchor'=> 'w')
+        end
+        bind('1',_proc) if _proc
+      }
+      Tk::BWidget::DynamicHelp::add(@last_for_state_frame[_frame], 'text'=>_label) if _label
+      @last_for_state_frame[_frame]
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e)
+    end
+  end
+  private :__add_state_button
+
   def menu_button(_name='default')
     @menu_buttons[_name]
   end
@@ -927,6 +961,7 @@ class TkTitledFrame < TkBaseTitledFrame
     @left_label = create_left_label
     @right_label = create_right_label
     @right_labels_text = Hash.new
+    @right_labels_image = Hash.new
     @ap = Array.new
     @apx = Array.new
     @apy = Array.new
@@ -966,7 +1001,15 @@ class TkTitledFrame < TkBaseTitledFrame
       pack('side'=> 'left','anchor'=> 'e')
     }
   end
-
+  
+  def shift_on
+    @left_label.foreground(Arcadia.conf('titlelabel.foreground'))
+  end
+  
+  def shift_off
+    @left_label.foreground(Arcadia.conf('titlelabel.disabledforeground'))
+  end
+  
   def title(_text=nil)
     if _text.nil?
       return @title
@@ -980,27 +1023,52 @@ class TkTitledFrame < TkBaseTitledFrame
     end
   end
 
-  def top_text(_text=nil)
-    if _text.nil?
+  def top_text_clear
+    @right_label.configure('text'=>'', 'image'=>nil)
+  end
+
+  def top_text(_text=nil, _image=nil)
+    if _text.nil? && _image.nil?
       return @right_label.text
-    else
+    elsif !_text.nil? && _image.nil?
       @right_label.text(_text)
+    else
+      @right_label.configure('text'=>_text, 'image'=>_image)
     end
   end
 
-  def save_caption(_name, _caption)
+  def top_text_hint(_text=nil)
+    if _text.nil?
+      res = ''
+      res = @right_label_hint_variable.value if defined?(@right_label_hint_variable)
+      res
+    else
+      if !defined?(@right_label_hint_variable)
+        @right_label_hint_variable = TkVariable.new
+        Tk::BWidget::DynamicHelp::add(@right_label, 'variable'=>@right_label_hint_variable)
+      end      
+      @right_label_hint_variable.value=_text
+    end
+  end
+
+  def save_caption(_name, _caption, _image=nil)
     @right_labels_text[_name] = _caption
+    @right_labels_image[_name] = _image
   end
 
   def last_caption(_name)
     @right_labels_text[_name]
   end
 
+  def last_caption_image(_name)
+    @right_labels_image[_name]
+  end
+
   def restore_caption(_name)
     if @right_labels_text[_name]
-      top_text(@right_labels_text[_name])
+      top_text(@right_labels_text[_name], @right_labels_image[_name])
     else
-      top_text('')
+      top_text_clear
     end
   end
 
@@ -1179,60 +1247,122 @@ class TkTitledFrameAdapter < TkTitledFrame
 
   def initialize(parent=nil, title=nil, img=nil , keys=nil)
     super(parent, title, img, keys)
-    @transient_frame = TkFrame.new(@button_frame){
+    @transient_action_frame = TkFrame.new(@button_frame){
       background  Arcadia.conf('titlelabel.background')
       padx 0
       pady 0
       pack('side'=> "right",'anchor'=> 'e','fill'=>'both', 'expand'=>true)
     }
+    @transient_state_frame = TkFrame.new(@state_frame){
+      background  Arcadia.conf('titlelabel.background')
+      padx 0
+      pady 0
+      pack('side'=> "left",'anchor'=> 'w','fill'=>'both', 'expand'=>true)
+    }
     @transient_frame_adapter = Hash.new
+    @@instances = [] if !defined?(@@instances)
+    @@instances << self 
   end
 
   def forge_transient_adapter(_name)
     if @transient_frame_adapter[_name].nil?
-      @transient_frame_adapter[_name] = TkFrameAdapter.new(Arcadia.layout.root, {'background'=>  Arcadia.conf('titlelabel.background')})
-      __attach_adapter(@transient_frame_adapter[_name])
-      @transient_frame_adapter[_name].raise
+      @transient_frame_adapter[_name] = Hash.new
+      @transient_frame_adapter[_name][:action] = TkFrameAdapter.new(Arcadia.layout.root, {'background'=>  Arcadia.conf('titlelabel.background')})
+      @transient_frame_adapter[_name][:state] = TkFrameAdapter.new(Arcadia.layout.root, {'background'=>  Arcadia.conf('titlelabel.background')})
+      __attach_action_adapter(@transient_frame_adapter[_name][:action])
+      __attach_action_adapter(@transient_frame_adapter[_name][:state])
+      @transient_frame_adapter[_name][:action].raise
+      @transient_frame_adapter[_name][:state].raise
     end
     @transient_frame_adapter[_name]
   end
 
-  def __attach_adapter(_adapter)
-    @last_attached_adapter.detach_frame if @last_attached_adapter
-    _adapter.attach_frame(@transient_frame)
-    @last_attached_adapter = _adapter
+#  def __attach_adapter(_adapter)
+#    @last_attached_adapter.detach_frame if @last_attached_adapter
+#    _adapter.attach_frame(@transient_action_frame)
+#    @last_attached_adapter = _adapter
+#  end
+
+  def __attach_action_adapter(_adapter)
+    @last_attached_action_adapter.detach_frame if @last_attached_action_adapter
+    _adapter.attach_frame(@transient_action_frame)
+    @last_attached_action_adapter = _adapter
   end
 
-  def change_adapter(_name, _adapter)
-    @transient_frame_adapter[_name] = _adapter
-    @transient_frame_adapter[_name].detach_frame
-    __attach_adapter(@transient_frame_adapter[_name])
-    @transient_frame_adapter[_name].raise
+  def __attach_state_adapter(_adapter)
+    @last_attached_state_adapter.detach_frame if @last_attached_state_adapter
+    _adapter.attach_frame(@transient_state_frame)
+    @last_attached_state_adapter = _adapter
   end
 
-  def change_adapter_name(_name)
-    __attach_adapter(forge_transient_adapter(_name))
-    @transient_frame_adapter[_name].raise
+#  def change_adapter(_name, _adapter)
+#    @transient_frame_adapter[_name] = _adapter
+#    @transient_frame_adapter[_name].detach_frame
+#    __attach_adapter(@transient_frame_adapter[_name])
+#    @transient_frame_adapter[_name].raise
+#  end
+#
+#  def change_adapter_name(_name)
+#    __attach_adapter(forge_transient_adapter(_name))
+#    @transient_frame_adapter[_name].raise
+#  end
+
+  def change_adapters(_name, _adapters)
+    @transient_frame_adapter[_name][:action] = _adapters[:action]
+    @transient_frame_adapter[_name][:state] = _adapters[:state]
+    @transient_frame_adapter[_name][:action].detach_frame
+    @transient_frame_adapter[_name][:state].detach_frame
+    __attach_action_adapter(@transient_frame_adapter[_name][:action])
+    __attach_state_adapter(@transient_frame_adapter[_name][:state])
+    @transient_frame_adapter[_name][:action].raise
+    @transient_frame_adapter[_name][:state].raise
+  end
+
+  def change_adapters_name(_name)
+    __attach_action_adapter(forge_transient_adapter(_name)[:action])
+    __attach_state_adapter(forge_transient_adapter(_name)[:state])
+    @transient_frame_adapter[_name][:action].raise
+    @transient_frame_adapter[_name][:state].raise
+  end
+
+  def clear_transient_adapters(_name)
+    @@instances.each{|i| i.transient_frame_adapter.delete(_name).clear if i.transient_frame_adapter[_name] }
+#    if @transient_frame_adapter[_name]
+#      if @transient_frame_adapter[_name][:action]
+#        @transient_frame_adapter[_name][:action].frame.destroy
+#        @transient_frame_adapter[_name].delete(:action).destroy
+#      end
+#      if @transient_frame_adapter[_name][:state]
+#        @transient_frame_adapter[_name][:state].frame.destroy 
+#        @transient_frame_adapter[_name].delete(:state).destroy 
+#      end
+#      @transient_frame_adapter.delete(_name).clear
+#    end
   end
 
   def add_button(_sender_name, _label,_proc=nil,_image=nil, _side= 'right')
     forge_transient_adapter(_sender_name)
-    __add_button(_label,_proc,_image, _side, @transient_frame_adapter[_sender_name])
+    __add_button(_label,_proc,_image, _side, @transient_frame_adapter[_sender_name][:action])
   end
 
   def add_menu_button(_sender_name, _name='default',_image=nil, _side= 'right', _args=nil)
     forge_transient_adapter(_sender_name)
-    __add_menu_button(_name, _image, _side, _args, @transient_frame_adapter[_sender_name])
+    __add_menu_button(_name, _image, _side, _args, @transient_frame_adapter[_sender_name][:action])
   end
 
   def add_panel(_sender_name, _name='default',_side= 'right', _args=nil)
     forge_transient_adapter(_sender_name)
-    __add_panel(_name, _side, _args, @transient_frame_adapter[_sender_name])
+    __add_panel(_name, _side, _args, @transient_frame_adapter[_sender_name][:action])
   end
 
   def add_sep(_sender_name, _width=0)
     forge_transient_adapter(_sender_name)
-    __add_sep(_width, @transient_frame_adapter[_sender_name])
+    __add_sep(_width, @transient_frame_adapter[_sender_name][:action])
+  end
+
+  def add_state_button(_sender_name, _label,_proc=nil,_image=nil, _side= 'left')
+    forge_transient_adapter(_sender_name)
+    __add_state_button(_label,_proc,_image, _side, @transient_frame_adapter[_sender_name][:state])
   end
 
 end
@@ -1291,14 +1421,19 @@ class TkFloatTitledFrame < TkBaseTitledFrame
     #          hide
     #      end
     #    }
+    Arcadia.instance.register_key_binding(self,"KeyPress[Escape]","ActionEvent.new(self, 'action'=>hide_if_visible)")
   end
-
+  
   def title(_text)
     @right_label.text(_text)
   end
 
   def on_close=(_proc)
     add_fixed_button('X', _proc, TAB_CLOSE_GIF)
+  end
+
+  def hide_if_visible
+    hide if visible?
   end
 
   def hide
@@ -1533,6 +1668,10 @@ module TkInputThrow
     _widget.bind_append("<Undo>"){Arcadia.process_event(UndoTextEvent.new(_widget));break}
     _widget.bind_append("<Redo>"){Arcadia.process_event(RedoTextEvent.new(_widget));break}
     _widget.bind_append("1", proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>_widget))})
+  end
+  
+  def select_throw
+    InputEnterEvent.new(self,'receiver'=>self).go!
   end
 end
 

@@ -3,20 +3,13 @@
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
 
-class SearchInFilesService < ArcadiaExt
+class SearchInFiles < ArcadiaExt
 
   def on_before_build(_event)
-    Arcadia.attach_listener(SearchInFilesListener.new(self),SearchInFilesEvent)
-  end
-
-end
-
-class SearchInFilesListener
-  def initialize(_service)
-    @service = _service
     create_find 'Search in files'
+    Arcadia.attach_listener(self, SearchInFilesEvent)
   end
-
+  
   def on_before_search_in_files(_event)
     if _event.what.nil?
       if _event.dir
@@ -32,9 +25,9 @@ class SearchInFilesListener
 
   #def on_after_search_in_files(_event)
   #end
-  
+
   def create_find title
-    @find = FindFrame.new(@service.arcadia.layout.root)
+    @find = FindFrame.new(self.arcadia.layout.root)
     @find.on_close=proc{@find.hide}
     @find.hide
     @find.b_go.bind('1', proc{update_all_combo;do_find}) # add trigger to button    
@@ -89,9 +82,9 @@ class SearchInFilesListener
     return if @find.e_what.text.strip.length == 0  || @find.e_filter.text.strip.length == 0  || @find.e_dir.text.strip.length == 0
     @find.hide
     if !defined?(@search_output)
-      @search_output = SearchOutput.new(@service)
+      @search_output = SearchOutput.new(self)
     end
-    @service.frame.show_anyway
+    self.frame.show_anyway
     Thread.new do
       begin    
         MonitorLastUsedDir.set_last @find.e_dir.text # save it away TODO make it into a message
@@ -101,7 +94,7 @@ class SearchInFilesListener
         _files = Dir[_filter]
         _node = @search_output.new_result(_search_title, _files.length)
         progress_stop=false
-        progress_bar = TkProgressframe.new(@service.arcadia.layout.root, _files.length)		  
+        progress_bar = TkProgressframe.new(self.arcadia.layout.root, _files.length)		  
         progress_bar.title('Searching')
         progress_bar.on_cancel=proc{progress_stop=true}
         #@progress_bar.on_cancel=proc{cancel}
@@ -129,7 +122,7 @@ class SearchInFilesListener
         #Arcadia.new_error_msg(self, e.message)
       ensure
         progress_bar.destroy if progress_bar
-        @service.frame.show_anyway
+        self.frame.show_anyway
       end
     end
   end
@@ -343,6 +336,7 @@ class FindFrame < TkFloatTitledFrame
     super
     self.focus
     @e_what.focus
+    @e_what_entry.select_throw
     @e_what_entry.selection_range(0,'end')
   end
 end
