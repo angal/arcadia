@@ -2,4 +2,4 @@ language=java
 exts=java
 scanner=coderay
 @include=coderay.tokens
-coderay.classes=keyword,directive,type,pre_type,operator,delimiter,method,class,char,comment,instance_variable,constant,string,content,integer
+coderay.classes=keyword,directive,type,predefined_type,operator,delimiter,method,class,char,comment,instance_variable,constant,string,content,integer,exception

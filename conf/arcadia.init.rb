@@ -55,3 +55,4 @@ EOL
 exit
 end
 Tk.tk_call "eval","set auto_path [concat $::auto_path tcl]"
+#Tk.tk_call "eval","set tk_strictMotif true"

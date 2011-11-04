@@ -1,27 +1,35 @@
 = Arcadia Ide
-version 0.10.0
+version 0.11.0
 
 by Antonio Galeone
-on Jun 03, 2011
+on Nov 04, 2011
 
 
 == About
 
 Arcadia is a Light Integrated Development Environment (IDE) for Ruby language 
-written in classic Ruby using the classic tcl/tk GUI toolkit.
+written in Ruby using the classic tcl/tk GUI toolkit.
 
 Some of Arcadia ide project features include:
 * Editor with source browsing, syntax highlighting, code completion
-* Debugging support
 * Working on any platform where ruby and tcl-tk work.
+* Debugging support
 * Highly extensibility architecture.
 
-== In this release 0.10.0
+== In this release 0.11.0
     
 [Improvements]
-  - bugs fixed
-  - added initial basic support for other languages (python,java)
-
+  added some new feature: 
+  - now you can open more than one instance of "Editor" and "Dir Project"
+    by clicking on button with "plus" icon on the left side of title bar.
+    This can be usefull if you want see 2 buffers at the same time. 
+  - now you can hide the tabs in Editor (for optimizing space) by menu item :
+    "View->Show/Hide Editor Tabs" and recall a buffer by menubutton on right side 
+    of title bar
+  - porting to new version of coderay   
+  
+  A lot of bugs fixed !!!
+  
 == Dependencies
   - rubygems
   - ruby-tk
@@ -29,15 +37,13 @@ Some of Arcadia ide project features include:
   - tk-tile (if tcl/tk < 8.5)
   - ctags
   - ack (optional)
-  - gem coderay
+  - gem coderay (> 1.0)
   - gem ruby-debug (ruby-debug19 on ruby 1.9)
   - gem win32-process (only on windows)
   - gem ruby-wmi (only on windows)
   
 == How to install
-There are two way:
-1. exec as root on command line "gem install arcadia"
-   or as user "sudo gem install arcadia"
+* exec on command line "gem install arcadia"
 
 == How to run
 * exec on command line "arcadia"
@@ -48,7 +54,7 @@ Application layout is splitted in vertical and horizontal resizable frames.
 On vertical and horizontal  splitter appear two button for left or right 
 one shot frame close. 
 Every frame has a title, a button to expand or resizing it and a menu-button 
-for the dynamic layout functions.
+for dynamic layout functions (like add row, add column, close or for move a frame).
 
 ==== Main Toolbar
 The toolbar button are in order:
@@ -63,7 +69,7 @@ The toolbar button are in order:
 - quit (to exit from arcadia)
 
 ==== Editor
-Editor use the notebook metaphor. Same command are on the popup menu 
+Editor can use the notebook metaphor. Same command are on the popup menu 
 that is raised on "Button-3" click event fundamentally for closing the tab 
 under the mouse pointer.
 These are same editor short-cut:

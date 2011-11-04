@@ -336,7 +336,7 @@ class DialogEvent < ArcadiaEvent
   class Result < Result
     attr_accessor :value
   end
-  attr_accessor :title, :msg, :type, :level
+  attr_accessor :title, :msg, :type, :level, :exception
 end
 
 #class QuestionDialogEvent < DialogEvent

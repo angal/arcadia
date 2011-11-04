@@ -491,6 +491,19 @@ class SafeCompleteCode
     #---------------------------------
     focus_line = source_array[@row-1]
     focus_line = focus_line[0..@col] if focus_line
+    #-----
+#    if ["\s",'(','{','['].include?(focus_line[-1..-1])
+#      p "focus_line[-1..-1] e uguale a #{focus_line[-1..-1]}"
+#      focus_line = ''
+#    else
+#      focus_line_split = focus_line.split
+#      if focus_line_split && focus_line_split.length >0
+#        old_focus_line_length = focus_line.length 
+#        focus_line = focus_line_split[-1]
+#        @col = @col - (old_focus_line_length = focus_line.length)
+#      end
+#    end
+    #---
     focus_line = '' if focus_line.nil?
     focus_world = ''
     if focus_line && focus_line.strip.length > 0
@@ -515,6 +528,7 @@ class SafeCompleteCode
       focus_world= focus_word(focus_segment)
     end
     @class_node = @ss.class_node_by_line(@row)
+    focus_line_to_evaluate = focus_line
     #---------------------------------
     @modified_source = "#{@modified_source}Dir.chdir('#{File.dirname(@editor.file)}')\n" if @editor.file
     @modified_row = @modified_row+1
@@ -546,7 +560,7 @@ class SafeCompleteCode
         #Arcadia.console(self, 'msg'=>"per require @modified_row=#{@modified_row}")
       # 2) includiano la riga da evaluare con un $SAFE 3
       elsif j.to_i == @row-1
-        focus_line = line
+        focus_line_to_evaluate = line
         break
       # 3) eliminiamo la riga
       else
@@ -554,7 +568,7 @@ class SafeCompleteCode
       end
       break if j.to_i >= @row - 1
     }
-    if focus_line
+    if focus_line_to_evaluate
       # ricerchiamo una eventuale dichiarazione
         if focus_world && focus_world.strip.length > 0
           begin
@@ -598,7 +612,7 @@ class SafeCompleteCode
         ss_source = @ss.scheletor_from_node(@ss.root,'',to_iniect, to_iniect_class)
         ss_source_array = ss_source.split("\n")
         ss_len = ss_source_array.length
-        if ss_len>0 && ss_source_array[0].strip != focus_line.strip
+        if ss_len>0 && ss_source_array[0].strip != focus_line_to_evaluate.strip
           @modified_source = "#{@modified_source}#{ss_source}"
           if @class_node
             @modified_source = "#{@modified_source}#{@class_node.label.downcase} = #{@class_node.label}.new\n"
@@ -629,7 +643,6 @@ class SafeCompleteCode
         end
     end
     if @filter.strip.length > 0 && !is_dot?
-#        refresh_words(source_array)
         refresh_words
     end
 
@@ -1310,7 +1323,7 @@ class AgEditor
   end
 
 
-  def raise_complete_code(_candidates, _row, _col, _filter='')
+  def raise_complete_code(_candidates, _row, _col, _filter='')    
     @raised_listbox_frame.destroy if @raised_listbox_frame != nil
     _index_call = _row+'.'+_col
     _index_now = @text.index('insert')
@@ -1324,13 +1337,14 @@ class AgEditor
         if !ei.nil?
           j=1
           pre_target = ''
-          while ei-j>=0 && _line[ei-j..ei-j]!="\s"
+          while ei-j>=0 && !["\s",'(','[','{'].include?(_line[ei-j..ei-j])
             pre_target = _line[ei-j..ei-j] + pre_target
             j+=1
           end
           _target= pre_target + _target
         end       
       end
+      
       if _target.strip.length > 0 && _target != '.'
         extra_len = _target.length.+@
         _begin_index = _index_now<<' - '<<extra_len.to_s<<' chars'
@@ -1339,6 +1353,19 @@ class AgEditor
         _begin_index = _index_now
         extra_len = 0
       end
+      if _filter.length > 0 
+        begin_index_for_delete = "insert - #{_filter.length}chars"
+      else
+        for_delete = @text.get(_begin_index,"insert")
+        if for_delete && ['.','(','[','{','=','<','!','>'].include?(for_delete.strip[-1..-1])
+          begin_index_for_delete = "insert"
+        elsif for_delete && for_delete.include?('.')
+          begin_index_for_delete = "insert - #{for_delete.split('.')[-1].length}chars"
+        else
+          begin_index_for_delete = _begin_index
+        end 
+      end
+
       if _candidates.length >= 1 
           _rx, _ry, _width, heigth = @text.bbox(_begin_index);
           _x = _rx + TkWinfo.rootx(@text)  
@@ -1401,6 +1428,7 @@ class AgEditor
 
               Tk.event_generate(@raised_listbox, "1") if TkWinfo.mapped?(@raised_listbox)
           }
+          
 
           _insert_selected_value = proc{
             #_value = @raised_listbox.get('active').split('-')[0].strip
@@ -1410,7 +1438,7 @@ class AgEditor
               @raised_listbox_frame.destroy
               #_menu.destroy
               @text.focus
-              @text.delete(_begin_index,'insert')
+              @text.delete(begin_index_for_delete,'insert')
 
               # workaround for @ char
               _value = _value.strip
@@ -1549,7 +1577,7 @@ class AgEditor
             end
           }
         elsif _candidates.length == 1 && _candidates[0].length>0
-          @text.delete(_begin_index,'insert');
+          @text.delete(begin_index_for_delete,'insert');
           @text.insert('insert',_candidates[0].split[0])
           complete_code_end
         end
@@ -1607,32 +1635,6 @@ class AgEditor
 
     @text.bind_append("Control-KeyPress"){|e|
       case e.keysym
-#      when 'z'
-#        begin
-#          @text.edit_undo
-#        rescue RuntimeError => e
-#          throw e unless e.to_s.include? "nothing to undo" # this is ok--we've done undo back to the beginning
-#          break
-#        end
-#        if @highlighting
-#          _b = @text.index('@0,0').split('.')[0].to_i
-#          _e = @text.index('@0,'+TkWinfo.height(@text).to_s).split('.')[0].to_i + 1
-#          rehighlightlines(_b,_e)
-#        end
-#        break
-#      when 'r'
-#        begin
-#          @text.edit_redo
-#        rescue RuntimeError => e
-#          throw e unless e.to_s.include? "nothing to redo" # this is ok--we've done redo back to the beginning
-#          break
-#        end
-#        if @highlighting
-#          _b = @text.index('@0,0').split('.')[0].to_i
-#          _e = @text.index('@0,'+TkWinfo.height(@text).to_s).split('.')[0].to_i + 1
-#          rehighlightlines(_b,_e)
-#        end
-#        break
       when 'o'  
         if @file
           _dir = File.dirname(@file)
@@ -1641,24 +1643,9 @@ class AgEditor
         end
         Arcadia.process_event(OpenBufferEvent.new(self,'file'=>Tk.getOpenFile('initialdir'=>_dir)))
         break
-#      when 'c'
-#        @text.text_copy
-#        break
-#      when 'x'
-#        @text.text_cut
-#        break
-#      when 'v'
-#        _b = @text.index('insert').split('.')[0].to_i
-#        @text.text_paste
-#        _e = @text.index('insert').split('.')[0].to_i
-#        if @highlighting
-#          rehighlightlines(_b,_e)
-#        end
-#        break
-      end
-      case e.keysym
       when 's'
         save
+        #Tk.callback_break
       when 'f'
         find
       when 'egrave'
@@ -1692,21 +1679,6 @@ class AgEditor
         end
       when 'U'
         decrease_indent
-#        _r = @text.tag_ranges('sel')
-#        _row_begin = _r[0][0].split('.')[0].to_i
-#        _row_end = _r[_r.length - 1][1].split('.')[0].to_i
-#        n_space = $arcadia['conf']['editor.tab-replace-width-space'].to_i
-#        if n_space > 0
-#          suf = "\s"*n_space
-#        else
-#          suf = "\t"
-#        end
-#        _l_suf = 	suf.length.to_s
-#        for _row in _row_begin..._row_end
-#          if @text.get(_row.to_s+'.0',_row.to_s+'.'+_l_suf) == suf
-#            @text.delete(_row.to_s+'.0',_row.to_s+'.'+_l_suf)
-#          end
-#        end
       when 'C'
         _r = @text.tag_ranges('sel')
         _row_begin = _r[0][0].split('.')[0].to_i
@@ -1727,19 +1699,16 @@ class AgEditor
     }
     
     @text.bind_append("KeyPress"){|e|
-      #@do_complete = false
+      @last_keypress = e.keysym
       case e.keysym
-      #when 'Return'
-      when 'BackSpace'
-        _index = @text.index('insert')
-        _row, _col = _index.split('.')
-        rehighlightlines(_row.to_i,_row.to_i) if @highlighting
-  #      rehighlightline(_row.to_i) if @highlighting
-      when 'Delete'
-        _index = @text.index('insert')
-        _row, _col = _index.split('.')
-        rehighlightlines(_row.to_i, _row.to_i) if @highlighting
-  #      rehighlightline(_row.to_i) if @highlighting
+#      when 'BackSpace'
+#        _index = @text.index('insert')
+#        _row, _col = _index.split('.')
+#        rehighlightlines(_row.to_i,_row.to_i) if @highlighting
+#      when 'Delete'
+#        _index = @text.index('insert')
+#        _row, _col = _index.split('.')
+#        rehighlightlines(_row.to_i, _row.to_i) if @highlighting
       when 'F5'
         run_buffer
       when 'F3'
@@ -1777,13 +1746,15 @@ class AgEditor
     }
 
     @text.bind_append("KeyRelease"){|e|
+      @last_keyrelease = e.keysym
+      #return if @last_keypress != e.keysym
       case e.keysym
-      when 'Up','Down'
-          refresh_outline
+#      when 'Up','Down'
+#          refresh_outline
       when 'Left', 'Right'
-          if Arcadia.instance.last_focused_text_widget != @text
-            @text.select_throw
-          end
+        if Arcadia.instance.last_focused_text_widget != @text
+          @text.select_throw
+        end
       when 'Return' #,'Control_L', 'Control_V', 'BackSpace', 'Delete'
         _index = @text.index('insert')
         _row, _col = _index.split('.')
@@ -1801,20 +1772,26 @@ class AgEditor
         if _row.to_i + 1  ==  @text.index('end').split('.')[0].to_i
           do_line_update
         end
-      else 
-        if ['Control_L', 'Control_V', 'BackSpace', 'Delete'].include?(e.keysym)
-          do_line_update
+        if @highlighting
+          rehighlightlines(_row.to_i, _row.to_i)
         end
+      when 'Shift_L','Shift_R','Control_L','Control_R' ,'Prior', 'Next', 'Up','Down'
+        # do nothing because od do_line_update
+      else 
+#        if ['BackSpace', 'Delete'].include?(e.keysym)
+#          do_line_update
+#        end
         if @highlighting
           row = @text.index('insert').split('.')[0].to_i
           rehighlightlines(row, row)
         end
       end
-      check_modify if !['Up','Down','Left', 'Right', 'Prior', 'Next'].include?(e.keysym)      
+      check_modify if !['Shift_L','Shift_R','Control_L','Control_R','Up','Down','Left', 'Right', 'Prior', 'Next'].include?(e.keysym)      
     }
 
 
     @text.bind_append("Shift-KeyPress"){|e|
+      @last_keypress = e.keysym
       case e.keysym
       when 'Tab','ISO_Left_Tab'
         _r = @text.tag_ranges('sel')
@@ -2085,9 +2062,11 @@ class AgEditor
     if _from_row &&  @highlighting
       invalidated_begin_zone= zone_of_row(_from_row)
       @is_line_bold.delete_if {|key, value| key >= invalidated_begin_zone }
+      @is_line_comment.delete_if {|key, value| key >= invalidated_begin_zone }
       @highlight_zone.delete_if {|key, value| key >= invalidated_begin_zone }
     elsif @highlighting
       @is_line_bold.clear
+      @is_line_comment.clear
       @highlight_zone.clear 
     end
     @last_line_begin=0
@@ -2120,6 +2099,7 @@ class AgEditor
   def initialize_highlight(_ext)
     @highlight_scanner = @controller.highlight_scanner(_ext)
     @is_line_bold = Hash.new
+    @is_line_comment = Hash.new
     @is_tag_bold = Hash.new
     do_tag_configure_global('debug')
     if @lang_hash.nil? || @highlight_scanner.nil?
@@ -3002,9 +2982,38 @@ class AgEditor
     end
   end
 
+  def refresh_visible_highlighting
+    line_begin_index = @text.index('@0,0')
+    line_begin = line_begin_index.split('.')[0].to_i
+    line_begin = @comment_line_begin if !@comment_line_begin.nil? && @comment_line_begin < line_begin
+    line_end = @text.index('@0,'+TkWinfo.height(@text).to_s).split('.')[0].to_i + 1
+    reset_highlight(line_begin)
+    zone_begin = zone_of_row(line_begin)
+    zone_end = zone_of_row(line_end)
+    zone_begin.upto(zone_end){|z| highlight_zone(z)}
+    highlight_zone(zone_of_row(line_end+1)) if @is_line_comment[line_end]
+    
+    #rehighlightlines(line_begin,line_end,true)
+    if @is_line_comment[line_end]
+      line_end.downto(line_begin){|l|
+        @comment_line_begin = l if @is_line_comment[l]
+      }
+    else
+      @comment_line_begin = nil
+    end
+  end
+
+
   def highlightlines(_row_begin, _row_end, _check_mod = false)
     if _check_mod 
       check_modify
+    end
+    is_comment = _row_begin == _row_end
+    if _row_begin == _row_end && (@is_line_comment[_row_end-1] || @is_line_comment[_row_end+1])
+      if  !['apostrophe','quotedbl'].include?(@last_keypress)
+        refresh_visible_highlighting
+        return  
+      end
     end
     #_row_begin = _row_begin+1
     _ibegin = _row_begin.to_s+'.0'
@@ -3013,28 +3022,39 @@ class AgEditor
     _lines = @text.get(_ibegin, _iend)
     tags_map = @highlight_scanner.highlight_tags(_row_begin,_lines)
     tags_map.each do |key,value|      
+      is_comment = is_comment && key == :comment
+      break if is_comment
       to_tag = Array.new
       value.each{|ite|
         to_tag.concat(ite)
-        if @is_tag_bold[key.to_s]
-          if ite.length==2
-            row_begin = ite[0].split('.')[0].to_i
-            row_end = ite[1].split('.')[0].to_i
-            for row in row_begin..row_end 
-              @is_line_bold[row]=true
-            end
+        if ite.length==2
+          row_begin = ite[0].split('.')[0].to_i
+          row_end = ite[1].split('.')[0].to_i
+          for row in row_begin..row_end 
+            @is_line_bold[row] = @is_tag_bold[key.to_s]
+            @is_line_comment[row] = key == :comment
           end
-#          ite.each{|p|
-#            row_begin = p[0].split('.')[0].to_i
-#            row_end = p[1].split('.')[0].to_i
-#            for row in row_begin...row_end 
-#              @is_line_bold[row]=true
-#            end
-#          }
         end
       }
+#      to_tag.each{|p|
+#        if @i.nil?
+#          @one = p
+#          @i = 1
+#          next
+#        else
+#          @two = p
+#          @i = nil
+#        end
+#        row_begin = @one.split('.')[0].to_i
+#        row_end = @two.split('.')[0].to_i
+#        for row in row_begin...row_end 
+#          @is_line_comment[row] = key == :comment
+#        end
+#      }
       @text.tag_adds(key.to_s,to_tag)
     end
+    refresh_visible_highlighting if is_comment
+
     if @tabs_show || @spaces_show
       if !defined?(@rescanner)
         if @lang_hash['scanner']!='re'
@@ -3051,7 +3071,8 @@ class AgEditor
   def highlight_zone(_zone, _force_highlight=false)
     if !@highlight_zone[_zone] || _force_highlight
       _b = @highlight_zone_length*(_zone - 1) +1
-      _e = @highlight_zone_length*(_zone) #+ 1
+      _e = @highlight_zone_length*(_zone) #+ 1      
+      _b -=1 while @is_line_comment[_b-1]      
       rehighlightlines(_b,_e)
       @highlight_zone[_zone] = true
     end
@@ -3352,25 +3373,58 @@ class AgMultiEditorView
     @parent = parent
     @usetabs = _usetabs
     if @usetabs
-      @enb = Tk::BWidget::NoteBook.new(parent.hinner_frame,Arcadia.style('tabpanel')){
-        tabbevelsize 0
-        internalborderwidth 2
-        side Arcadia.conf('editor.tabs.side')
-        font Arcadia.conf('editor.tabs.font')
-        pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
-      }
-      refresh_after_map = proc{
-        if !@enb.pages.empty?
-          if @enb.raise.nil? || @enb.raise.strip.length == 0
-            @enb.raise(@enb.pages[0]) 
-            @enb.see(@enb.pages[0])
-          end
-        end
-      }
-      @enb.bind_append("Map",refresh_after_map)
+      initialize_tabs
     end
     @pages = {}
+    @page_binds = {}
     @raised_page=nil
+  end
+  
+  def initialize_tabs
+    @enb = Tk::BWidget::NoteBook.new(@parent.hinner_frame, Arcadia.style('tabpanel')){
+      tabbevelsize 0
+      internalborderwidth 2
+      side Arcadia.conf('editor.tabs.side')
+      font Arcadia.conf('editor.tabs.font')
+      pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
+    }
+    refresh_after_map = proc{
+      if !@enb.pages.empty?
+        if @enb.raise.nil? || @enb.raise.strip.length == 0
+          @enb.raise(@enb.pages[0]) 
+           @enb.see(@enb.pages[0])
+        end
+      end
+    }
+    @enb.bind_append("Map",refresh_after_map)
+  end
+  
+  def switch_2_tabs
+    raised = raise
+    @usetabs = true
+    initialize_tabs
+    @pages.each{|name, value|
+      oldframe = value['frame'].frame
+      value['frame'].detach_frame
+      oldframe.destroy
+      add_page(name, value['file'], value['text'], value['image'], value['raisecmd'], value['frame'])
+    }
+    raise(raised)
+    @page_binds.each{|event, proc| page_bind(event, proc)}    
+  end
+
+  def switch_2_notabs
+    raised = raise
+    @usetabs = false
+    @pages.each{|name, value|
+      value['frame'].detach_frame
+      add_page(name, value['file'], value['text'], value['image'], value['raisecmd'], value['frame'])
+    }
+    @enb.destroy
+    raise(raised)
+    @page_binds.each{|event, proc| 
+      page_bind(event, proc)
+    }    
   end
   
   def root_frame
@@ -3433,7 +3487,7 @@ class AgMultiEditorView
     title
   end
   
-  def add_page(_name, _file, _title, _image, _raise_proc)
+  def add_page(_name, _file, _title, _image, _raise_proc, _adapter=nil)
     if @usetabs
       frame = @enb.insert('end', _name ,
         'text'=> _title,
@@ -3442,26 +3496,36 @@ class AgMultiEditorView
         'foreground'=> Arcadia.style("tabpanel")["foreground"],
         'raisecmd'=>_raise_proc
       )
-      frame
     else
       frame = TkFrame.new(@parent.hinner_frame) #.pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
     end
-    @pages[_name]={'frame'=>frame, 'file'=>_file, 'text'=>_title, 'image' => _image, 'raisecmd'=>_raise_proc}
-    frame
+    if _adapter.nil?
+      adapted_frame = TkFrameAdapter.new(@parent.hinner_frame)
+    else
+      adapted_frame = _adapter
+    end
+    adapted_frame.attach_frame(frame)
+    adapted_frame.raise
+    @pages[_name]={'frame'=>adapted_frame, 'file'=>_file, 'text'=>_title, 'image' => _image, 'raisecmd'=>_raise_proc}
+    adapted_frame
   end
 
   def delete_page(_name)
     if @usetabs
       @enb.delete(_name)
     end
-    @pages.delete(_name)['frame'].destroy 
+    adapter_frame = @pages.delete(_name)['frame']
+    adapter_frame.frame.destroy if adapter_frame.frame
+    adapter_frame.destroy 
   end
 
   def page_bind(_event, _proc)
+    @page_binds[_event] = _proc
     if @usetabs
-      @enb.tabbind("Button-3",_proc)
+      @enb.tabbind_append("Button-3",_proc)
+      @parent.root.top_text_bind_remove("Button-3")   
     else
-    
+      @parent.root.top_text_bind_append("Button-3", _proc)   
     end    
   end
 
@@ -3648,7 +3712,7 @@ class ReHighlightScanner < HighlightScanner
   end
 end
   
-class CoderayHighlightScanner < HighlightScanner
+class CoderayHighlightScannerOld < HighlightScanner
   def initialize(_langs_conf)
     super(_langs_conf)
     require 'coderay'
@@ -3683,6 +3747,70 @@ class CoderayHighlightScanner < HighlightScanner
           ar = tok[0].split
           row+=tok[0].count("\n")
 
+          begin_gap = ar[-1]
+          if begin_gap && tok[0][-1..-1]!="\n"
+            col = begin_gap.length
+          else
+            col = 0
+          end
+        else
+          col+=toklength
+        end
+        t_end="#{row}.#{col}"
+        if tok[1]!=:space
+          tags_map[tok[1]] = [] if tags_map[tok[1]].nil?
+          tags_map[tok[1]] << [t_begin,t_end]
+          #Arcadia.console(self, 'msg'=>"#{tok[1]}=#{[t_begin,t_end]}", 'level'=>'error')          
+          #p [t_begin,t_end]
+        end
+      end  
+    }
+    tags_map
+  end
+end
+
+class CoderayHighlightScanner < HighlightScanner
+
+  def initialize(_langs_conf)
+    super(_langs_conf)
+    require 'coderay'
+  end
+
+  def highlight_tags(_row_begin,_code)
+    super(_row_begin,_code)
+    c_scanner = CodeRay::Scanners[@lang].new _code
+    row=_row_begin
+    col=0
+    tags_map = Hash.new 
+    c_scanner.tokens.each{|t|
+      #p tok
+      if @i.nil?
+        @tok = []
+        @tok << t
+        @i = 1
+        next
+      else
+        @tok << t
+        @i = nil
+      end 
+      tok = @tok
+      
+      #p tok
+      
+      if tok[1]==:space && tok[0].include?("\n")
+        row+=tok[0].count("\n")
+        begin_gap = tok[0].split("\n")[-1]
+        if begin_gap && tok[0][-1..-1]!="\n"
+          col = begin_gap.length
+        else
+          col = 0
+        end
+      elsif !([:open, :close, :begin_group,:end_group].include?(tok[0])&& tok[1].class==Symbol)
+        toklength = tok[0].length
+        t_begin="#{row}.#{col}"
+        if tok[0].include?("\n")
+          ar = tok[0].split("\n")
+          row+=tok[0].count("\n")
           begin_gap = ar[-1]
           if begin_gap && tok[0][-1..-1]!="\n"
             col = begin_gap.length
@@ -3851,7 +3979,8 @@ class AgMultiEditor < ArcadiaExtPlus
 
   def on_build(_event)
 #    self.frame.hinner_frame.bind_append("Enter", proc{activate})
-    @main_frame = AgMultiEditorView.new(self.frame, conf('use-tabs')=='yes')
+    @usetabs = conf('use-tabs')=='yes'
+    @main_frame = AgMultiEditorView.new(self.frame, @usetabs)
     @@outline_bar = AgEditorOutlineToolbar.new(self) if !defined?(@@outline_bar)
     create_find # this is the "find within current file" one
     begin
@@ -3862,7 +3991,7 @@ class AgMultiEditor < ArcadiaExtPlus
     frame.root.add_button(
       self.name,
       'Close current',
-      proc{Arcadia.process_event(CloseCurrentTabEvent.new(self))}, 
+      proc{self.activate;Arcadia.process_event(CloseCurrentTabEvent.new(self))}, 
       CLOSE_DOCUMENT_GIF)
     frame.root.add_sep(self.name, 1)
     @buffer_number = TkVariable.new
@@ -3939,7 +4068,7 @@ class AgMultiEditor < ArcadiaExtPlus
     @buffer_menu.delete(to_del) if to_del != -1
   end
 
-  def mod_buffer_menu_item(_file, _newtext)
+  def mod_buffer_menu_item(_file, _newtext, _newvalue = nil)
     to_mod = -1
     i_end = @buffer_menu.index('end')
     0.upto(i_end){|j|
@@ -3953,6 +4082,41 @@ class AgMultiEditor < ArcadiaExtPlus
       end
     }
     @buffer_menu.entryconfigure(to_mod, 'label'=>_newtext) if to_mod != -1
+    if to_mod != -1 && _newvalue != nil
+      is_file = File.exists?(_newvalue)
+      @buffer_menu.entryconfigure(to_mod, 
+        :value => _newvalue,
+        :image=> Arcadia.file_icon(_newvalue),
+        :command=>proc{
+          if is_file
+            open_file(_newvalue)
+          else
+            open_buffer(tab_name(_newvalue))             
+          end
+        }
+      )
+    end
+  end
+
+  def refresh_selected_buffer_menu_item
+    i_end = @buffer_menu.index('end')
+    p_name =  @main_frame.raise
+    if @tabs_editor[p_name] && @tabs_editor[p_name].file
+      to_select = @tabs_editor[p_name].file
+    else
+      to_select = unname_modified(tab_title_by_tab_name(p_name))
+    end
+    0.upto(i_end){|j|
+      type = @buffer_menu.menutype(j)
+      if type != 'separator'
+        value = @buffer_menu.entrycget(j,'value')
+        if value == to_select
+          @buffer_menu.entryconfigure(j, 'state'=>'disabled')
+        else
+          @buffer_menu.entryconfigure(j, 'state'=>'normal')
+        end
+      end
+    }
   end
 
   def on_initialize(_event)
@@ -3975,18 +4139,14 @@ class AgMultiEditor < ArcadiaExtPlus
     if raised && _event.focus_widget == raised.text
       if [CutTextEvent, PasteTextEvent, UndoTextEvent, RedoTextEvent].include?(_event.class)
         if raised.highlighting
-          line_begin_index = raised.text.index('@0,0')
-          line_begin = line_begin_index.split('.')[0].to_i
-          line_end = raised.text.index('@0,'+TkWinfo.height(raised.text).to_s).split('.')[0].to_i + 1
-          raised.reset_highlight(line_begin)
-          raised.rehighlightlines(line_begin,line_end,true)
+          raised.refresh_visible_highlighting
         else
           raised.check_modify
         end      
       end
     end
   end
-
+  
   def highlight_scanner(_ext=nil)
     return nil if _ext.nil?
     scanner = nil
@@ -4081,7 +4241,7 @@ class AgMultiEditor < ArcadiaExtPlus
 
   def pop_up_menu
     @pop_up = TkMenu.new(
-      :parent=>@main_frame.root_frame,
+      :parent=> self.frame.hinner_frame,
       :tearoff=>0,
       :title => 'Menu'
     )
@@ -4140,7 +4300,11 @@ class AgMultiEditor < ArcadiaExtPlus
       proc{|*x|
         _x = TkWinfo.pointerx(@main_frame.root_frame)
         _y = TkWinfo.pointery(@main_frame.root_frame)
-        @selected_tab_name_from_popup = x[0].split(':')[0]
+        if @usetabs
+          @selected_tab_name_from_popup = x[0].split(':')[0]
+        else
+          @selected_tab_name_from_popup = @main_frame.raise
+        end
         _index = @main_frame.index(@selected_tab_name_from_popup)
         if _index == -1 
           @selected_tab_name_from_popup = 'ff'+@selected_tab_name_from_popup
@@ -4386,6 +4550,22 @@ class AgMultiEditor < ArcadiaExtPlus
     _e.show_hide_line_numbers if _e
   end
 
+  def show_hide_tabs
+    if active? 
+      if @usetabs
+        @main_frame.switch_2_notabs
+        @usetabs = false
+        Arcadia['conf']["#{@name}.use-tabs"]='no'
+      else
+        @main_frame.switch_2_tabs
+        @usetabs = true
+        Arcadia['conf']["#{@name}.use-tabs"]='yes'
+      end
+    else
+      active_instance.show_hide_tabs
+    end
+  end
+
   def on_finalize(_event)
     @batch_files = true
     _files =''
@@ -4561,6 +4741,15 @@ class AgMultiEditor < ArcadiaExtPlus
   def unname_read_only(_name)
     return _name.gsub("[READ-ONLY] ",'')
   end
+
+  def name_modified(_name)
+    '(...)'+_name
+  end
+
+  def unname_modified(_name)
+    return _name.gsub("(...)",'')
+  end
+  
   
   def change_tab_set_read_only(_tab)
     _new_name = name_read_only(@main_frame.page_title(page_name(_tab)))
@@ -4576,8 +4765,7 @@ class AgMultiEditor < ArcadiaExtPlus
 
 
   def change_tab_set_modify(_tab)
-    _new_name = '(...)'+@main_frame.page_title(page_name(_tab))
-    change_tab_title(_tab, _new_name)
+    change_tab_title(_tab, name_modified(@main_frame.page_title(page_name(_tab))))
   end
 
   def tab_title(_tab)
@@ -4616,7 +4804,7 @@ class AgMultiEditor < ArcadiaExtPlus
   def change_tab_reset_modify(_tab)
     #_new_name = @main_frame.enb.itemcget(@tabs_name[_tab], 'text').gsub!("(...)",'')
     if @main_frame.index(@main_frame.page_name(_tab))
-	    _new_name = @main_frame.page_title(page_name(_tab)).gsub!("(...)",'')
+	    _new_name = unname_modified(@main_frame.page_title(page_name(_tab)))
      	if _new_name
         change_tab_title(_tab, _new_name)
      	end
@@ -4643,10 +4831,16 @@ class AgMultiEditor < ArcadiaExtPlus
     end
   end
 
-  def change_tab_title(_tab, _new_text)
+  def change_tab_title(_tab, _new_text, _new_file=nil)
     p_name = page_name(_tab)
     old_text = @main_frame.page_title(p_name)
-    mod_buffer_menu_item(@main_frame.page(p_name)['file'], _new_text)
+
+    if @tabs_editor[p_name] && @tabs_editor[p_name].file
+      mod_buffer_menu_item(@tabs_editor[p_name].file, _new_text, _new_file)
+    else
+      mod_buffer_menu_item(unname_modified(tab_title_by_tab_name(p_name)), _new_text)
+    end
+#    mod_buffer_menu_item(@main_frame.page(p_name)['file'], _new_text)
     @main_frame.page_title(p_name, _new_text)
   end
 
@@ -4658,15 +4852,15 @@ class AgMultiEditor < ArcadiaExtPlus
     _tab_name=tab_file_name(_old_file)
     _tab = @main_frame.page_frame(_tab_name)
     e =  @tabs_editor[_tab_name]
-    e.new_file_name(_new_file) if e
     change_file_name(_tab, _new_file)
+    e.new_file_name(_new_file) if e
   end
 
   def change_file_name(_tab, _new_file)
     @tabs_file[page_name(_tab)] = _new_file
     @raw_buffer_name[tab_file_name(_new_file)]=page_name(_tab)
     _new_label = File.basename(_new_file)
-    change_tab_title(_tab, _new_label)
+    change_tab_title(_tab, _new_label, _new_file)
     change_tab_icon(_tab, _new_label)
     #change_frame_caption(_new_file)
     #@tabs_editor[tab_file_name(_new_file)]=@tabs_editor[page_name(_tab)]
@@ -4756,7 +4950,7 @@ class AgMultiEditor < ArcadiaExtPlus
     _title = @tabs_file[_name] != nil ? File.basename(@tabs_file[_name]) :_name
     Arcadia.broadcast_event(BufferRaisedEvent.new(self, 'title'=>_title, 'file'=>@tabs_file[_name], 'lang'=>_lang ))
     Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>_e.text)) if _e
-
+    refresh_selected_buffer_menu_item
     #EditorContract.instance.buffer_raised(self, 'title'=>_title, 'file'=>@tabs_file[_name])
   end
   
@@ -5045,7 +5239,7 @@ class AgMultiEditor < ArcadiaExtPlus
     if @tabs_editor[_name] && @tabs_editor[_name].file
       del_buffer_menu_item(@tabs_editor[_name].file)
     else
-      del_buffer_menu_item(tab_title_by_tab_name(_name))
+      del_buffer_menu_item(unname_modified(tab_title_by_tab_name(_name)))
     end
     @tabs_editor.delete(_name)
     @tabs_file.delete(_name)

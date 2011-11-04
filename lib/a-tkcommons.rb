@@ -93,28 +93,28 @@ end
 
 module TkMovable
   def start_moving(_moving_obj=self, _moved_obj=self)
-    @x0 = 0
-    @y0 = 0
-    @moving_obj = _moving_obj
-    @moved_obj = _moved_obj
-    @moving_obj.bind_append("B1-Motion", proc{|x, y| moving_do_move_obj(x,y)},"%x %y")
-    @moving_obj.bind_append("ButtonPress-1", proc{|e| moving_do_press(e.x, e.y)})
+    @x0_m = 0
+    @y0_m = 0
+    @moving_obj_m = _moving_obj
+    @moved_obj_m = _moved_obj
+    @moving_obj_m.bind_append("B1-Motion", proc{|x, y| moving_do_move_obj(x,y)},"%x %y")
+    @moving_obj_m.bind_append("ButtonPress-1", proc{|e| moving_do_press(e.x, e.y)})
   end
 
   def stop_moving
-    @moving_obj.bind_remove("B1-Motion")
-    @moving_obj.bind_remove("ButtonPress-1")
+    @moving_obj_m.bind_remove("B1-Motion")
+    @moving_obj_m.bind_remove("ButtonPress-1")
   end
 
   def moving_do_press(_x, _y)
-    @x0 = _x
-    @y0 = _y
+    @x0_m = _x
+    @y0_m = _y
   end
 
   def moving_do_move_obj(_x, _y)
-    _x = TkPlace.info(@moved_obj)['x'] + _x - @x0
-    _y = TkPlace.info(@moved_obj)['y'] + _y - @y0
-    @moved_obj.place('x'=>_x, 'y'=>_y)
+    _x = TkPlace.info(@moved_obj_m)['x'] + _x - @x0_m
+    _y = TkPlace.info(@moved_obj_m)['y'] + _y - @y0_m
+    @moved_obj_m.place('x'=>_x, 'y'=>_y)
   end
 
 end
@@ -123,32 +123,32 @@ module TkResizable
   MIN_WIDTH = 50
   MIN_HEIGHT = 50
   def start_resizing(_moving_obj=self, _moved_obj=self)
-    @x0 = 0
-    @y0 = 0
-    @moving_obj = _moving_obj
-    @moved_obj = _moved_obj
-    @moving_obj.bind_append("B1-Motion", proc{|x, y| resizing_do_move_obj(x,y)},"%x %y")
-    @moving_obj.bind_append("ButtonPress-1", proc{|e| resizing_do_press(e.x, e.y)})
+    @x0_r = 0
+    @y0_r = 0
+    @moving_obj_r = _moving_obj
+    @moved_obj_r = _moved_obj
+    @moving_obj_r.bind_append("B1-Motion", proc{|x, y| resizing_do_move_obj(x,y)},"%x %y")
+    @moving_obj_r.bind_append("ButtonPress-1", proc{|e| resizing_do_press(e.x, e.y)})
   end
 
   def stop_resizing
-    @moving_obj.bind_remove("B1-Motion")
-    @moving_obj.bind_remove("ButtonPress-1")
+    @moving_obj_r.bind_remove("B1-Motion")
+    @moving_obj_r.bind_remove("ButtonPress-1")
   end
 
   def resizing_do_press(_x, _y)
-    @x0 = _x
-    @y0 = _y
+    @x0_r = _x
+    @y0_r = _y
   end
 
   def resizing_do_move_obj(_x, _y)
-    _width0 = TkPlace.info(@moved_obj)['width']
-    _height0 = TkPlace.info(@moved_obj)['height']
-    _width = _width0 + _x - @x0
-    _height = _height0 + _y -@y0
+    _width0 = TkPlace.info(@moved_obj_r)['width']
+    _height0 = TkPlace.info(@moved_obj_r)['height']
+    _width = _width0 + _x - @x0_r
+    _height = _height0 + _y -@y0_r
     _width = MIN_WIDTH if _width < MIN_WIDTH
     _height = MIN_HEIGHT if _height < MIN_HEIGHT
-    @moved_obj.place('width'=>_width, 'height'=>_height)
+    @moved_obj_r.place('width'=>_width, 'height'=>_height)
   end
 
 end
@@ -262,7 +262,7 @@ class AGTkObjPlace
 end
 
 class TkFrameAdapter < TkFrame
-  include TkMovable
+  #include TkMovable
   attr_reader :frame
   def initialize(scope_parent=nil, args=nil)
     newargs =  Arcadia.style('panel')
@@ -271,22 +271,21 @@ class TkFrameAdapter < TkFrame
     end
     super(scope_parent, newargs)
     @scope_parent = scope_parent
-    @movable = true
-    #ObjectSpace.define_finalizer(self, self.method(:detach_frame).to_proc)
+    #@movable = false
   end
 
-  def add_moved_by(_obj)
-    @movable = true
-    start_moving(_obj, self)
-  end
+#  def add_moved_by(_obj)
+#    @movable = true
+#    start_moving(_obj, self)
+#  end
 
   def detach_frame
     if @frame
-      if @movable
-        @frame.bind_remove("Configure")
-        @frame.bind_remove("Map")
-        @frame.bind_remove("Unmap")
-      end
+#      if @movable
+#        @frame.bind_remove("Configure")
+#        @frame.bind_remove("Map")
+#        @frame.bind_remove("Unmap")
+#      end
       @frame = nil
       self.unmap
     end
@@ -304,11 +303,11 @@ class TkFrameAdapter < TkFrame
     @frame = _frame
     @frame_manager = TkWinfo.manager(@frame)
     refresh
-    if @movable
-      @frame.bind_append("Configure",proc{refresh})
-      @frame.bind_append("Map",proc{refresh})
-      @frame.bind_append("Unmap",proc{unmap  if TkWinfo.mapped?(@frame)})
-    end
+#    if @movable
+#      @frame.bind_append("Configure",proc{refresh})
+#      @frame.bind_append("Map",proc{refresh})
+#      @frame.bind_append("Unmap",proc{unmap  if TkWinfo.mapped?(@frame)})
+#    end
     self
   end
 
@@ -1037,6 +1036,14 @@ class TkTitledFrame < TkBaseTitledFrame
     end
   end
 
+  def top_text_bind_append(_tkevent, _proc=nil)
+    @right_label.bind_append(_tkevent, _proc)
+  end
+
+  def top_text_bind_remove(_tkevent)
+    @right_label.bind_remove(_tkevent)
+  end
+
   def top_text_hint(_text=nil)
     if _text.nil?
       res = ''
@@ -1107,7 +1114,8 @@ class TkTitledFrame < TkBaseTitledFrame
     if @state == 'normal'
       p = TkWinfo.parent(self)
       while (p != nil) && (TkWinfo.manager(p)=='place')
-        Tk.messageBox('message'=>p.to_s)
+        Arcadia.dialog(self, 'msg'=>p.to_s)
+        #Tk.messageBox('message'=>p.to_s)
         @ap << p
         @apx << TkPlace.info(p)['x']
         @apy << TkPlace.info(p)['y']
@@ -1308,6 +1316,7 @@ class TkTitledFrameAdapter < TkTitledFrame
 #  end
 
   def change_adapters(_name, _adapters)
+    forge_transient_adapter(_name)
     @transient_frame_adapter[_name][:action] = _adapters[:action]
     @transient_frame_adapter[_name][:state] = _adapters[:state]
     @transient_frame_adapter[_name][:action].detach_frame
@@ -1326,18 +1335,17 @@ class TkTitledFrameAdapter < TkTitledFrame
   end
 
   def clear_transient_adapters(_name)
-    @@instances.each{|i| i.transient_frame_adapter.delete(_name).clear if i.transient_frame_adapter[_name] }
-#    if @transient_frame_adapter[_name]
-#      if @transient_frame_adapter[_name][:action]
-#        @transient_frame_adapter[_name][:action].frame.destroy
-#        @transient_frame_adapter[_name].delete(:action).destroy
-#      end
-#      if @transient_frame_adapter[_name][:state]
-#        @transient_frame_adapter[_name][:state].frame.destroy 
-#        @transient_frame_adapter[_name].delete(:state).destroy 
-#      end
-#      @transient_frame_adapter.delete(_name).clear
-#    end
+    @@instances.each{|i| 
+      if i.transient_frame_adapter[_name] 
+        if i.transient_frame_adapter[_name][:action]
+          i.transient_frame_adapter[_name][:action].detach_frame
+        end
+        if i.transient_frame_adapter[_name][:state]
+          i.transient_frame_adapter[_name][:state].detach_frame
+        end
+        i.transient_frame_adapter.delete(_name).clear
+      end 
+    }
   end
 
   def add_button(_sender_name, _label,_proc=nil,_image=nil, _side= 'right')
@@ -1864,8 +1872,7 @@ module TkScrollableWidget
       end
       @v_scroll_command.call(first,last) if !@v_scroll_command.nil?
       @last_y_last = last if last.to_f < 1
-    end
-    
+    end    
   end
 
   def add_xscrollcommand(cmd=Proc.new)
@@ -2035,7 +2042,8 @@ class KeyTest < TkFloatTitledFrame
     super(_parent)
 
     @ttest = TkText.new(self.frame){
-      background  '#FFF454'
+      background  Arcadia.conf("background")
+      foreground  Arcadia.conf("foreground")
       #place('relwidth' => '1','relx' => 0,'x' => '0','y' => '0','relheight' => '1','rely' => 0,'height' => '0','bordermode' => 'inside','width' => '0')
     }.bind("KeyPress"){|e|
       @ttest.insert('end'," "+e.keysym+" ")

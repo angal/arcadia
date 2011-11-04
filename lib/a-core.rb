@@ -73,8 +73,6 @@ class Arcadia < TkApplication
     )
     #.place('x'=>0,'y'=>0,'relwidth'=>1,'relheight'=>1)
     
-    
-    
     @mf_root.show_statusbar('status')
     Arcadia.new_statusbar_item("Platform").text=RUBY_PLATFORM
     self['toolbar']= ArcadiaMainToolbar.new(self, @mf_root.add_toolbar)
@@ -265,11 +263,11 @@ class Arcadia < TkApplication
   end
 
   def Arcadia.gem_available?(_gem)
-      if Gem.respond_to?(:available?)
-          return Gem.available?(_gem)
-      else
-          return !Gem.source_index.find_name(_gem).empty?
-      end
+    if Gem.respond_to?(:available?)
+      return Gem.available?(_gem)
+    else
+      return !Gem.source_index.find_name(_gem).empty?
+    end
   end
 
   def check_gems_dependences(_ext)
@@ -329,12 +327,18 @@ class Arcadia < TkApplication
     }
     begin
       _build_event = Arcadia.process_event(BuildEvent.new(self))
-    rescue Exception
+    rescue Exception => e
       ret = false
       msg = "During build event processing(#{$!.class.to_s}) : #{$!} at : #{$@.to_s}"
-      ans = Tk.messageBox('icon' => 'error', 'type' => 'abortretryignore',
-      'title' => "(Arcadia) Build face", 'parent' => @root,
-      'message' => msg)
+      ans = Arcadia.dialog(self, 
+            'type'=>'abort_retry_ignore', 
+            'title' => "(Arcadia) During build event processing", 
+            'msg'=>msg,
+            'exception'=>e,
+            'level'=>'error')
+#      ans = Tk.messageBox('icon' => 'error', 'type' => 'abortretryignore',
+#      'title' => "(Arcadia) Build face", 'parent' => @root,
+#      'message' => msg)
       if  ans == 'abort'
         raise
         exit
@@ -388,12 +392,18 @@ class Arcadia < TkApplication
 	      require "#{Dir.pwd}/#{source}" 
       end
       @exts_loaded << _extension
-    rescue Exception,LoadError
+    rescue Exception,LoadError => e
       ret = false
       msg = "Loading \"#{_extension}\" (#{$!.class.to_s}) : #{$!} at : #{$@.to_s}"
-      ans = Tk.messageBox('icon' => 'error', 'type' => 'abortretryignore',
-      'title' => "(Arcadia) Extensions '#{_extension}'", 'parent' => @root,
-      'message' => msg)
+      ans = Arcadia.dialog(self, 
+            'type'=>'abort_retry_ignore', 
+            'title' => "(Arcadia) Extensions '#{_extension}'", 
+            'msg'=>msg,
+            'exception'=>e,
+            'level'=>'error')
+#      ans = Tk.messageBox('icon' => 'error', 'type' => 'abortretryignore',
+#      'title' => "(Arcadia) Extensions '#{_extension}'", 'parent' => @root,
+#      'message' => msg)
       if  ans == 'abort'
         raise
         exit
@@ -420,12 +430,18 @@ class Arcadia < TkApplication
         end
         publish(_extension, klass.new(self, _extension))
       end
-    rescue Exception,LoadError
+    rescue Exception,LoadError => e
       ret = false
-      msg = "Loading \"#{_extension}\" (#{$!.class.to_s}) : #{$!} at : #{$@.to_s}"
-      ans = Tk.messageBox('icon' => 'error', 'type' => 'abortretryignore',
-      'title' => "(Arcadia) Extensions '#{_extension}'", 'parent' => @root,
-      'message' => msg)
+      msg = "Loading \"#{_extension}\" (#{$!.class.to_s}) : #{$!} at : #{$@.to_s}" 
+      ans = Arcadia.dialog(self, 
+            'type'=>'abort_retry_ignore', 
+            'title' => "(Arcadia) Extensions '#{_extension}'", 
+            'msg'=>msg,
+            'exception'=>e,
+            'level'=>'error')
+#      ans = Tk.messageBox('icon' => 'error', 'type' => 'abortretryignore',
+#      'title' => "(Arcadia) Extensions '#{_extension}'", 'parent' => @root,
+#      'message' => msg)
       if  ans == 'abort'
         raise
         exit
@@ -441,11 +457,17 @@ class Arcadia < TkApplication
   def ext_method(_extension, _method)
     begin
       self[_extension].send(_method)
-    rescue Exception
+    rescue Exception => e
       msg = _method.to_s+' "'+_extension.to_s+'"'+" ("+$!.class.to_s+") "+" : "+$! + "\n at : "+$@.to_s
-      ans = Tk.messageBox('icon' => 'warning', 'type' => 'abortretryignore',
-      'title' => '(Arcadia) Extensions', 'parent' => @root,
-      'message' => msg)
+      ans = Arcadia.dialog(self, 
+            'type'=>'abort_retry_ignore', 
+            'title' => "(Arcadia) Extensions", 
+            'msg'=>msg,
+            'exception'=>e,
+            'level'=>'error')
+#      ans = Tk.messageBox('icon' => 'warning', 'type' => 'abortretryignore',
+#      'title' => '(Arcadia) Extensions', 'parent' => @root,
+#      'message' => msg)
       if ans == 'abort'
         raise
         exit
@@ -506,7 +528,12 @@ class Arcadia < TkApplication
             
           rescue Exception
             msg = "Loading layout: (#{$!.class.to_s} : #{$!.to_s} at : #{$@.to_s})"
-            if Arcadia.dialog(self, 'type'=>'ok_cancel', 'level'=>'error','title' => '(Arcadia) Layout', 'msg'=>msg)=='cancel'
+            if Arcadia.dialog(self, 
+              'type'=>'ok_cancel', 
+              'level'=>'error',
+              'title' => '(Arcadia) Layout',
+              'exception' => $!, 
+              'msg'=>msg)=='cancel'
               raise
               exit
             else
@@ -791,6 +818,7 @@ class Arcadia < TkApplication
             'type'=>'ok_cancel', 
             'title' => "(Arcadia) #{_user_control.class::SUF}", 
             'msg'=>msg,
+            'exception'=>$!,
             'level'=>'error')=='cancel'
             raise
             exit
@@ -1200,9 +1228,12 @@ class Arcadia < TkApplication
   end
 
   def Arcadia.runtime_error(_e, _title="Runtime Error")
-    ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::RUNTIME_ERROR_TYPE,"title"=>"#{_title}:#{_e.message}", "detail"=>_e.backtrace).go!
+    ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::RUNTIME_ERROR_TYPE,"title"=>"#{_title} : [#{_e.class}] #{_e.message} at :", "detail"=>_e.backtrace).go!
   end 
 
+  def Arcadia.runtime_error_msg(_msg, _title="Runtime Error")
+    ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::RUNTIME_ERROR_TYPE,"title"=>"#{_title} at :", "detail"=>_msg).go!
+  end 
 end
 
 class ArcadiaUserControl
@@ -1915,7 +1946,7 @@ class ArcadiaProblemsShower
   def initialize_gui
     # float_frame
     args = {'width'=>600, 'height'=>300, 'x'=>400, 'y'=>100}
-    @ff = @arcadia.layout.new_float_frame(args).hide
+    @ff = @arcadia.layout.add_float_frame(args).hide
     @ff.title("Arcadia problems")
 
     #tree
@@ -2293,16 +2324,29 @@ class ArcadiaDialogManager
     end
     tktype = type.gsub('_','').downcase
     
+    if _event.msg && _event.msg.length > 500
+      msg = _event.msg[0..500]+' ...'
+    else
+      msg = _event.msg
+    end
+    
     tkdialog =  Tk::BWidget::MessageDlg.new(
             'icon' => icon,
             'bg' => Arcadia.conf('background'),
             'fg' => Arcadia.conf('foreground'),
             'type' => tktype,
             'title' => _event.title, 
-            'message' => _event.msg)
+            'message' => msg)
             
     tkdialog.configure('font'=>'courier 6')        
     res = tkdialog.create
+    if _event.level == 'error'
+      if _event.exception != nil
+        Arcadia.runtime_error(_event.exception, _event.title)
+      else
+        Arcadia.runtime_error_msg(_event.msg, _event.title)
+      end
+    end
     _event.add_result(self, 'value'=>res_array[res.to_i])
   end
 
@@ -2645,6 +2689,9 @@ class ArcadiaLayout
     saved_root_splitted_frames = @panels[_domain]['root_splitted_frames']
     _saved = Hash.new
     _saved.update(@panels[_domain]['sons'])
+    _saved.each_key{|name|
+      @panels['nil']['root'].change_adapters(name, @panels[_domain]['root'].transient_frame_adapter[name])
+    }     
     geometry = TkWinfo.geometry(@panels[_domain]['root'])
     width = geometry.split('x')[0].to_i/2
     _saved.each{|name,ffw|
@@ -2657,7 +2704,8 @@ class ArcadiaLayout
     build_titled_frame(domain_name(_row.to_i,_col.to_i+1))
     _saved.each{|name,ffw|
       ffw.domain = _domain
-      register_panel(ffw, ffw.hinner_frame)    
+      register_panel(ffw, ffw.hinner_frame)
+  	   @panels[_domain]['root'].change_adapters(name, @panels['nil']['root'].transient_frame_adapter[name])    
     }
     if saved_root_splitted_frames
       @panels[_domain]['root_splitted_frames']=saved_root_splitted_frames
@@ -2669,6 +2717,9 @@ class ArcadiaLayout
     saved_root_splitted_frames = @panels[_domain]['root_splitted_frames']
     _saved = Hash.new
     _saved.update(@panels[_domain]['sons'])
+    _saved.each_key{|name|
+      @panels['nil']['root'].change_adapters(name, @panels[_domain]['root'].transient_frame_adapter[name])
+    }    
     geometry = TkWinfo.geometry(@panels[_domain]['root'])
     height = geometry.split('+')[0].split('x')[1].to_i/2
     _saved.each{|name,ffw|
@@ -2681,7 +2732,8 @@ class ArcadiaLayout
     build_titled_frame(domain_name(_row.to_i+1,_col.to_i))
     _saved.each{|name,ffw|
       ffw.domain = _domain
-      register_panel(ffw, ffw.hinner_frame)    
+      register_panel(ffw, ffw.hinner_frame)
+  	   @panels[_domain]['root'].change_adapters(name, @panels['nil']['root'].transient_frame_adapter[name])
     }
     if saved_root_splitted_frames
       @panels[_domain]['root_splitted_frames']=saved_root_splitted_frames
@@ -2888,6 +2940,9 @@ class ArcadiaLayout
     else
       other_source_save = Hash.new
       other_source_save.update(@panels[other_domain]['sons']) if @panels[other_domain]
+      other_source_save.each_key{|name|
+        @panels['nil']['root'].change_adapters(name, @panels[other_domain]['root'].transient_frame_adapter[name])
+      }     
       other_source_save.each{|name,ffw|
         unregister_panel(ffw, false, false)
       }
@@ -2899,6 +2954,7 @@ class ArcadiaLayout
       other_source_save.each{|name,ffw|
         ffw.domain = other_domain
         register_panel(ffw, ffw.hinner_frame)
+    	   @panels[other_domain]['root'].change_adapters(name, @panels['nil']['root'].transient_frame_adapter[name])
       }
       parent_splitted_adapter = find_splitted_frame(@panels[other_domain]['root'])
       if  parent_splitted_adapter
@@ -3174,7 +3230,7 @@ class ArcadiaLayout
         root_frame = pan['root'].frame
         pan['root'].title(_title)
         pan['root'].restore_caption(_name)
-   	pan['root'].change_adapters_name(_name)
+   	    pan['root'].change_adapters_name(_name)
         if !root_frame.instance_of?(TkFrameAdapter) && num==0
           if _adapter
             adapter = _adapter
@@ -3206,7 +3262,7 @@ class ArcadiaLayout
   					    pan['root'].title(api.title)
   					    pan['root'].restore_caption(api.name) 
   					    pan['root'].change_adapters_name(api.name)
-         	         Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>pan['sons'][api.name].extension_name, 'frame_name'=>pan['sons'][api.name].name))
+                Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>pan['sons'][api.name].extension_name, 'frame_name'=>pan['sons'][api.name].name))
 #               changed
 #               notify_observers('RAISE', api.name)
             }
@@ -3330,7 +3386,7 @@ class ArcadiaLayout
     @panels[_domain_name]['root'].frame
   end
   
-  def new_float_frame(_args=nil)
+  def add_float_frame(_args=nil)
     if _args.nil?
      _args = {'x'=>10, 'y'=>10, 'width'=>100, 'height'=>100}
     end

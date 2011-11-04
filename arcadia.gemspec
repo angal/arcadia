@@ -4,8 +4,8 @@
 require 'rubygems'
   SPEC = Gem::Specification.new do |s|
   s.name = "arcadia"
-  s.version = "0.10.0"
-  s.date = "2011-06-03"
+  s.version = "0.11.0"
+  s.date = "2011-11-04"
   s.author = "Antonio Galeone"
   s.email = "antonio-galeone@rubyforge.org"
   s.homepage = "http://arcadia.rubyforge.org"
@@ -32,7 +32,7 @@ require 'rubygems'
   s.default_executable = 'arcadia'
   s.rdoc_options << '--title' << 'Arcadia Documentation' <<  '--main'  << 'README' << '-q'
   s.extra_rdoc_files = ["README"]
-  s.add_dependency("coderay")
+  s.add_dependency("coderay",">= 1.0.3")
 #  s.add_dependency("ruby-debug", ">= 0.9.3") # TODO 
 #  s.add_dependency("rdp-rbeautify") # prettifier plugin TODO uncomment once published
 #  s.add_dependency("whichr")

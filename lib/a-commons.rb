@@ -176,7 +176,7 @@ class FloatFrameWrapper < AbstractFrameWrapper
       end
 
       args = {'width'=>a[0], 'height'=>a[1], 'x'=>a[2], 'y'=>a[3]}
-      @obj = @arcadia.layout.new_float_frame(args)
+      @obj = @arcadia.layout.add_float_frame(args)
       @obj.title(@title) if @title
     end
   end
@@ -213,10 +213,6 @@ class ArcadiaExt
   def initialize(_arcadia, _name=nil)
     @arcadia = _arcadia
     @arcadia.register(self)
-    Arcadia.attach_listener(self, BuildEvent)
-    Arcadia.attach_listener(self, InitializeEvent)
-    Arcadia.attach_listener(self, ExitQueryEvent)
-    Arcadia.attach_listener(self, FinalizeEvent)
     @name = _name
     @frames = Array.new
     @frames_points = conf_array("#{_name}.frames")
@@ -225,6 +221,10 @@ class ArcadiaExt
     @float_frames = Array.new
     @float_geometries = conf_array("#{_name}.float_frames")
     @float_labels = conf_array("#{_name}.float_labels")
+    Arcadia.attach_listener(self, BuildEvent)
+    Arcadia.attach_listener(self, InitializeEvent)
+    Arcadia.attach_listener(self, ExitQueryEvent)
+    Arcadia.attach_listener(self, FinalizeEvent)
     #ObjectSpace.define_finalizer(self, self.method(:finalize).to_proc)
   end
 
@@ -273,6 +273,10 @@ class ArcadiaExt
   end
 
   def frame(_n=0,create_if_not_exist=true)
+    if @frames_points[_n].nil?
+      @frames_points[_n] = '0.0'
+      Arcadia['conf']["#{@name}.frames"]+=',0.0'
+    end  
     if @frames[_n] == nil && @frames_points[_n] && create_if_not_exist
       (@frames_labels[_n].nil?)? _label = @name : _label = @frames_labels[_n]
       (@frames_names[_n].nil?)? _name = @name : _name = @frames_names[_n]
@@ -361,11 +365,11 @@ class ArcadiaExtPlus < ArcadiaExt
     @@instances = {} if !defined?(@@instances)
     @@main_instance = {} if !defined?(@@main_instance)
     @@active_instance = {} if !defined?(@@active_instance)
-    super(_arcadia, _name)
-    Arcadia.attach_listener(self, ActivateInstanceEvent)
     @@instances[self.class] = [] if @@instances[self.class] == nil
     @@instances[self.class] << self
     @@main_instance[self.class] = self if @@main_instance[self.class] == nil
+    Arcadia.attach_listener(self, ActivateInstanceEvent)
+    super(_arcadia, _name)
     if self.frame != nil
       self.frame.hinner_frame.bind_append("Enter", proc{activate})
       if @@main_instance[self.class] == self
@@ -373,7 +377,7 @@ class ArcadiaExtPlus < ArcadiaExt
         self.name,
         'Duplicate',
         proc{duplicate},
-        PLUS_GIF,
+        PLUS_EX_GIF,
         'left')
         activate(self, false)
       else
@@ -381,7 +385,7 @@ class ArcadiaExtPlus < ArcadiaExt
         self.name,
         'Destroy',
         proc{deduplicate},
-        MINUS_GIF,
+        MINUS_EX_GIF,
         'left')
         activate(self, false)
       end
@@ -419,10 +423,6 @@ class ArcadiaExtPlus < ArcadiaExt
 
   def instances
     @@instances[self.class]
-  end
-
-  def main_instance
-    @@main_instance[self.class]
   end
 
   def instance_index
@@ -642,18 +642,13 @@ module EventBus #(or SourceEvent)
   private :_event_class_stack
 
   def _process_fase(_class, _event, _listeners=nil, _fase_name = nil)
-    # _fase_name cicle
     return if _listeners.nil?
     _fase_name.nil?? suf = '':suf = _fase_name
-    #method_name = 'on_'+suf+_class.to_s.downcase.gsub('event','')
     method_name = _method_name(_class, suf)
-    #p _method_name(_event, suf)+' == '+method_name
-    #p method_name
     if _class != _event.class
-      #sub_method_name = 'on_'+suf+_event.class.to_s.downcase.gsub('event','')
       sub_method_name = _method_name(_event.class, suf)
       _listeners.each do|_listener|
-        next if !(_class.kind_of?(ArcadiaSysEvent) || _event.class.kind_of?(ArcadiaSysEvent)) && _listener.kind_of?(ArcadiaExtPlus) && !_listener.active?
+        next if _listener.kind_of?(ArcadiaExtPlus) && !(_listener.active? || _class == ArcadiaSysEvent || _class.superclass == ArcadiaSysEvent || _event.class.kind_of?(ArcadiaSysEvent))
         if _listener.respond_to?(sub_method_name)
           _listener.send(sub_method_name, _event)
         elsif _listener.respond_to?(method_name)
@@ -663,7 +658,7 @@ module EventBus #(or SourceEvent)
       end
     else
       _listeners.each do|_listener|
-        next if _listener.instance_of?(ArcadiaExtPlus) && !_listener.active?
+        next if _listener.kind_of?(ArcadiaExtPlus) && !(_listener.active? || (_event.kind_of?(ArcadiaSysEvent)))
         _listener.send(method_name, _event) if _listener.respond_to?(method_name)
         break if _event.is_breaked?
       end

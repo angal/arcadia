@@ -1,17 +1,23 @@
 #coderay.classes=annotation,attribute_name,attribute_name_fat,attribute_value,attribute_value_fat,bin,char,class,class_variable,color,comment,constant,content,definition,delimiter,directive,doc,doctype,doc_string,entity,error,escape,exception,float,function,global_variable,hex,important,include,inline,inline_delimiter,instance_variable,integer,interpreted,keyword,key,label,local_variable,modifier,oct,operator_fat,pre_constant,pre_type,predefined,preprocessor,pseudo_class,regexp,reserved,shell,string,symbol,tag,tag_fat,tag_special,type,variable,value,xml_text,insert,delete,change,head,
 
 
-coderay.classes=reserved,method,class,char,comment,instance_variable,constant,string,content,integer
-coderay.hightlight.reserved.foreground=>>>hightlight.reserved.foreground
-coderay.hightlight.reserved.style=bold
+coderay.classes=keyword,method,class,char,comment,instance_variable,class_variable,symbol,constant,string,content,integer
+#coderay.hightlight.reserved.foreground=>>>hightlight.reserved.foreground
+#coderay.hightlight.reserved.style=bold
+coderay.hightlight.keyword.foreground=>>>hightlight.reserved.foreground
+coderay.hightlight.keyword.style=bold
 coderay.hightlight.method.foreground=>>>hightlight.method.foreground
 coderay.hightlight.method.style=bold
+#coderay.hightlight.ident.style=bold
+#coderay.hightlight.delimiter.style=bold
 coderay.hightlight.class.foreground=>>>hightlight.class.foreground
 coderay.hightlight.class.style=bold
 coderay.hightlight.module_name.foreground=>>>hightlight.class.foreground
 coderay.hightlight.module_name.style=bold
 coderay.hightlight.instance_variable.foreground=>>>hightlight.instance_variable.foreground
 coderay.hightlight.instance_variable.style=bold
+coderay.hightlight.class_variable.foreground=>>>hightlight.class_variable.foreground
+coderay.hightlight.class_variable.style=bold
 coderay.hightlight.constant.foreground=>>>hightlight.constant.foreground
 coderay.hightlight.constant.style=bold
 coderay.hightlight.global_variable.foreground=>>>hightlight.global_variable.foreground
@@ -39,3 +45,5 @@ coderay.hightlight.directive.style=bold
 coderay.hightlight.type.foreground=>>>hightlight.reserved.foreground
 coderay.hightlight.type.style=bold
 coderay.hightlight.operator.style=bold
+coderay.hightlight.predefined_type.foreground=>>>hightlight.class.foreground
+coderay.hightlight.exception.foreground=>>>hightlight.exception.foreground

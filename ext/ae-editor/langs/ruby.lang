@@ -1,6 +1,6 @@
 language=ruby
 
-exts=rb,rbw
+exts=rb,rbw,gemspec
 
 scanner=coderay
 #scanner=re

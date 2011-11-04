@@ -1570,9 +1570,12 @@ class RubyDebug < ArcadiaExt
 
   def on_exit_query(_event)
     if @rdc && @rdc.is_alive?
-      query = (Tk.messageBox('icon' => 'question', 'type' => 'yesno',
+      query = (Arcadia.dialog(self, 'icon' => 'question', 'type' => 'yes_no',
       'title' => '(Arcadia) Debug',
       'message' => "Debug in course, do you want to exit?")=='yes')
+#      query = (Tk.messageBox('icon' => 'question', 'type' => 'yesno',
+#      'title' => '(Arcadia) Debug',
+#      'message' => "Debug in course, do you want to exit?")=='yes')
       if query
         debug_quit
         _event.can_exit=true
@@ -1657,10 +1660,15 @@ class RubyDebug < ArcadiaExt
     if @rdc 
       if @rdc.is_alive?
         Thread.new{
-          Tk.messageBox('icon' => 'info', 
-          						'type' => 'ok',
-        						 'title' => '(Arcadia) Debug',
-        						 'message' => "Debug in course, stop it before exit")
+          Arcadia.dialog(self, 
+              'type'=>'ok', 
+              'title' => "(Arcadia) Debug", 
+              'msg'=>"Debug in course, stop it before exit",
+              'level'=>'info')
+#          Tk.messageBox('icon' => 'info', 
+#          						'type' => 'ok',
+#        						 'title' => '(Arcadia) Debug',
+#        						 'message' => "Debug in course, stop it before exit")
         }
       else
         begin
