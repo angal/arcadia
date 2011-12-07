@@ -19,7 +19,7 @@ Some of Arcadia ide project features include:
 == In this release 0.11.0
     
 [Improvements]
-  added some new feature: 
+  added some new features: 
   - now you can open more than one instance of "Editor" and "Dir Project"
     by clicking on button with "plus" icon on the left side of title bar.
     This can be usefull if you want see 2 buffers at the same time. 

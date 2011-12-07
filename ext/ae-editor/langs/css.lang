@@ -1,0 +1,5 @@
+language=css
+exts=css
+scanner=coderay
+@include=coderay.tokens
+coderay.classes=preprocessor,tag,attribute_name,comment,content

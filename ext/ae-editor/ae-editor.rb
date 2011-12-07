@@ -4458,7 +4458,8 @@ class AgMultiEditor < ArcadiaExtPlus
               er.mark_selected(_index) if select_index
             end   
           else
-            self.open_file(_event.file, _index, select_index)
+            _e = self.open_file(_event.file, _index, select_index)
+            _e.do_line_update
           end
         elsif _event.text
           if _event.title 

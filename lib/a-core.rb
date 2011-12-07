@@ -23,7 +23,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.11.0',
+        '0.11.1',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -54,7 +54,8 @@ class Arcadia < TkApplication
       title _title
       withdraw
       protocol( "WM_DELETE_WINDOW", proc{Arcadia.process_event(QuitEvent.new(self))})
-      iconphoto(Arcadia.image_res(ARCADIA_RING_GIF))
+      iconphoto(Arcadia.image_res(ARCADIA_RING_GIF)) if Arcadia.instance.tcltk_info.level >= '8.4.9'
+
     }
     @on_event = Hash.new
 
@@ -2115,7 +2116,7 @@ class ArcadiaSh < TkToplevel
   def initialize
     super
     title 'ArcadiaSh'
-    iconphoto(Arcadia.image_res(ARCADIA_RING_GIF))
+    iconphoto(Arcadia.image_res(ARCADIA_RING_GIF)) if Arcadia.instance.tcltk_info.level >= '8.4.9'
     geometry = '800x200+10+10'
     geometry(geometry)
     @text = TkText.new(self, Arcadia.style('text')){
