@@ -834,6 +834,8 @@ class AgEditorOutlineToolbar
       else
         sync_off
       end
+      #Arcadia.console(self, "msg"=>"@sync=#{@sync}" )
+
     }
     @sync = false
     @cb_sync.command(do_check)
@@ -843,6 +845,7 @@ class AgEditorOutlineToolbar
     @sync = true
     e = @controller.active_instance.raised
     if e
+      #Arcadia.console(self, "msg"=>"@sync=#{@sync} file=#{e.file}" )
       e.outline.select_without_event(e.outline.last_row) if e.outline.last_row
     end
   end
@@ -896,6 +899,7 @@ class AgEditorOutline
         parent = parent.parent
       end
 
+
       @tree_exp.close_tree(to_open) if to_open && !@opened
 
       @tree_exp.see(_node.rif)
@@ -935,7 +939,6 @@ class AgEditorOutline
             build_tree(_line)
             Tk.update
           }
-          #_line = _self.selection_get[0]
           _line = _self.selected
           _index =_line.to_s+'.0'
         end
@@ -1027,7 +1030,7 @@ class AgEditorOutline
     
     _txt = @editor.text.get('1.0','end')
     if @editor.has_ctags?
-      if @editor.file
+      if @editor.file && !@editor.modified?
         @ss = CtagsSourceStructure.new(@editor.file, @editor.ctags_string)
       else
         tmp_file = @editor.create_temp_file
@@ -1112,6 +1115,12 @@ class AgEditor
   def modified_from_opening?
     @modified_from_opening
   end
+  
+  def highlighted?
+    !@highlighting || (@last_line_end && @last_line_end > 0)
+  end
+  
+
   
   def show_line_numbers
     if !@line_numbers_visible
@@ -1258,7 +1267,7 @@ class AgEditor
       #p "riga:#{j}"
       break if j.to_i >= _row.to_i - 1
     }
-    Arcadia.console(self, 'msg'=>_custom_text)
+    #Arcadia.console(self, 'msg'=>_custom_text)
 
     if @file
       _file = "#{File.join(File.dirname(@file),'~~'+File.basename(@file))}"
@@ -3378,6 +3387,7 @@ class AgMultiEditorView
     @pages = {}
     @page_binds = {}
     @raised_page=nil
+    @raised_page_usetabs=@usetabs
   end
   
   def initialize_tabs
@@ -3560,7 +3570,7 @@ class AgMultiEditorView
     else
       if _page.nil?
         @raised_page
-      else
+      elsif @raised_page != _page || @raised_page_usetabs != @usetabs 
         if @raised_page
           @pages[@raised_page]['frame'].unpack if @pages[@raised_page]
         end
@@ -3569,6 +3579,7 @@ class AgMultiEditorView
         @pages[_page]['raisecmd'].call
       end
     end
+    @raised_page_usetabs=@usetabs
     @raised_page
   end
   
@@ -4003,11 +4014,13 @@ class AgMultiEditor < ArcadiaExtPlus
   end
 
   def on_activate_instance(_event)
+    return if defined?(@last_active_instance_name) && @last_active_instance_name == _event.name
     if _event.name == @name
       refresh_status
       _e = raised
       change_outline(_e, true) if  _e      
     end
+    @last_active_instance_name = _event.name if _event.name == @name || exist_name?(_event.name)
   end
 
   def outline_bar
@@ -4459,7 +4472,7 @@ class AgMultiEditor < ArcadiaExtPlus
             end   
           else
             _e = self.open_file(_event.file, _index, select_index)
-            _e.do_line_update
+#            _e.w
           end
         elsif _event.text
           if _event.title 
@@ -5070,7 +5083,7 @@ class AgMultiEditor < ArcadiaExtPlus
       editor.text_see(_text_index)
       editor.mark_selected(_text_index) if _mark_selected 
     end
-
+    editor.do_line_update if !editor.highlighted?
     return editor
   end
 
@@ -5083,7 +5096,6 @@ class AgMultiEditor < ArcadiaExtPlus
     		_buffer_name = tab_name(_title_new)
     		#_buffer_name = tab_name('new')
     end
-    
     if _index != -1
       _tab = @main_frame.page_frame(resolve_tab_name(_buffer_name))
       @main_frame.raise(resolve_tab_name(_buffer_name)) if frame_visible?
@@ -5108,14 +5120,6 @@ class AgMultiEditor < ArcadiaExtPlus
         _image = Arcadia.file_icon(_title)
       end
       _tab = @main_frame.add_page(_buffer_name, _filename, _title, _image, proc{do_buffer_raise(_buffer_name, _title)})
-#      _tab = @main_frame.enb.insert('end', _buffer_name ,
-#        'text'=> _title,
-#        'image'=> _image,
-# #       'image'=> Arcadia.file_icon(lang_sign),
-#        'background'=> Arcadia.style("tabpanel")["background"],
-#        'foreground'=> Arcadia.style("tabpanel")["foreground"],
-#        'raisecmd'=>proc{do_buffer_raise(_buffer_name, _title)}
-#      )
       @raw_buffer_name[_buffer_name]=_buffer_name
       if _filename
         add_buffer_menu_item(_filename)

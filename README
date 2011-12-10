@@ -1,8 +1,8 @@
 = Arcadia Ide
-version 0.11.0
+version 0.11.1
 
 by Antonio Galeone
-on Nov 04, 2011
+on Dec 11, 2011
 
 
 == About
@@ -16,19 +16,11 @@ Some of Arcadia ide project features include:
 * Debugging support
 * Highly extensibility architecture.
 
-== In this release 0.11.0
+== In this release 0.11.1
     
 [Improvements]
-  added some new features: 
-  - now you can open more than one instance of "Editor" and "Dir Project"
-    by clicking on button with "plus" icon on the left side of title bar.
-    This can be usefull if you want see 2 buffers at the same time. 
-  - now you can hide the tabs in Editor (for optimizing space) by menu item :
-    "View->Show/Hide Editor Tabs" and recall a buffer by menubutton on right side 
-    of title bar
-  - porting to new version of coderay   
-  
-  A lot of bugs fixed !!!
+ - Bugs fixed
+ - Some aesthetic enhancement
   
 == Dependencies
   - rubygems
