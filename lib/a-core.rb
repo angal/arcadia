@@ -23,7 +23,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.11.1',
+        '0.11.2',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -264,6 +264,7 @@ class Arcadia < TkApplication
   end
 
   def Arcadia.gem_available?(_gem)
+    #TODO : Gem::Specification::find_by_name(_gem)
     if Gem.respond_to?(:available?)
       return Gem.available?(_gem)
     else
@@ -2394,12 +2395,11 @@ class ArcadiaLayout
     
     @panels['nil'] = Hash.new
     @panels['nil']['root'] = TkTitledFrameAdapter.new(self.root)
-    
     @autotab = _autotab
     @headed = false
     @wrappers=Hash.new
     @splitters=Array.new
-    #ArcadiaContractListener.new(self, MainContract, :do_main_event)
+    @tabbed = Arcadia.conf('layout.tabbed')=='true'
   end
 	
 	def root
@@ -2408,9 +2408,24 @@ class ArcadiaLayout
 	
 	def raise_panel(_domain, _extension)
     p = @panels[_domain]
-    if p && p['notebook'] != nil
-      p['notebook'].raise(_extension)
-      p['notebook'].see(_extension)
+    p[:raised_name]=_extension if p
+    if @tabbed
+      if p && p['notebook'] != nil
+        p['notebook'].raise(_extension)
+        p['notebook'].see(_extension)
+      end
+    elsif p
+      p['sons'].each{|k,v|
+        if k == _extension
+   	      v.hinner_frame.raise
+          p['root'].title(v.title)
+          p['root'].restore_caption(k)
+          p['root'].change_adapters_name(k)
+          Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>k, 'frame_name'=>p['sons'][k].name))
+   	      build_invert_menu
+   	      break
+   	    end
+   	  }
     end
 	end
 
@@ -2421,8 +2436,12 @@ class ArcadiaLayout
 	def raised?(_domain, _name)
     ret = true
     p = @panels[_domain]
-    if p && p['notebook'] != nil
-      ret=p['notebook'].raise == _name
+    if @tabbed
+      if p && p['notebook'] != nil
+        ret=p['notebook'].raise == _name
+      end
+    else
+      ret = @panels[_domain][:raised_name] == _name
     end
     ret
 	end
@@ -2430,16 +2449,25 @@ class ArcadiaLayout
 	def raised_fixed_frame(_domain)
 	  ret = nil
 	  p = @panels[_domain]
-    if p && p['notebook'] != nil
-      raised_name=p['notebook'].raise
-   	  @panels[_domain]['sons'].each{|k,v|
-   	    if raised_name == k 
-   	      ret = v 
-   	      break
-   	    end
-   	  }
-    elsif @panels[_domain]['sons'].length == 1
-      ret = @panels[_domain]['sons'].values[0]
+    if @tabbed
+      if p && p['notebook'] != nil
+        raised_name=p['notebook'].raise
+     	  @panels[_domain]['sons'].each{|k,v|
+     	    if raised_name == k 
+     	      ret = v 
+     	      break
+     	    end
+     	  }
+      elsif @panels[_domain]['sons'].length == 1
+        ret = @panels[_domain]['sons'].values[0]
+      end
+    else
+      p['sons'].each{|k,v|
+        if k == @panels[_domain][:raised_name]
+          ret = v
+          break
+        end
+      }
     end
     ret
   end
@@ -3111,7 +3139,6 @@ class ArcadiaLayout
     build_invert_menu
   end
 
-
 #  def change_domain_old(_dom1, _dom2, _name2)
 #    tt1= @panels[_dom1]['root'].top_text
 #    tt2= @panels[_dom2]['root'].top_text
@@ -3139,6 +3166,24 @@ class ArcadiaLayout
 #    build_invert_menu
 #  end
 
+  def sorted_menu_index(_menu, _label)
+    index = '0'
+    i_end = _menu.index('end').to_i - 4
+    if i_end && i_end > 0
+      0.upto(i_end){|j|
+        type = _menu.menutype(j)
+        if type != 'separator'
+          value = _menu.entrycget(j,'label').to_s
+          if value > _label
+            index=j
+            break
+          end
+        end
+      }
+    end
+    index
+  end
+
   def process_frame(_ffw)
   #def process_frame(_domain_name, _frame_name)
     #domain_root = @panels[_domain_name]['sons'][_frame_name]
@@ -3147,7 +3192,8 @@ class ArcadiaLayout
         titledFrame = @panels[dom]['root']
         if titledFrame.instance_of?(TkTitledFrameAdapter)
           menu = @panels[dom]['root'].menu_button('ext').cget('menu')
-          menu.insert('0',:command,
+          ind = sorted_menu_index(menu, _ffw.title)
+          menu.insert(ind,:command,
                 :label=>_ffw.title,
                 :image=>Arcadia.image_res(ARROW_LEFT_GIF),
                 :compound=>'left',
@@ -3170,13 +3216,35 @@ class ArcadiaLayout
         if i >= 0
           index = i.to_s
         end
-        mymenu.insert(index,:command,
-           :label=>"close \"#{_ffw.title}\"",
-           :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
-           :compound=>'left',
-           :command=>proc{unregister_panel(_ffw, false, true)},
-           :hidemargin => true
-        )
+        if @tabbed
+          mymenu.insert(index,:command,
+             :label=>"close \"#{_ffw.title}\"",
+             :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
+             :compound=>'left',
+             :command=>proc{unregister_panel(_ffw, false, true)},
+             :hidemargin => true
+          )
+        else 
+          if @panels[_ffw.domain][:raised_name] == _ffw.name
+            mymenu.insert(index,:command,
+               :label=>"close \"#{_ffw.title}\"",
+               :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
+               :compound=>'left',
+               :command=>proc{unregister_panel(_ffw, false, true)},
+               #:command=>proc{raise_panel(_ffw.domain, _ffw.name)},
+               :hidemargin => true
+            )
+          else
+            ind = sorted_menu_index(mymenu, _ffw.title)
+            mymenu.insert(ind,:command,
+                  :label=>_ffw.title,
+                  :image=>Arcadia.image_res(ARROW_LEFT_GIF),
+                  :compound=>'left',
+                  :command=>proc{change_domain(_ffw.domain, _ffw.name)},
+                  :hidemargin => true
+            )
+          end
+        end
       end
     end
     
@@ -3193,10 +3261,18 @@ class ArcadiaLayout
             add_commons_menu_items(dom, menu)
           else
             index = menu.index('end').to_i
-            if @panels.keys.length > 2
-              i=index-4
+            if @tabbed
+              if @panels.keys.length > 2
+                i=index-4
+              else
+                i=index-3
+              end
             else
-              i=index-3
+              if @panels.keys.length > 2
+                i=index-4
+              else
+                i=index-3
+              end
             end
             if i >= 0
               end_index = i.to_s
@@ -3244,80 +3320,87 @@ class ArcadiaLayout
       else
         root_frame = pan['root']
       end
-      if (num == 0 && @autotab)
-        pan['sons'][_name] = _ffw
-        process_frame(_ffw)
-        return adapter
-      else
-        if num == 1 && @autotab &&  pan['notebook'] == nil
-          pan['notebook'] = Tk::BWidget::NoteBook.new(root_frame, Arcadia.style('titletabpanel')){
-            tabbevelsize 0
-            internalborderwidth 0
-            pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
-          }
-          api = pan['sons'].values[0]
-          api_tab_frame = pan['notebook'].insert('end',
-            api.name,
-            'text'=>api.title,
-            'raisecmd'=>proc{
-  					    pan['root'].title(api.title)
-  					    pan['root'].restore_caption(api.name) 
-  					    pan['root'].change_adapters_name(api.name)
+      @panels[_domain_name][:raised_name]=_name
+      if @tabbed
+        if (num == 0 && @autotab)
+          pan['sons'][_name] = _ffw
+          process_frame(_ffw)
+          return adapter
+        else
+          if num == 1 && @autotab &&  pan['notebook'] == nil
+            pan['notebook'] = Tk::BWidget::NoteBook.new(root_frame, Arcadia.style('titletabpanel')){
+              tabbevelsize 0
+              internalborderwidth 0
+              pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
+            }
+            api = pan['sons'].values[0]
+            api_tab_frame = pan['notebook'].insert('end',
+              api.name,
+              'text'=>api.title,
+              'raisecmd'=>proc{
+    					    pan['root'].title(api.title)
+    					    pan['root'].restore_caption(api.name) 
+    					    pan['root'].change_adapters_name(api.name)
                 Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>pan['sons'][api.name].extension_name, 'frame_name'=>pan['sons'][api.name].name))
-#               changed
-#               notify_observers('RAISE', api.name)
+              }
+            )
+            adapter = api.hinner_frame
+            adapter.detach_frame
+            adapter.attach_frame(api_tab_frame)
+            api.hinner_frame.raise
+          elsif (num==0 && !@autotab)
+            pan['notebook'] = Tk::BWidget::NoteBook.new(root_frame, Arcadia.style('titletabpanel')){
+              tabbevelsize 0
+              internalborderwidth 0
+              pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
+            }
+          end
+          _panel = pan['notebook'].insert('end',_name , 
+          		'text'=>_title, 
+            'raisecmd'=>proc{
+              pan['root'].title(_title)            
+              pan['root'].restore_caption(_name) 
+              pan['root'].change_adapters_name(_name)
+        	     Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>_ffw.extension_name, 'frame_name'=>_ffw.name))
             }
           )
-          adapter = api.hinner_frame
-          adapter.detach_frame
-          adapter.attach_frame(api_tab_frame)
-          api.hinner_frame.raise
-        elsif (num==0 && !@autotab)
-          pan['notebook'] = Tk::BWidget::NoteBook.new(root_frame, Arcadia.style('titletabpanel')){
-            tabbevelsize 0
-            internalborderwidth 0
-            pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
-          }
+          if _adapter
+            adapter = _adapter
+          else
+            adapter = TkFrameAdapter.new(self.root)
+          end
+          adapter.attach_frame(_panel)
+          adapter.raise
+          _panel=adapter
+          pan['sons'][_name] = _ffw
+          pan['notebook'].raise(_name)
+          process_frame(_ffw)
+          return _panel
         end
-        _panel = pan['notebook'].insert('end',_name , 
-        		'text'=>_title, 
-          'raisecmd'=>proc{
-            pan['root'].title(_title)            
-            pan['root'].restore_caption(_name) 
-            pan['root'].change_adapters_name(_name)
-      	     Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>_ffw.extension_name, 'frame_name'=>_ffw.name))
-#            changed
-#            notify_observers('RAISE', _name)
-          }
-        )
-        if _adapter
-          adapter = _adapter
-        else
-          adapter = TkFrameAdapter.new(self.root)
-        end
-        adapter.attach_frame(_panel)
-        adapter.raise
-        _panel=adapter
-        #@wrappers[_name]=wrapper
-        #p['sons'][_name] = ArcadiaPanelInfo.new(_name,_title,_panel,_ffw)
+      else
+        # not tabbed
         pan['sons'][_name] = _ffw
-        pan['notebook'].raise(_name)
         process_frame(_ffw)
-        return _panel
+        if adapter.nil?
+          if _adapter
+            adapter = _adapter
+          else
+            adapter = TkFrameAdapter.new(self.root)
+          end
+        end
+        adapter.attach_frame(root_frame)
+        adapter.raise
+#        pan['sons'].each{|k,v|
+#          if k != _name
+#            unregister_panel(v,false)
+#          end
+#        }
+        return adapter
       end
     else
       _ffw.domain = nil
       process_frame(_ffw)
-       return TkFrameAdapter.new(self.root)
-#
-#      Arcadia.dialog(self, 
-#        'type'=>'ok',
-#        'msg'=>"domain #{_domain_name} do not exist\nfor '#{_title}'!",
-#        'level'=>'warning' 
-#      )
-#      float_frame = new_float_frame
-#      float_frame.title(_title)
-#      return float_frame.frame
+      return TkFrameAdapter.new(self.root)
     end
   end
 
@@ -3344,15 +3427,20 @@ class ArcadiaLayout
       @panels[_domain_name]['root'].title(t)
       @panels[_domain_name]['root'].restore_caption(n)
       @panels[_domain_name]['root'].change_adapters_name(n)
-
-      @panels[_domain_name]['notebook'].destroy
-      @panels[_domain_name]['notebook']=nil
+      if @tabbed
+        @panels[_domain_name]['notebook'].destroy
+        @panels[_domain_name]['notebook']=nil
+      end
     elsif @panels[_domain_name]['sons'].length > 1
-      @panels[_domain_name]['notebook'].delete(_name) if @panels[_domain_name]['notebook'].index(_name) > 0
+      if @tabbed
+        @panels[_domain_name]['notebook'].delete(_name) if @panels[_domain_name]['notebook'].index(_name) > 0
+      end
       #p "unregister #{_name} ------> 3"
       new_raise_key = @panels[_domain_name]['sons'].keys[@panels[_domain_name]['sons'].length-1]
       #p "unregister #{_name} ------> 4"
-      @panels[_domain_name]['notebook'].raise(new_raise_key)
+      if @tabbed
+        @panels[_domain_name]['notebook'].raise(new_raise_key)
+      end
       #p "unregister #{_name} ------> 5"
     elsif @panels[_domain_name]['sons'].length == 0
       @panels[_domain_name]['root'].title('')

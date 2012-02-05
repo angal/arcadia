@@ -152,15 +152,11 @@ class SearchOutput
     @button_u = Tk::BWidget::Button.new(left_frame, Arcadia.style('toolbarbutton')){
       image  Arcadia.image_res(CLEAR_GIF)
       helptext 'Clear'
-      foreground 'blue'
       command _proc_clear
       relief 'groove'
       pack('side' =>'top', 'anchor'=>'n',:padx=>0, :pady=>0)
     }
     
-#    @found_color='#3f941b'
-#    @not_found_color= 'red'
-#    @item_color='#6fc875'
     @found_color=Arcadia.conf('activeforeground')
     @not_found_color= Arcadia.conf('hightlight.comment.foreground')
     @item_color=Arcadia.conf('treeitem.fill')

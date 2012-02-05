@@ -119,6 +119,7 @@ class FixedFrameWrapper < AbstractFrameWrapper
   end
 
   def hide
+    Arcadia.layout.hide_panel(@domain, @name)
   end
 
   def raised?
