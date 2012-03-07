@@ -807,7 +807,7 @@ module Configurable
   def Configurable.properties_group(_group, _hash_source, _hash_suff='conf', _refresh=false)
     group_key="#{_hash_suff}.#{_group}"
     @@conf_groups = Hash.new if !defined?(@@conf_groups)
-    if @@conf_groups[group_key].nil? || _refresh
+    if @@conf_groups[group_key].nil? || _refresh 
       @@conf_groups[group_key] = Hash.new
       glen=_group.length
       _hash_source.keys.sort.each{|k|
@@ -819,6 +819,14 @@ module Configurable
       }
     end
     Hash.new.update(@@conf_groups[group_key])
+  end
+
+  def Configurable.clear_properties_group_cache(_group, _suff='conf')
+    group_key="#{_suff}.#{_group}"
+    if !@@conf_groups[group_key].nil?
+      @@conf_groups[group_key].clear
+      @@conf_groups[group_key] = nil
+    end 
   end
 
   def resolve_value(_value, _hash_source)
@@ -872,6 +880,7 @@ module Configurable
         _hash_target["#{k[0..-2]}.#{key}"]=value if !_hash_target["#{k[0..-2]}.#{key}"]
       end
       _hash_target.delete(k)
+      Configurable.clear_properties_group_cache(k[0..-2])
     end
   end
 

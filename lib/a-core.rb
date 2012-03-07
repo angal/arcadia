@@ -1778,7 +1778,7 @@ class ArcadiaAboutSplash < TkToplevel
       place('x' => 100,'y' => 65,'height' => 19)
     }
     @tkLabel21 = TkLabel.new(self){
-      text  'by Antonio Galeone - 2004/2011'
+      text  'by Antonio Galeone - 2004/2012'
       background  _bgcolor
       foreground  '#ffffff'
       font Arcadia.instance['conf']['splash.credits.font']

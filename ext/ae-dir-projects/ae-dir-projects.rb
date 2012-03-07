@@ -233,7 +233,7 @@ class DirProjects < ArcadiaExtPlus
       end
       if @num_childrens_of[_node] == 1
         child = @htree.nodes(_node)[0]
-        if File.ftype(node2file(child)) == 'directory'
+        if child && File.ftype(node2file(child)) == 'directory'
           @htree.open_tree(child,false) 
           @opened_folder << child if !@opened_folder.include?(child)
         end
