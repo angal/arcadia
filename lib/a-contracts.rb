@@ -351,6 +351,10 @@ end
 #class ErrorDialogEvent < DialogEvent
 #end
 
+# system integration Event
+class XtermEvent < ArcadiaEvent
+  attr_accessor :title, :dir, :command
+end
 
 #  +---------------------------------------------+
 #         Action event

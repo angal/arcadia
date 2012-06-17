@@ -229,7 +229,10 @@ class ArcadiaExt
     #ObjectSpace.define_finalizer(self, self.method(:finalize).to_proc)
   end
 
-
+  def hide_frame(_n=0)
+    Arcadia.layout.unregister_panel(frame(_n), false, true)
+  end 
+  
   def conf_array(_name)
     res = []
     value = @arcadia['conf'][_name]
@@ -320,7 +323,10 @@ class ArcadiaExt
     @float_frames[_n]
   end
 
-  def conf(_property)
+  def conf(_property, _value=nil)
+    if !_value.nil?
+      @arcadia['conf'][@name+'.'+_property] = _value
+    end
     @arcadia['conf'][@name+'.'+_property]
   end
 
@@ -371,10 +377,37 @@ class ArcadiaExtPlus < ArcadiaExt
     @@main_instance[self.class] = self if @@main_instance[self.class] == nil
     Arcadia.attach_listener(self, ActivateInstanceEvent)
     super(_arcadia, _name)
-    if self.frame != nil
-      self.frame.hinner_frame.bind_append("Enter", proc{activate})
+    @@active_instance[self.class] = self if @@active_instance[self.class] == nil
+
+#    if self.frame != nil
+#      self.frame.hinner_frame.bind_append("Enter", proc{activate})
+#      if @@main_instance[self.class] == self
+#        frame.root.add_state_button(
+#        self.name,
+#        'Duplicate',
+#        proc{duplicate},
+#        PLUS_EX_GIF,
+#        'left')
+#        activate(self, false)
+#      else
+#        frame.root.add_state_button(
+#        self.name,
+#        'Destroy',
+#        proc{deduplicate},
+#        MINUS_EX_GIF,
+#        'left')
+#        activate(self, false)
+#      end
+#    end
+  end
+
+  def frame(_n=0,create_if_not_exist=true)
+    fr = super(_n, create_if_not_exist)
+    if fr != nil && !@frame_initialize
+      @frame_initialize = true
+      fr.hinner_frame.bind_append("Enter", proc{activate})
       if @@main_instance[self.class] == self
-        frame.root.add_state_button(
+        fr.root.add_state_button(
         self.name,
         'Duplicate',
         proc{duplicate},
@@ -382,7 +415,7 @@ class ArcadiaExtPlus < ArcadiaExt
         'left')
         activate(self, false)
       else
-        frame.root.add_state_button(
+        fr.root.add_state_button(
         self.name,
         'Destroy',
         proc{deduplicate},
@@ -391,6 +424,7 @@ class ArcadiaExtPlus < ArcadiaExt
         activate(self, false)
       end
     end
+    fr 
   end
 
   def ArcadiaExtPlus.instances(_class)
@@ -404,6 +438,10 @@ class ArcadiaExtPlus < ArcadiaExt
   def main_instance
     @@main_instance[self.class]
   end
+
+  def main_instance?
+    @@main_instance[self.class] == self
+  end  
 
   def activate(_obj=self, _raise_event=true)
     @@active_instance[self.class] = _obj
@@ -457,6 +495,7 @@ class ArcadiaExtPlus < ArcadiaExt
     #initialize
     Arcadia.process_event(InitializeEvent.new(Arcadia.instance), [instance])
     add_to_conf_property("#{main_instance.name}.clones", _name)
+    instance
   end
   
   def clone(_name)
@@ -481,6 +520,16 @@ class ArcadiaExtPlus < ArcadiaExt
 #    end
 #  end
 
+  def clean_instance
+    activate_main
+    @@instances[self.class].delete(self) if @@instances[self.class]
+    Arcadia.del_conf_group(Arcadia['conf'],@name)
+    Arcadia.del_conf_group(Arcadia['pers'],@name)
+    del_from_conf_property("#{main_instance.name}.clones", @name)
+    Arcadia.process_event(ClearCacheInstanceEvent.new(Arcadia.instance), [self])
+    Arcadia.process_event(DestroyInstanceEvent.new(Arcadia.instance), [self])
+  end
+
   def deduplicate
     if (Arcadia.dialog(self, 'type'=>'yes_no',
       'msg'=>"Shure delete '#{@name}'?",
@@ -488,13 +537,7 @@ class ArcadiaExtPlus < ArcadiaExt
       'level' => 'question')=='yes')
       exit_query_event = Arcadia.process_event(ExitQueryEvent.new(self, 'can_exit'=>true))
       if exit_query_event.can_exit
-        activate_main
-        @@instances[self.class].delete(self) if @@instances[self.class]
-        Arcadia.del_conf_group(Arcadia['conf'],@name)
-        Arcadia.del_conf_group(Arcadia['pers'],@name)
-        del_from_conf_property("#{main_instance.name}.clones", @name)
-        Arcadia.process_event(ClearCacheInstanceEvent.new(Arcadia.instance), [self])
-        Arcadia.process_event(DestroyInstanceEvent.new(Arcadia.instance), [self])
+        clean_instance
       end
     end
   end

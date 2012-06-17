@@ -408,6 +408,13 @@ class DirProjects < ArcadiaExtPlus
       :hidemargin => false
     )
     
+
+    @pop_up_tree.insert('end',
+      :command,
+      :label=>'Xterm from here',
+      :hidemargin => false,
+      :command=> proc{do_open_xterm}
+    )
     
     #-----------------
     
@@ -440,6 +447,29 @@ class DirProjects < ArcadiaExtPlus
     )
     @pop_up_tree.insert('end',
       :command,
+      :label=>'Copy',
+      :hidemargin => false,
+      :command=> proc{
+        _selected = @htree.selected
+        if _selected
+          @copy_source = _selected
+        end
+      }
+    )
+    
+    @pop_up_tree.insert('end',
+      :command,
+      :label=>'Paste',
+      :hidemargin => false,
+      :command=> proc{
+        _selected = @htree.selected
+        if @copy_source && _selected && @copy_source != _selected && File.ftype(node2file(_selected)) == "directory"
+          do_paste(@copy_source, _selected)
+        end
+      }
+    )
+    @pop_up_tree.insert('end',
+      :command,
       :label=>'Delete',
       :hidemargin => false,
       :command=> proc{
@@ -464,6 +494,14 @@ class DirProjects < ArcadiaExtPlus
     if _target
       _target = File.dirname(_target) if File.ftype(_target) == 'file'
       Arcadia.process_event(SearchInFilesEvent.new(self,'dir'=>_target))
+    end
+  end
+
+  def do_open_xterm
+    _target = @htree.selected
+    if _target
+      _target = File.dirname(_target) if File.ftype(_target) == 'file'
+      XtermEvent.new(self,'dir'=>_target, 'title'=>_target).go!
     end
   end
 
@@ -694,6 +732,36 @@ class DirProjects < ArcadiaExtPlus
 
   def is_project?(_node)
     @htree.exist?(_node) && @htree.parent(_node)=='root'
+  end
+
+  def do_paste(_source, _destination, _interactive = true)
+    _msg = "Copy #{_source} to #{_destination}?"
+    if !_interactive || Arcadia.dialog(self,'type'=>'yes_no', 'level'=>'warning','title' => 'Confirm copy', 'msg'=>_msg)=='yes'
+      if File.exists?(_source) 
+        require "fileutils"
+        type = File.ftype(node2file(_source))
+        source_basename = _source.split(File::SEPARATOR)[-1]
+        if type == 'directory'
+          des_path = File.join(_destination,source_basename)
+          if File.exists?(des_path)  || Dir.mkdir(des_path)
+            entries = Dir.entries(_source)
+            entries.delete('.')
+            entries.delete('..')
+            entries.each{|en|
+              full_en = File.join(_source,en)
+              do_paste(full_en, des_path, false)
+            }
+          end
+        else
+          new_file = File.join(_destination,source_basename)
+          FileUtils.cp(_source, new_file)
+        end
+        if _interactive
+          do_refresh(File.split(_source)[0])
+          do_refresh(_destination)
+        end
+      end
+    end
   end
 
   def do_delete(_node, _interactive = true)
