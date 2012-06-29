@@ -145,7 +145,11 @@ class Arcadia < TkApplication
       #p "RuntimeError : #{e.message}"
       Arcadia.runtime_error(e)
     end
-    Tk.update_idletasks
+    begin
+      Tk.update_idletasks
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e)
+    end
     if self['conf']['geometry.state'] == 'zoomed'
       if Arcadia.is_windows?
         @root.state('zoomed')

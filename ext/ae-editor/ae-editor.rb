@@ -3337,7 +3337,11 @@ class AgEditor
       @file = _filename
       if _filename
         File::open(_filename,'rb'){ |file|
-          @text.insert('end',file.readlines.collect!{| line | line.chomp}.join("\n"))
+          if Arcadia.conf('encoding')
+            @text.insert('end',file.readlines.collect!{| line | Tk.EncodedString(line.chomp, Arcadia.conf('encoding'))}.join("\n"))
+          else
+            @text.insert('end',file.readlines.collect!{| line | line.chomp}.join("\n"))
+          end
           #@text.insert('end',file.read)
         }
 	      File.open(_filename, 'rb') { |file|

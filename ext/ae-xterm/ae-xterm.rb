@@ -27,7 +27,7 @@ class XTerm < ArcadiaExtPlus
     @bind_after_run = false
     if conf("create") == "yes"
       Thread.new{
-        do_run_xterm(conf('dir'), instance_index)
+        do_run_xterm(conf('dir'))
         do_after_run_xterm
       }
     end
@@ -35,38 +35,63 @@ class XTerm < ArcadiaExtPlus
   
   def on_finalize(_event)
     @finalizing = true
-    if @xterm_pid !=  -1
-      cmd = "xdotool windowkill #{@xterm_pid}"
-      system(cmd) 
-    end
+    killall_xterm
+#    if @xterm_pid !=  -1
+#      cmd = "xdotool windowkill #{@xterm_pid}"
+#      system(cmd) 
+#    end
   end  
+  
+  def killall_xterm
+    fi_pids_string = open("|xdotool search --class #{xterm_class} "){|f|  f.read.strip }
+    if fi_pids_string
+      fi_pids_array = fi_pids_string.split
+      fi_pids_array.each{|fi_pid| system("xdotool windowkill #{fi_pid}")
+        p "KILLO XTERM #{xterm_class} pid #{fi_pid}"
+      }
+    end
+  end
   
   def do_after_run_xterm
     if !@bind_after_run
       @bind_after_run = true
-      frame.hinner_frame.bind_append("Configure", proc{|w,h| resize(w,h)}, "%w %h")
-      frame.hinner_frame.bind_append("Map", proc{do_run_xterm(conf('dir'), instance_index) if !xterm_runned?})
+      frame.hinner_frame.bind_append("Configure", proc{|w,h| p "CONFIGURE";  resize(w,h)}, "%w %h")
+      frame.hinner_frame.bind_append("Map", proc{p "MAPPO"; do_run_xterm(conf('dir')) if !xterm_runned?})
     end 
   end
   
-  def do_run_xterm(_dir='~', _index=0)
+  def xterm_class
+    "xarc#{instance_index}"
+  end
+  
+  def do_run_xterm(_dir='~')
+    return if @running
+    @running = true
     conf("create",'yes')
     conf("dir",_dir)
     self.frame.show_anyway
+    killall_xterm
     id_int = eval(frame.hinner_frame.winfo_id).to_i
-    xterm_class = "xarc#{_index}"
+    p "CREO XTERM #{xterm_class} con id #{id_int}"
     cmd = "cd #{_dir} ; xterm -into #{id_int} -bg '#{conf('color.bg')}' -fg #{conf('color.fg')} -fa '#{conf('font')}' -class #{xterm_class}  +sb  +hold"
     fi_pid=-1
     Thread.new do
+      #open("|#{cmd}"){|f|  @xterm_pid = f.read.strip if f }
       system(cmd)
       @xterm_pid = -1
       if !@finalizing
         do_xterm_exit
       end
     end
-    open("|xdotool search --limit 1 --class #{xterm_class} "){|f|  fi_pid = f.read.strip if f }
-    @xterm_pid = fi_pid
+    maxtimes = 100
+    t=0
+    while  @xterm_pid == -1 && t < maxtimes 
+      open("|xdotool search --limit 1 --class #{xterm_class} "){|f|  fi_pid = f.read.strip if f }
+      @xterm_pid = fi_pid
+      t=t+1
+    end
     resize()
+    @running = false
 #    frame.hinner_frame.bind_append("Configure", proc{|w,h| resize(w,h)}, "%w %h")
 #    frame.hinner_frame.bind_append("Map", proc{ do_run_xterm(conf('dir'),instance_index) if !xterm_runned?}) 
   end
@@ -101,13 +126,13 @@ class XTerm < ArcadiaExtPlus
       conf("create",saved_main_conf)
       if !new_instance.xterm_runned?
         Thread.new{
-          new_instance.do_run_xterm(_event.dir, new_instance.instance_index)
+          new_instance.do_run_xterm(_event.dir)
           new_instance.do_after_run_xterm
         } 
       end
     else
       Thread.new{
-        do_run_xterm(_event.dir, instance_index)
+        do_run_xterm(_event.dir)
         do_after_run_xterm
       }
     end
