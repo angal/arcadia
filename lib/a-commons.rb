@@ -846,6 +846,21 @@ module Configurable
   #
   #  def hash_as_one_line_format(_name, _hash)
   #  end
+  
+  def hash2properties_file(_hash=nil, _file=nil)
+    if _hash && _file && FileTest.writable?(File.dirname(_file))
+      f = File.new(_file, "w")
+      begin
+        if f
+          _hash.keys.sort.each{|key|
+            f.syswrite("#{key}=#{_hash[key]}\n")
+          }
+        end
+      ensure
+        f.close unless f.nil?
+      end
+    end
+  end
 
   def Configurable.properties_group(_group, _hash_source, _hash_suff='conf', _refresh=false)
     group_key="#{_hash_suff}.#{_group}"
@@ -1008,6 +1023,14 @@ class Application
 
   def Application.conf(_property)
     @@instance['conf'][_property] if @@instance
+  end
+
+  def Application.version
+    @@instance['applicationParams'].version if @@instance
+  end
+
+  def Application.local_dir
+    @@instance.local_dir if @@instance
   end
 
   def conf(_property)

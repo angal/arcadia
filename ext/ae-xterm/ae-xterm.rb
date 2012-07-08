@@ -44,11 +44,12 @@ class XTerm < ArcadiaExtPlus
   
   def killall_xterm
     fi_pids_string = open("|xdotool search --class #{xterm_class} "){|f|  f.read.strip }
-    if fi_pids_string
+    if fi_pids_string && fi_pids_string.length > 0
       fi_pids_array = fi_pids_string.split
       fi_pids_array.each{|fi_pid| system("xdotool windowkill #{fi_pid}")
         p "KILLO XTERM #{xterm_class} pid #{fi_pid}"
       }
+      Arcadia.runtime_error_msg("kill per #{xterm_class} #{ fi_pids_string }")
     end
   end
   
@@ -73,6 +74,7 @@ class XTerm < ArcadiaExtPlus
     killall_xterm
     id_int = eval(frame.hinner_frame.winfo_id).to_i
     p "CREO XTERM #{xterm_class} con id #{id_int}"
+    Arcadia.runtime_error_msg("CREO XTERM #{xterm_class} con id #{id_int}")
     cmd = "cd #{_dir} ; xterm -into #{id_int} -bg '#{conf('color.bg')}' -fg #{conf('color.fg')} -fa '#{conf('font')}' -class #{xterm_class}  +sb  +hold"
     fi_pid=-1
     Thread.new do
@@ -85,11 +87,12 @@ class XTerm < ArcadiaExtPlus
     end
     maxtimes = 100
     t=0
-    while  @xterm_pid == -1 && t < maxtimes 
+    while  (@xterm_pid == -1 || @xterm_pid.nil? || @xterm_pid.length == 0) && t < maxtimes 
       open("|xdotool search --limit 1 --class #{xterm_class} "){|f|  fi_pid = f.read.strip if f }
       @xterm_pid = fi_pid
       t=t+1
     end
+    Arcadia.runtime_error_msg("assegno al xterm #{xterm_class} xterm_pid #{@xterm_pid}")
     resize()
     @running = false
 #    frame.hinner_frame.bind_append("Configure", proc{|w,h| resize(w,h)}, "%w %h")

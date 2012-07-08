@@ -29,6 +29,7 @@ class Arcadia < TkApplication
       )
     ) 
     load_config
+    @localization = ArcadiaLocalization.new
     if self['conf']['encoding']
       Tk.encoding=self['conf']['encoding']
     end
@@ -2114,6 +2115,49 @@ class ArcadiaActionDispatcher
     end
   end
 
+end
+
+class ArcadiaLocalization
+  include Configurable
+  KEY_CACHE_VERSION = '__VERSION__'
+  STANDARD_LOCALE = 'en-US'
+  def initialize
+    @standard_locale=Arcadia.conf("locale.standard").nil? ? STANDARD_LOCALE : Arcadia.conf("locale.standard")
+    @locale=Arcadia.conf("locale").nil? ? STANDARD_LOCALE : Arcadia.conf("locale")
+    lc_lang_standard_file="conf/LC/#{Arcadia.conf('locale.standard')}.LANG"
+    lc_lang_locale_file="conf/LC/#{Arcadia.conf('locale')}.LANG"
+    need_cache_update = false
+    if @standard_locale == @locale || !File.exist?(lc_lang_locale_file)
+      @lc_lang = properties_file2hash(lc_lang_standard_file) if File.exist?(lc_lang_standard_file)
+    else
+      lc_lang_cache_file=File.join(Arcadia.local_dir, "#{Arcadia.conf('locale')}.LC_LANG_CACHE")
+      if File.exist?(lc_lang_cache_file)
+        @lc_lang = properties_file2hash(lc_lang_cache_file)
+        if @lc_lang[KEY_CACHE_VERSION] != Arcadia.version 
+          # is to update
+          need_cache_update = true
+        end
+      else
+        need_cache_update = true
+      end
+      if need_cache_update
+        @lc_lang = properties_file2hash(lc_lang_standard_file)
+        @lc_lang.each_pair{|key,value| @lc_lang[key] = "? < #{value}"}
+        if File.exist?(lc_lang_locale_file)
+          lc_lang_locale = properties_file2hash(lc_lang_locale_file)
+        else
+          lc_lang_locale = {}
+        end
+        lc_lang_locale.each{|k,v| @lc_lang[k]=v}
+        @lc_lang[KEY_CACHE_VERSION]=Arcadia.version
+        hash2properties_file(@lc_lang, lc_lang_cache_file)
+      end
+    end
+  end
+  
+  def text(_key)
+    @lc_lang.nil||@lc_lang[_key].nil? ? "?" : @lc_lang[_key]
+  end  
 end
 
 class ArcadiaSh < TkToplevel

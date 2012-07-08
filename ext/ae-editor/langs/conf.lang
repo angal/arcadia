@@ -1,6 +1,6 @@
 scanner=re
 language=conf
-exts=conf,lang,pers,tokens
+exts=conf,lang,pers,tokens,LANG
 re.classes=key,value,link,operator,comment
 re.comment=#(.*)
 re.key=(.*)\=
