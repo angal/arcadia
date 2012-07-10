@@ -19,6 +19,7 @@ class Arcadia < TkApplication
   attr_reader :layout
   attr_reader :wf
   attr_reader :mf_root
+  attr_reader :localization
   def initialize
     super(
       ApplicationParams.new(
@@ -788,7 +789,7 @@ class Arcadia < TkApplication
       suf = "#{_pre}.#{suf}"
     end
     contexts = self['conf']["#{suf}.contexts"]
-    contexts_caption = self['conf']["#{suf}.contexts.caption"]
+    contexts_caption = make_locale_value(self['conf']["#{suf}.contexts.caption"], @localization.lc_lang)
     return if contexts.nil?
     groups = contexts.split(',')
     groups_caption = contexts_caption.split(',') if contexts_caption
@@ -807,9 +808,9 @@ class Arcadia < TkApplication
             item_args = Hash.new
             
             iprops.each{|k,v|
-              item_args[k]= make_value(_self_on_eval, v)
+              item_args[k]=make_value(_self_on_eval, v)
             }
-
+            item_args['caption'] = make_locale_value(item_args['caption'], @localization.lc_lang) if item_args['caption']
             item_args['name'] = item if item_args['name'].nil?
             item_args['rif'] = rif
             item_args['context'] = group
@@ -1075,6 +1076,12 @@ class Arcadia < TkApplication
     if @@instance
         return @@instance.wf
 	  end
+  end
+
+  def Arcadia.text(_key=nil)
+    if @@instance
+      return @@instance.localization.text(_key)
+    end
   end
   
   def Arcadia.open_file_dialog
@@ -1541,41 +1548,47 @@ class ArcadiaMainMenu < ArcadiaUserControl
 
   def build
     menu_spec_file = [
-      ['File', 0],
-      ['Open', proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>Arcadia.open_file_dialog))}, 0],
-      ['New', proc{Arcadia.process_event(NewBufferEvent.new(self))}, 0],
+      [Arcadia.text('main.menu.file'), 0],
+      [Arcadia.text('main.menu.file.open'), proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>Arcadia.open_file_dialog))}, 0],
+      [Arcadia.text('main.menu.file.new'), proc{Arcadia.process_event(NewBufferEvent.new(self))}, 0],
       #['Save', proc{EditorContract.instance.save_file_raised(self)},0],
-      ['Save', proc{Arcadia.process_event(SaveBufferEvent.new(self))},0],
-      ['Save as ...', proc{Arcadia.process_event(SaveAsBufferEvent.new(self))},0],
+      [Arcadia.text('main.menu.file.save'), proc{Arcadia.process_event(SaveBufferEvent.new(self))},0],
+      [Arcadia.text('main.menu.file.save_as'), proc{Arcadia.process_event(SaveAsBufferEvent.new(self))},0],
       '---',
-      ['Quit', proc{Arcadia.process_event(QuitEvent.new(self))}, 0]]
-      menu_spec_edit = [['Edit', 0],
-      ['Cut', proc{Arcadia.process_event(CutTextEvent.new(self))}, 2],
-      ['Copy', proc{Arcadia.process_event(CopyTextEvent.new(self))}, 0],
-      ['Paste', proc{Arcadia.process_event(PasteTextEvent.new(self))}, 0],
-      ['Undo', proc{Arcadia.process_event(UndoTextEvent.new(self))}, 0],
-      ['Redo', proc{Arcadia.process_event(RedoTextEvent.new(self))}, 0],
-      ['Select all', proc{Arcadia.process_event(SelectAllTextEvent.new(self))}, 0],
-      ['Invert selection', proc{Arcadia.process_event(InvertSelectionTextEvent.new(self))}, 0],
-      ['Uppercase', proc{Arcadia.process_event(UpperCaseTextEvent.new(self))}, 0],
-      ['Lowercase', proc{Arcadia.process_event(LowerCaseTextEvent.new(self))}, 0],
-      ['Prettify Current', proc{Arcadia.process_event(PrettifyTextEvent.new(self))}, 0]]
+      [Arcadia.text('main.menu.file.quit'), proc{Arcadia.process_event(QuitEvent.new(self))}, 0]]
       
-      menu_spec_search = [['Search', 0],
-      ['Find/Replace ...', proc{Arcadia.process_event(SearchBufferEvent.new(self))}, 2],
-      ['Find in files...', proc{Arcadia.process_event(SearchInFilesEvent.new(self))}, 2],
-      ['Ack in files...', proc{Arcadia.process_event(AckInFilesEvent.new(self))}, 2],
-      ['Go to line ...', proc{Arcadia.process_event(GoToLineBufferEvent.new(self))}, 2]]
-      menu_spec_view = [['View', 0],['Show/Hide Toolbar', proc{$arcadia.show_hide_toolbar}, 2],
-      ['Close current tab', proc{Arcadia.process_event(CloseCurrentTabEvent.new(self))}, 0],
+      menu_spec_edit = [[Arcadia.text('main.menu.edit'), 0],
+      [Arcadia.text('main.menu.edit.cut'), proc{Arcadia.process_event(CutTextEvent.new(self))}, 2],
+      [Arcadia.text('main.menu.edit.copy'), proc{Arcadia.process_event(CopyTextEvent.new(self))}, 0],
+      [Arcadia.text('main.menu.edit.paste'), proc{Arcadia.process_event(PasteTextEvent.new(self))}, 0],
+      [Arcadia.text('main.menu.edit.undo'), proc{Arcadia.process_event(UndoTextEvent.new(self))}, 0],
+      [Arcadia.text('main.menu.edit.redo'), proc{Arcadia.process_event(RedoTextEvent.new(self))}, 0],
+      [Arcadia.text('main.menu.edit.select_all'), proc{Arcadia.process_event(SelectAllTextEvent.new(self))}, 0],
+      [Arcadia.text('main.menu.edit.invert_selection'), proc{Arcadia.process_event(InvertSelectionTextEvent.new(self))}, 0],
+      [Arcadia.text('main.menu.edit.uppercase'), proc{Arcadia.process_event(UpperCaseTextEvent.new(self))}, 0],
+      [Arcadia.text('main.menu.edit.lowercase'), proc{Arcadia.process_event(LowerCaseTextEvent.new(self))}, 0],
+      [Arcadia.text('main.menu.edit.prettify_current'), proc{Arcadia.process_event(PrettifyTextEvent.new(self))}, 0],
+       '---',
+      [Arcadia.text('main.menu.edit.preferences'), proc{}, 0]]
+      
+      menu_spec_search = [[Arcadia.text('main.menu.search'), 0],
+      [Arcadia.text('main.menu.search.find_replace'), proc{Arcadia.process_event(SearchBufferEvent.new(self))}, 2],
+      [Arcadia.text('main.menu.search.find_in_files'), proc{Arcadia.process_event(SearchInFilesEvent.new(self))}, 2],
+      [Arcadia.text('main.menu.search.ack_im_file'), proc{Arcadia.process_event(AckInFilesEvent.new(self))}, 2],
+      [Arcadia.text('main.menu.search.go_to_line'), proc{Arcadia.process_event(GoToLineBufferEvent.new(self))}, 2]]
+      
+      menu_spec_view = [[Arcadia.text('main.menu.view'), 0],
+      [Arcadia.text('main.menu.view.show_hide_toolbar'), proc{$arcadia.show_hide_toolbar}, 2],
+      [Arcadia.text('main.menu.view.close_current_tab'), proc{Arcadia.process_event(CloseCurrentTabEvent.new(self))}, 0],
       ]
-      menu_spec_tools = [['Tools', 0],
-      ['Keys-test', $arcadia['action.test.keys'], 2],
-      ['Edit prefs', proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>$arcadia.local_file_config))}, 0],
-      ['Load from edited prefs', proc{$arcadia.load_local_config}, 0]
+      
+      menu_spec_tools = [[Arcadia.text('main.menu.tools'), 0],
+      [Arcadia.text('main.menu.tools.keys_test'), $arcadia['action.test.keys'], 2],
+      [Arcadia.text('main.menu.tools.edit_prefs'), proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>$arcadia.local_file_config))}, 0],
+      [Arcadia.text('main.menu.tools.load_from_edited_prefs'), proc{$arcadia.load_local_config}, 0]
     ]
-    menu_spec_help = [['Help', 0],
-    ['About', $arcadia['action.show_about'], 2],]
+    menu_spec_help = [[Arcadia.text('main.menu.help'), 0],
+    [Arcadia.text('main.menu.help.about'), $arcadia['action.show_about'], 2],]
     begin
       @menu.add_menu(menu_spec_file)
       @menu.add_menu(menu_spec_edit)
@@ -2120,7 +2133,8 @@ end
 class ArcadiaLocalization
   include Configurable
   KEY_CACHE_VERSION = '__VERSION__'
-  STANDARD_LOCALE = 'en-US'
+  STANDARD_LOCALE = 'en-UK'
+  attr_reader :lc_lang
   def initialize
     @standard_locale=Arcadia.conf("locale.standard").nil? ? STANDARD_LOCALE : Arcadia.conf("locale.standard")
     @locale=Arcadia.conf("locale").nil? ? STANDARD_LOCALE : Arcadia.conf("locale")
@@ -2142,7 +2156,7 @@ class ArcadiaLocalization
       end
       if need_cache_update
         @lc_lang = properties_file2hash(lc_lang_standard_file)
-        @lc_lang.each_pair{|key,value| @lc_lang[key] = "? < #{value}"}
+        @lc_lang.each_pair{|key,value| @lc_lang[key] = "{^#{value}}"}
         if File.exist?(lc_lang_locale_file)
           lc_lang_locale = properties_file2hash(lc_lang_locale_file)
         else
@@ -2156,7 +2170,7 @@ class ArcadiaLocalization
   end
   
   def text(_key)
-    @lc_lang.nil||@lc_lang[_key].nil? ? "?" : @lc_lang[_key]
+    @lc_lang.nil?||@lc_lang[_key].nil? ? "?" : @lc_lang[_key]
   end  
 end
 

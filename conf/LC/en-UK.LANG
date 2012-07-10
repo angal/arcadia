@@ -1,0 +1,42 @@
+#main.menu.file
+main.menu.file=File
+main.menu.file.open=Open
+main.menu.file.new=New
+main.menu.file.save=Save
+main.menu.file.save_as=Save as ...
+main.menu.file.quit=Quit
+#main.menu.edit
+main.menu.edit=Edit
+main.menu.edit.cut=Cut
+main.menu.edit.copy=Copy
+main.menu.edit.paste=Paste
+main.menu.edit.undo=Undo
+main.menu.edit.redo=Redo
+main.menu.edit.select_all=Select all
+main.menu.edit.invert_selection=Invert selection
+main.menu.edit.uppercase=Uppercase
+main.menu.edit.lowercase=Lowercase
+main.menu.edit.prettify_current=Prettify current
+main.menu.edit.preferences=Preferences
+#main.menu.search
+main.menu.search=Search
+main.menu.search.find_replace=Find/Replace ...
+main.menu.search.find_in_files=Find in files...
+main.menu.search.ack_im_file=Ack in files...
+main.menu.search.go_to_line=Go to line ...
+#main.menu.view
+main.menu.view=View
+main.menu.view.show_hide_toolbar=Show/Hide Toolbar
+main.menu.view.close_current_tab=Close current tab
+#main.menu.tools
+main.menu.tools=Tools
+main.menu.tools.keys_test=Keys-test
+main.menu.tools.edit_prefs=Edit prefs
+main.menu.tools.load_from_edited_prefs=Load from edited prefs
+#main.menu.help
+main.menu.help=Help
+main.menu.help.about=About
+
+
+ext.editor.menu.view.show_hide_line_number=Show/Hide editor line numbers
+ext.editor.menu.view.show_hide_tabs=Show/Hide editor tabs

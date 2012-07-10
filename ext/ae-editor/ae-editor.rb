@@ -5087,7 +5087,7 @@ class AgMultiEditor < ArcadiaExtPlus
       editor.text_see(_text_index)
       editor.mark_selected(_text_index) if _mark_selected 
     end
-    editor.do_line_update if !editor.highlighted?
+    editor.do_line_update if editor && !editor.highlighted?
     return editor
   end
 

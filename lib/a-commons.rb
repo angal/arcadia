@@ -791,6 +791,7 @@ end
 module Configurable
   LINK_SYMBOL='>>>'
   ADD_SYMBOL='+++'
+  LC_SYMBOL='LC@'
   FONT_TYPE_SYMBOL='$$font:::'
   def properties_file2hash(_property_file, _link_hash=nil)
     r_hash = Hash.new
@@ -900,6 +901,13 @@ module Configurable
     return _v
   end
 
+  def resolve_locale_value(_value, _hash_source)
+    if _value.length > 3 && _value[0..2]==LC_SYMBOL
+      _value=_hash_source[_value[3..-1]] if _hash_source[_value[3..-1]]
+    end
+    return _value
+  end
+
   def resolve_properties_link(_hash_target, _hash_source)
     loop_level_max = 10
     #    _hash_adding = Hash.new
@@ -946,6 +954,14 @@ module Configurable
     value = _value.strip
     if value[0..0]=='!'
       value=_self_context.instance_eval(value[1..-1])
+    end
+    value
+  end
+
+  def make_locale_value(_value='', _locale_hash=nil)
+    value = _value.strip if _value
+    if value && _locale_hash && value.length > 3 && value[0..2]==LC_SYMBOL
+      value = _locale_hash[value[3..-1]] if _locale_hash[value[3..-1]]
     end
     value
   end
