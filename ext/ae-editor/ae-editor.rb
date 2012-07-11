@@ -1766,23 +1766,35 @@ class AgEditor
         end
       when 'Return' #,'Control_L', 'Control_V', 'BackSpace', 'Delete'
         _index = @text.index('insert')
+        _previous_index = @text.index('insert -2 chars')
         _row, _col = _index.split('.')
-        _txt = @text.get((_row.to_i-1).to_s+'.0',_index)
-        if _txt.length > 0
-          m = /\s*/.match(_txt)
-          if m
-            if (m[0] != "\n")
-              _sm = m[0]
-              _sm = _sm.sub(/\n/,"")
-              @text.insert('insert',_sm)
+        _previous_row, _previous_col = _previous_index.split('.')
+        if _previous_row != _row
+          _txt = @text.get((_row.to_i-1).to_s+'.0',_index)
+          if _txt.length > 0
+            m = /\s*/.match(_txt)
+            if m
+              if (m[0] != "\n")
+                _sm = m[0]
+                _sm = _sm.sub(/\n/,"")
+                if _col.strip != '0'
+                  i0 = "#{_row.strip}.0"
+                  i1 = "#{_index} lineend"
+                  dirty = @text.get(i0,i1)
+                  if dirty && dirty.strip.length == 0
+                    @text.delete(i0,i1)
+                  end
+                end    
+                @text.insert('insert',_sm)
+              end
             end
           end
-        end
-        if _row.to_i + 1  ==  @text.index('end').split('.')[0].to_i
-          do_line_update
-        end
-        if @highlighting
-          rehighlightlines(_row.to_i, _row.to_i)
+          if _row.to_i + 1  ==  @text.index('end').split('.')[0].to_i
+            do_line_update
+          end
+          if @highlighting
+            rehighlightlines(_row.to_i, _row.to_i)
+          end
         end
       when 'Shift_L','Shift_R','Control_L','Control_R' ,'Prior', 'Next', 'Up','Down'
         # do nothing because od do_line_update
