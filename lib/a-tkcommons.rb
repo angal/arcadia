@@ -1959,8 +1959,8 @@ module TkScrollableWidget
   def disarm_scroll_binding
     @widget.yscrollcommand(proc{})
     @widget.xscrollcommand(proc{})
-    @v_scroll.command(proc{})
-    @h_scroll.command(proc{})
+    @v_scroll.command(proc{}) if @v_scroll
+    @h_scroll.command(proc{}) if @h_scroll
   end
 
   def show_v_scroll(_force=false)

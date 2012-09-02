@@ -11,10 +11,10 @@ require "tk"
 
 class OutputView
   attr_reader :text
+  attr_accessor :input_buffer
   def initialize(parent=nil)
     #left_frame = TkFrame.new(parent.frame.hinner_frame, Arcadia.style('panel')).place('x' => '0','y' => '0','relheight' => '1','width' => '25')
     #right_frame = TkFrame.new(parent.frame.hinner_frame, Arcadia.style('panel')).place('x' => '25','y' => '0','relheight' => '1','relwidth' => '1','width' => '-25')
-
     parent.frame.root.add_button(
       parent.name,
       'Clear',
@@ -60,8 +60,18 @@ class OutputView
     'background'=>Arcadia.conf('hightlight.sel.background'),
     'foreground'=>Arcadia.conf('hightlight.sel.foreground')
     )
+    @text.bind_append("KeyPress"){|e| input(e.keysym)}
+    @input_buffer = nil
     pop_up_menu        
   end
+
+  def input(_char)
+    case _char
+      when 'Return'
+        @input_buffer = @text.get("insert linestart","insert").sub(Output::PROMPT,'').strip
+    end
+  end
+
 
   def pop_up_menu
     @pop_up = TkMenu.new(
@@ -147,16 +157,19 @@ end
 class Output < ArcadiaExt
   attr_reader :main_frame
   MARKSUF='mark-'
+  PROMPT='>>>'
   def on_before_build(_event)
     #ArcadiaContractListener.new(self, MsgContract, :do_msg_event)
     @tag_seq = 0
+    @writing=false
+    @prompt_active = false
     Arcadia.attach_listener(self, MsgEvent)
+    Arcadia.attach_listener(self, InputKeyboardQueryEvent)
     #_frame = @arcadia.layout.register_panel('_rome_',@name, 'Output')
     @main_frame = OutputView.new(self)
     @run_threads = Array.new
   end
-
-
+  
   def on_after_build(_event)
     self.frame.show
   end
@@ -170,6 +183,7 @@ class Output < ArcadiaExt
     if _event.mark
       _mark_index = _event.mark.sub(MARKSUF,'');
       _index_begin = "#{_mark_index} + 1 lines + 1 chars"
+
       #_index_begin = "#{@main_frame.text.index(_event.mark)} + 1 lines + 1 chars"
       #       _b = Tk::BWidget::Button.new(@main_frame.text,
       #         'helptext'=>Time.now.strftime("-> %d-%b-%Y %H:%M:%S"),
@@ -183,7 +197,8 @@ class Output < ArcadiaExt
       @main_frame.text.insert("end","\n")
       _index_begin = @main_frame.text.index('end')
       TkTextImage.new(@main_frame.text, _index_begin, 'padx'=>0, 'pady'=>0, 'image'=> Arcadia.image_res(ITEM_START_LOG_GIF))
-      @main_frame.text.insert("end"," +--- #{format_time(_event.time)} ---+\n", 'bord_msg')
+      #@main_frame.text.insert("end"," +--- #{format_time(_event.time)} ---+\n", 'bord_msg')
+      sync_insert("end"," +--- #{format_time(_event.time)} ---+\n", 'bord_msg')
     end
     if _event.append
       _index_begin = "#{@main_frame.text.index(_index_begin)} - 2 lines lineend"
@@ -196,7 +211,8 @@ class Output < ArcadiaExt
 #    if _event.level == 'error'
 #      TkTextImage.new(@main_frame.text, _index_begin, 'padx'=>0, 'pady'=>0, 'image'=> TkPhotoImage.new('data' => ERROR_9X9_GIF))
 #    end
-    @main_frame.text.insert(_index_begin,_txt, "#{_event.level}_msg")
+    #@main_frame.text.insert(_index_begin,_txt, "#{_event.level}_msg")
+    sync_insert(_index_begin,_txt, "#{_event.level}_msg")
     _index_end = @main_frame.text.index('end')
     if ['debug','error'].include?(_event.level)
       parse_begin_row = _index_begin.split('.')[0].to_i-2
@@ -214,7 +230,53 @@ class Output < ArcadiaExt
     #         'relief'=>'groove')
     #       TkTextWindow.new(@main_frame.text, 'end', 'window'=> _b)
     #     end
+
+      
   end
+
+  def sync_insert(_index, _txt, _tag=nil)
+    begin
+      while @writing
+        sleep(0.1)
+      end
+      @writing = true
+      if @prompt_active
+        start =  @main_frame.text.get("#{_index} -1 lines linestart", _index).strip
+        if start == PROMPT
+          _index = "#{_index} -1 lines linestart"
+        end
+      end
+      if _tag
+        @main_frame.text.insert(_index, _txt, _tag)
+      else
+        @main_frame.text.insert(_index, _txt)
+      end
+    ensure
+      @writing = false
+    end
+  end
+
+  def on_input_keyboard_query(_event)
+    @prompt_active = true
+    sync_insert("end","#{PROMPT}",'bord_msg')
+    @main_frame.text.focus
+    @main_frame.text.see("end")
+
+    @main_frame.input_buffer = nil
+    while @main_frame.input_buffer.nil? && !_event.is_breaked?
+      sleep(0.1)
+    end
+    if !_event.is_breaked?
+      _event.add_result(self, 'input'=>@main_frame.input_buffer)
+    else
+      if @main_frame.text.get("end -1 lines linestart", "end -1 lines lineend").strip == PROMPT
+        @main_frame.text.delete("end -1 lines linestart", "end -1 lines lineend")
+      end
+    end
+    @main_frame.input_buffer = nil
+    @prompt_active = false
+  end
+
 
   def parse_debug(_from_row=0, _to_row=-1)
     return if _from_row == _to_row
@@ -291,11 +353,12 @@ class Output < ArcadiaExt
 
   def out(_txt=nil, _tag=nil)
     if @main_frame && _txt
-      if _tag
-        @main_frame.text.insert('end',_txt, _tag)
-      else
-        @main_frame.text.insert('end',_txt)
-      end
+      sync_insert('end', _txt, _tag)
+#      if _tag
+#        @main_frame.text.insert('end',_txt, _tag)
+#      else
+#        @main_frame.text.insert('end',_txt)
+#      end
     end
   end
 

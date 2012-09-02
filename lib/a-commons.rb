@@ -113,8 +113,10 @@ class FixedFrameWrapper < AbstractFrameWrapper
     if !Arcadia.layout.registered_panel?(self)
       if domain.nil?
         self.domain = @extension.frame_domain_default(@index)
+        @extension.frame_domain(@index, self.domain)
       end
       Arcadia.layout.register_panel(self, self.hinner_frame)
+      Arcadia.layout.build_invert_menu
     end
   end
 
@@ -289,7 +291,7 @@ class ArcadiaExt
     return @frames[_n]
   end
 
-  def frame_domain(_n=0)
+  def frame_domain(_n=0, _value=nil)
     if conf('frames')
       frs = conf('frames').split(',')
     else
@@ -297,7 +299,25 @@ class ArcadiaExt
     end
     ret = nil
     if frs.length > _n
-      ret = frs[_n]
+      if _value != nil
+        ret = _value
+        conf_value = ''
+        frs.each_with_index{|v,i| 
+          if i==_n
+            cv = _value 
+          else
+            cv = v
+          end
+          if conf_value.length > 0
+            conf_value+=",#{cv}"
+          else
+            conf_value+=cv
+          end
+        }
+        conf('frames', conf_value)
+      else
+        ret = frs[_n]
+      end
     end
     ret
   end
@@ -378,7 +398,6 @@ class ArcadiaExtPlus < ArcadiaExt
     Arcadia.attach_listener(self, ActivateInstanceEvent)
     super(_arcadia, _name)
     @@active_instance[self.class] = self if @@active_instance[self.class] == nil
-
 #    if self.frame != nil
 #      self.frame.hinner_frame.bind_append("Enter", proc{activate})
 #      if @@main_instance[self.class] == self
@@ -403,10 +422,10 @@ class ArcadiaExtPlus < ArcadiaExt
 
   def frame(_n=0,create_if_not_exist=true)
     fr = super(_n, create_if_not_exist)
-    if fr != nil && !@frame_initialize
+    if fr != nil && !@frame_initialize && fr.domain != nil && fr.domain != ArcadiaLayout::HIDDEN_DOMAIN
       @frame_initialize = true
       fr.hinner_frame.bind_append("Enter", proc{activate})
-      if @@main_instance[self.class] == self
+      if main_instance?
         fr.root.add_state_button(
         self.name,
         'Duplicate',

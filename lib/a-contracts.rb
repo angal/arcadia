@@ -285,6 +285,12 @@ class RunCmdEvent < ArcadiaEvent
   attr_accessor :lang
 end
 
+class InputKeyboardQueryEvent < ArcadiaEvent
+  class Result < Result
+    attr_accessor :input
+  end 
+end
+
 class InputEvent < ArcadiaEvent
 end
 
@@ -352,7 +358,7 @@ end
 #end
 
 # system integration Event
-class XtermEvent < ArcadiaEvent
+class TermEvent < ArcadiaEvent
   attr_accessor :title, :dir, :command
 end
 

@@ -24,7 +24,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.11.2',
+        '0.12.0',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -120,9 +120,7 @@ class Arcadia < TkApplication
       end
       geometry = start_width.to_s+'x'+start_height.to_s+'+0+0'
     end
-    @splash.next_step('..prepare')  if @splash
     prepare
-    @splash.last_step('..load finish')  if @splash
     begin
       @root.deiconify
     rescue RuntimeError => e
@@ -271,7 +269,13 @@ class Arcadia < TkApplication
 
   def Arcadia.gem_available?(_gem)
     #TODO : Gem::Specification::find_by_name(_gem)
-    if Gem.respond_to?(:available?)
+    if Gem::Specification.respond_to?(:find_by_name)
+      begin
+	    !Gem::Specification::find_by_name(_gem).nil?
+      rescue Exception => e
+	    false
+      end
+    elsif Gem.respond_to?(:available?)
       return Gem.available?(_gem)
     else
       return !Gem.source_index.find_name(_gem).empty?
@@ -590,17 +594,10 @@ class Arcadia < TkApplication
 
   def prepare
     super
-    @splash.next_step('...initialize')  if @splash
-    @splash.next_step  if @splash
-    #self.load_libs
-    @splash.next_step  if @splash
-    @splash.next_step('... load extensions')  if @splash
+    @splash.next_step('... initialize layout')  if @splash
     #load_config
     initialize_layout
     publish('buffers.code.in_memory',Hash.new)
-    @splash.next_step('... load obj controller')  if @splash
-    @splash.next_step('... load editor')  if @splash
-    @splash.next_step('... load actions')  if @splash
     #provvisorio 
     @keytest = KeyTest.new
     @keytest.on_close=proc{@keytest.hide}
@@ -608,21 +605,21 @@ class Arcadia < TkApplication
     @keytest.title("Keys test")
     publish('action.test.keys', proc{@keytest.show})
     publish('action.get.font', proc{Tk::BWidget::SelectFont::Dialog.new.create})
-    @splash.next_step  if @splash
     publish('action.show_about', proc{ArcadiaAboutSplash.new.deiconify})
     self['menubar'] = ArcadiaMainMenu.new(@main_menu_bar)
+    @splash.next_step('... build extensions')  if @splash
     self.do_build
-    @splash.next_step  if @splash
     publish('objic.action.raise_active_obj',
     proc{
     		InspectorContract.instance.raise_active_toplevel(self)
     }
     )
-    @splash.next_step('... toolbar buttons ')  if @splash   
+    @splash.next_step('... load common user controls')  if @splash   
     #Arcadia control
     load_user_control(self['toolbar'])
     load_user_control(self['menubar'])
     #Extension control
+    @splash.next_step('... load key binding')  if @splash   
     load_key_binding
     @exts.each{|ext|
       @splash.next_step("... load #{ext} user controls ")  if @splash
@@ -632,8 +629,10 @@ class Arcadia < TkApplication
     }
     load_user_control(self['toolbar'],"","e")
     load_user_control(self['menubar'],"","e")
+    @splash.next_step('... load runners')  if @splash   
     load_runners
     do_make_clones
+    @splash.next_step('... initialize extensions')  if @splash   
     do_initialize
     #@layout.build_invert_menu
   end
@@ -946,7 +945,7 @@ class Arcadia < TkApplication
             if str_frames.length > 0
               str_frames << ','
             end
-            str_frames << '-1.-1'
+            str_frames << ArcadiaLayout::HIDDEN_DOMAIN
           end
           if doms[frame]
             if str_frames.length > 0
@@ -980,6 +979,27 @@ class Arcadia < TkApplication
   def Arcadia.console(_sender, _args=Hash.new)
     _event = process_event(MsgEvent.new(_sender, _args))
     _event.mark
+  end
+
+  def Arcadia.console_input(_sender)
+    @@input_ready = true if !defined?(@@input_ready)
+    while !@@input_ready && !@@input_ready.nil?
+      sleep(0.1)
+    end
+    begin
+      @@input_ready=false
+      @@last_input_keyboard_query_event = InputKeyboardQueryEvent.new(_sender)
+      @@last_input_keyboard_query_event.go!
+      ret = @@last_input_keyboard_query_event.results.length > 0 ? @@last_input_keyboard_query_event.results[0].input : nil
+    ensure
+      @@input_ready=true
+      @@last_input_keyboard_query_event=nil
+    end
+    ret
+  end
+
+  def Arcadia.console_input_event
+    @@last_input_keyboard_query_event
   end
 
   def Arcadia.file_extension(_filename=nil)
@@ -1078,9 +1098,9 @@ class Arcadia < TkApplication
 	  end
   end
 
-  def Arcadia.text(_key=nil)
+  def Arcadia.text(_key=nil, _args=nil)
     if @@instance
-      return @@instance.localization.text(_key)
+      return @@instance.localization.text(_key, _args)
     end
   end
   
@@ -1767,7 +1787,7 @@ class ArcadiaAboutSplash < TkToplevel
 #    }
 
     @tkLabel1 = TkLabel.new(self){
-      image  Arcadia.image_res(ARCADIA_JAP_GIF)
+      image  Arcadia.image_res(ARCADIA_JAP_WHITE_GIF)
       background  _bgcolor
       justify  'left'
       place('x' => 90,'y' => 10)
@@ -2156,7 +2176,7 @@ class ArcadiaLocalization
       end
       if need_cache_update
         @lc_lang = properties_file2hash(lc_lang_standard_file)
-        @lc_lang.each_pair{|key,value| @lc_lang[key] = "{^#{value}}"}
+        @lc_lang.each_pair{|key,value| @lc_lang[key] = "#{@locale}:#{value}"}
         if File.exist?(lc_lang_locale_file)
           lc_lang_locale = properties_file2hash(lc_lang_locale_file)
         else
@@ -2169,8 +2189,13 @@ class ArcadiaLocalization
     end
   end
   
-  def text(_key)
-    @lc_lang.nil?||@lc_lang[_key].nil? ? "?" : @lc_lang[_key]
+  def text(_key, _args = nil)
+    ret = @lc_lang.nil?||@lc_lang[_key].nil? ? "?" : @lc_lang[_key]
+    if !_args.nil?
+      #todo
+      _args.each_with_index{|arg, i| ret.gsub("@ARG#{i}", arg) }
+    end
+    ret
   end  
 end
 
@@ -2441,7 +2466,7 @@ class ArcadiaLayout
 #    :frame,
 #    :ffw
 #  )
-
+  HIDDEN_DOMAIN = '-1.-1'
   def initialize(_arcadia, _frame, _autotab=true)
     @arcadia = _arcadia
     @frames = Array.new
@@ -3247,8 +3272,7 @@ class ArcadiaLayout
   end
 
   def process_frame(_ffw)
-  #def process_frame(_domain_name, _frame_name)
-    #domain_root = @panels[_domain_name]['sons'][_frame_name]
+    #p "processo frame #{_ffw.title}"
     @panels.keys.each{|dom|
       if  dom != '_domain_root_' && dom != _ffw.domain && @panels[dom] && @panels[dom]['root']
         titledFrame = @panels[dom]['root']
@@ -3313,6 +3337,8 @@ class ArcadiaLayout
   end
 
   def build_invert_menu(refresh_commons_items=false)
+    #p " ***build_invert_menu"
+
     @panels.keys.each{|dom|
       if dom != '_domain_root_' && @panels[dom] && @panels[dom]['root']
         titledFrame = @panels[dom]['root']
@@ -3358,6 +3384,8 @@ class ArcadiaLayout
   end
 
   def register_panel(_ffw, _adapter=nil)
+    #p " > register_panel #{_ffw.title} _adapter #{_adapter}"
+
     _domain_name = _ffw.domain
     _name = _ffw.name
     _title = _ffw.title
@@ -3468,7 +3496,8 @@ class ArcadiaLayout
 
 
   def unregister_panel(_ffw, delete_wrapper=true, refresh_menu=true)
-    #p "unregister #{_name} ------> 1"
+    p " < unregister_panel #{_ffw.title}"
+
     _domain_name = _ffw.domain
     _name = _ffw.name
     @panels[_domain_name]['sons'][_name].hinner_frame.detach_frame

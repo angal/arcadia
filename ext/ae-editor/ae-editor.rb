@@ -4390,7 +4390,7 @@ class AgMultiEditor < ArcadiaExtPlus
         self.debug_begin
       when SetBreakpointEvent
         if _event.active == 1
-          if _event.file
+          if _event.file && File.exists?(_event.file)
             @breakpoints << {:file=>_event.file,:line=>_event.row}
             _e = @tabs_editor[tab_file_name(_event.file)]
           elsif _event.id
@@ -4402,7 +4402,7 @@ class AgMultiEditor < ArcadiaExtPlus
             _line = _e.text.get(_index, _index+ '  lineend')
             _event.line_code = _line.strip if _line
             _e.add_tag_breakpoint(_event.row) 
-          else
+          elsif File.exists?(_event.file)
             # TODO: 
             _line = File.readlines(_event.file)[_event.row.to_i-1]
             _event.line_code = _line.strip if _line
@@ -4488,7 +4488,7 @@ class AgMultiEditor < ArcadiaExtPlus
             end   
           else
             _e = self.open_file(_event.file, _index, select_index)
-#            _e.w
+            #_e.do_line_update
           end
         elsif _event.text
           if _event.title 

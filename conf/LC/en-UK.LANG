@@ -37,6 +37,11 @@ main.menu.tools.load_from_edited_prefs=Load from edited prefs
 main.menu.help=Help
 main.menu.help.about=About
 
+#main.splash
+main.splash.spep.creating_extension=... creating @ARG0
 
+#Extensions
+
+# editor
 ext.editor.menu.view.show_hide_line_number=Show/Hide editor line numbers
 ext.editor.menu.view.show_hide_tabs=Show/Hide editor tabs

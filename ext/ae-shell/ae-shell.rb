@@ -140,7 +140,7 @@ class Shell < ArcadiaExt
         start_time = Time.now
         @arcadia['pers']['run.file.last']=_event.file if _event.persistent
         @arcadia['pers']['run.cmd.last']=_event.cmd if _event.persistent
-        if Arcadia.is_windows?
+        if Arcadia.is_windows? && RUBY_VERSION < '1.9'
           # use win32-process gem to startup a child process [not sure if linux needs something like this, too]
           require 'win32/process'
           require 'ruby-wmi'
@@ -185,18 +185,17 @@ class Shell < ArcadiaExt
 #              th = Thread.current
               fi = nil
               fi_pid = nil
-              abort_action = proc{
-                ArcadiaUtils.unix_child_pids(fi_pid).each {|pid|
-                  Process.kill(9,pid.to_i)
-                }
-                Process.kill(9,fi_pid.to_i)
-                #Kernel.system("kill -9 #{unix_child_pids(fi_pid).join(' ')} #{fi_pid}") if fi
-              }
+#              abort_action = proc{
+#                ArcadiaUtils.unix_child_pids(fi_pid).each {|pid|
+#                  Process.kill(9,pid.to_i)
+#                }
+#                Process.kill(9,fi_pid.to_i)
+#              }
                 
-              alive_check = proc{
-                num = `ps -p #{fi_pid}|wc -l` if fi_pid
-                num.to_i > 1 && fi_pid
-              }
+#              alive_check = proc{
+#                num = `ps -p #{fi_pid}|wc -l` if fi_pid
+#                num.to_i > 1 && fi_pid
+#              }
               
 
               #Arcadia.console(self,'msg'=>"#{th}", 'level'=>'debug', 'abort_action'=>abort_action)
@@ -204,44 +203,103 @@ class Shell < ArcadiaExt
               Open3.popen3(_cmd_){|stdin, stdout, stderr, th|
                 fi_pid = th.pid if th
                 output_mark = Arcadia.console(self,'msg'=>" [pid #{fi_pid}]", 'level'=>'debug', 'mark'=>output_mark, 'append'=>true)
+                alive_check = proc{th.status != false}
+                abort_action = proc{Process.kill(9,fi_pid.to_i)}
+
     	           Arcadia.process_event(SubProcessEvent.new(self, 'pid'=>fi_pid, 'name'=>_event.file,'abort_action'=>abort_action, 'alive_check'=>alive_check))
-                
-                if stdout  
-                  if @stdout_blocking
-                    output_dump = stdout.read
-                    if output_dump && output_dump.length > 0 
-                      output_mark = Arcadia.console(self,'msg'=>output_dump, 'level'=>'error', 'mark'=>output_mark)
-                      _event.add_result(self, 'output'=>output_dump)
+
+#                if stdout
+#                  if @stdout_blocking
+#                    output_dump = stdout.read
+#                    if output_dump && output_dump.length > 0 
+#                      output_mark = Arcadia.console(self,'msg'=>output_dump, 'level'=>'error', 'mark'=>output_mark)
+#                      _event.add_result(self, 'output'=>output_dump)
+#                    end
+#                  else
+#                    stdout.each do |output_dump|
+#                      p "th.status = #{th.status}"
+#                      output_mark = Arcadia.console(self,'msg'=>output_dump, 'level'=>'debug', 'mark'=>output_mark)
+#                      _event.add_result(self, 'output'=>output_dump)
+#                      if stdin && !stdin.closed? && th.status != false
+#                          begin
+#                            stdin.puts(Arcadia.console_input(self))
+#                          rescue Exception => e
+#                            output_mark = Arcadia.console(self,'msg'=>e.to_s, 'level'=>'debug', 'mark'=>output_mark)
+#                          end
+#                      end
+#                    end
+#                  end
+#                end
+
+ 
+
+                to = Thread.new(stdout) do |tout|
+                  begin
+                    while (line = tout.gets)
+                      output_mark = Arcadia.console(self,'msg'=>line, 'level'=>'debug', 'mark'=>output_mark)
+                      _event.add_result(self, 'output'=>line)
                     end
-                  else
-                    stdout.each do |output_dump|
-                      output_mark = Arcadia.console(self,'msg'=>output_dump, 'level'=>'debug', 'mark'=>output_mark)
-                      _event.add_result(self, 'output'=>output_dump)
-                    end
+                  rescue Exception => e
+                    output_mark = Arcadia.console(self,'msg'=>e.to_s, 'level'=>'debug', 'mark'=>output_mark)
                   end
                 end
-                
-                if stderr
-                  if @stderr_blocking
-                    current_buffer = '<<current buffer>>'
-                    output_dump = stderr.read
-                    if output_dump && output_dump.length > 0 
-                      if !_event.persistent
-                        output_dump.gsub!(_event.file, current_buffer)
+
+                input_break = false
+                ti = Thread.new(stdin, input_break) do |tin|
+                  while (tin && !tin.closed? && !input_break)
+                    if th.status != false && to.status == 'sleep'
+                      begin
+                        input = Arcadia.console_input(self)
+                        tin.puts(input) if input != nil
+                        sleep(0.1)
+                      rescue Exception => e
+                        output_mark = Arcadia.console(self,'msg'=>e.to_s, 'level'=>'debug', 'mark'=>output_mark)
                       end
-                      output_mark = Arcadia.console(self,'msg'=>output_dump, 'level'=>'error', 'mark'=>output_mark)
-                      _event.add_result(self, 'output'=>output_dump)
-                    end
-                  else
-                    stderr.each do |output_dump|
-                      if !_event.persistent
-                        output_dump.gsub!(_event.file, current_buffer)
-                      end
-                      output_mark = Arcadia.console(self,'msg'=>output_dump, 'level'=>'error', 'mark'=>output_mark)
-                      _event.add_result(self, 'output'=>output_dump)
+                    else
+                      sleep(0.1)
                     end
                   end
-                end
+               end
+
+               te = Thread.new(stderr) do |terr|
+                  while (line = terr.gets)
+                    output_mark = Arcadia.console(self,'msg'=>line, 'level'=>'error', 'mark'=>output_mark)
+                    _event.add_result(self, 'output'=>line)
+                  end
+               end
+
+               to.join
+               input_event = Arcadia.console_input_event
+               if input_event != nil
+                 input_event.break
+                 input_break = true
+                 ti.join
+               else
+                 ti.exit
+               end
+               te.exit
+                
+#                if stderr
+#                  if @stderr_blocking
+#                    current_buffer = '<<current buffer>>'
+#                    output_dump = stderr.read
+#                    if output_dump && output_dump.length > 0 
+#                      if !_event.persistent
+#                        output_dump.gsub!(_event.file, current_buffer)
+#                      end
+#                      output_mark = Arcadia.console(self,'msg'=>output_dump, 'level'=>'error', 'mark'=>output_mark)
+#                      _event.add_result(self, 'output'=>output_dump)
+#                    end
+#                  else
+#                    stderr.each do |output_dump|
+#                      if !_event.persistent
+#                        output_dump.gsub!(_event.file, current_buffer)
+#                      end
+#                      output_mark = Arcadia.console(self,'msg'=>output_dump, 'level'=>'error', 'mark'=>output_mark)
+#                      _event.add_result(self, 'output'=>output_dump)
+#                    end
+#                  end
+#                end
               }
               output_mark = Arcadia.console(self,'msg'=>"\nEnd running #{_event.title}:", 'level'=>'debug', 'mark'=>output_mark)
 
