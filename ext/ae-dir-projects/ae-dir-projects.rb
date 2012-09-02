@@ -79,11 +79,19 @@ class DirProjects < ArcadiaExtPlus
     )
     
     @button_box.add(Arcadia.style('toolbarbutton').update({
-      'name'=>'parent_folder',
+      'name'=>'search_in_files',
       'anchor' => 'nw',
       'command'=>proc{self.do_search_files},
       'helptext'=>'Search in files from current folder',
       'image'=> Arcadia.image_res(SEARCH_FILES_GIF)})
+    )
+
+    @button_box.add(Arcadia.style('toolbarbutton').update({
+      'name'=>'terminal',
+      'anchor' => 'nw',
+      'command'=>proc{self.do_open_term},
+      'helptext'=>'Open terminal from current folder',
+      'image'=> Arcadia.image_res(TERMINAL_GIF)})
     )
 
     #--- button_box
@@ -411,9 +419,9 @@ class DirProjects < ArcadiaExtPlus
 
     @pop_up_tree.insert('end',
       :command,
-      :label=>'Xterm from here',
+      :label=>'Terminal from here',
       :hidemargin => false,
-      :command=> proc{do_open_xterm}
+      :command=> proc{do_open_term}
     )
     
     #-----------------
@@ -497,11 +505,12 @@ class DirProjects < ArcadiaExtPlus
     end
   end
 
-  def do_open_xterm
+  def do_open_term
     _target = @htree.selected
     if _target
       _target = File.dirname(_target) if File.ftype(_target) == 'file'
-      XtermEvent.new(self,'dir'=>_target, 'title'=>_target).go!
+      #Arcadia.runtime_error_msg("Creo evento XtermEvent con dir = #{_target} e title =  #{_target}")
+      TermEvent.new(self,'dir'=>_target, 'title'=>_target).go!
     end
   end
 
