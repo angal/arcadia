@@ -331,7 +331,8 @@ class Arcadia < TkApplication
         elsif !ext_active?(extension)
           @exts.delete(extension)
         elsif ext_active?(extension)
-          @splash.next_step('... creating '+extension)  if @splash
+          @splash.next_step(Arcadia.text("main.splash.creating_extension", [extension])) if @splash
+          #@splash.next_step('... creating '+extension)  if @splash
           @exts.delete(extension) unless 
             (((@exts_dip[extension] != nil && @exts_loaded.include?(@exts_dip[extension]))||@exts_dip[extension] == nil) && ext_create(extension)) 
         end
@@ -594,7 +595,7 @@ class Arcadia < TkApplication
 
   def prepare
     super
-    @splash.next_step('... initialize layout')  if @splash
+    @splash.next_step(Arcadia.text('main.splash.initializing_layout'))  if @splash
     #load_config
     initialize_layout
     publish('buffers.code.in_memory',Hash.new)
@@ -607,32 +608,32 @@ class Arcadia < TkApplication
     publish('action.get.font', proc{Tk::BWidget::SelectFont::Dialog.new.create})
     publish('action.show_about', proc{ArcadiaAboutSplash.new.deiconify})
     self['menubar'] = ArcadiaMainMenu.new(@main_menu_bar)
-    @splash.next_step('... build extensions')  if @splash
+    @splash.next_step(Arcadia.text('main.splash.building_extensions'))  if @splash
     self.do_build
     publish('objic.action.raise_active_obj',
     proc{
     		InspectorContract.instance.raise_active_toplevel(self)
     }
     )
-    @splash.next_step('... load common user controls')  if @splash   
+    @splash.next_step(Arcadia.text('main.splash.loading_common_user_controls'))  if @splash   
     #Arcadia control
     load_user_control(self['toolbar'])
     load_user_control(self['menubar'])
     #Extension control
-    @splash.next_step('... load key binding')  if @splash   
+    @splash.next_step(Arcadia.text('main.splash.loading_keys_binding'))  if @splash   
     load_key_binding
     @exts.each{|ext|
-      @splash.next_step("... load #{ext} user controls ")  if @splash
+      @splash.next_step(Arcadia.text("main.splash.loading_ext_user_controls",[ext]))  if @splash
       load_user_control(self['toolbar'], ext)
       load_user_control(self['menubar'], ext)
       load_key_binding(ext)
     }
     load_user_control(self['toolbar'],"","e")
     load_user_control(self['menubar'],"","e")
-    @splash.next_step('... load runners')  if @splash   
+    @splash.next_step(Arcadia.text('main.splash.loading_runners'))  if @splash   
     load_runners
     do_make_clones
-    @splash.next_step('... initialize extensions')  if @splash   
+    @splash.next_step(Arcadia.text('main.splash.initializing_extensions'))  if @splash   
     do_initialize
     #@layout.build_invert_menu
   end
@@ -788,7 +789,8 @@ class Arcadia < TkApplication
       suf = "#{_pre}.#{suf}"
     end
     contexts = self['conf']["#{suf}.contexts"]
-    contexts_caption = make_locale_value(self['conf']["#{suf}.contexts.caption"], @localization.lc_lang)
+#    contexts_caption = make_locale_value(self['conf']["#{suf}.contexts.caption"], @localization.lc_lang)
+    contexts_caption = make_value(_self_on_eval, self['conf']["#{suf}.contexts.caption"])
     return if contexts.nil?
     groups = contexts.split(',')
     groups_caption = contexts_caption.split(',') if contexts_caption
@@ -809,7 +811,7 @@ class Arcadia < TkApplication
             iprops.each{|k,v|
               item_args[k]=make_value(_self_on_eval, v)
             }
-            item_args['caption'] = make_locale_value(item_args['caption'], @localization.lc_lang) if item_args['caption']
+            #item_args['caption'] = make_locale_value(item_args['caption'], @localization.lc_lang) if item_args['caption']
             item_args['name'] = item if item_args['name'].nil?
             item_args['rif'] = rif
             item_args['context'] = group
@@ -1098,9 +1100,9 @@ class Arcadia < TkApplication
 	  end
   end
 
-  def Arcadia.text(_key=nil, _args=nil)
+  def Arcadia.text(_key=nil, _params=nil)
     if @@instance
-      return @@instance.localization.text(_key, _args)
+      return @@instance.localization.text(_key, _params)
     end
   end
   
@@ -2154,6 +2156,7 @@ class ArcadiaLocalization
   include Configurable
   KEY_CACHE_VERSION = '__VERSION__'
   STANDARD_LOCALE = 'en-UK'
+  PARAM_SIG = '$'
   attr_reader :lc_lang
   def initialize
     @standard_locale=Arcadia.conf("locale.standard").nil? ? STANDARD_LOCALE : Arcadia.conf("locale.standard")
@@ -2189,11 +2192,10 @@ class ArcadiaLocalization
     end
   end
   
-  def text(_key, _args = nil)
+  def text(_key, _params = nil)
     ret = @lc_lang.nil?||@lc_lang[_key].nil? ? "?" : @lc_lang[_key]
-    if !_args.nil?
-      #todo
-      _args.each_with_index{|arg, i| ret.gsub("@ARG#{i}", arg) }
+    if !_params.nil?
+      _params.each_with_index{|param, i| ret = ret.gsub("#{PARAM_SIG}#{i}", param) }
     end
     ret
   end  
@@ -2479,6 +2481,7 @@ class ArcadiaLayout
     @panels['_domain_root_']= Hash.new
     @panels['_domain_root_']['root']= _frame
     @panels['_domain_root_']['sons'] = Hash.new
+    @panels['_domain_root_'][:raised_stack] = []
     
     @panels['nil'] = Hash.new
     @panels['nil']['root'] = TkTitledFrameAdapter.new(self.root)
@@ -2493,9 +2496,21 @@ class ArcadiaLayout
 		@panels['_domain_root_']['root']
 	end
 	
+	def raised_name(_domain)
+	  ret = nil
+	  if @panels[_domain] && @panels[_domain][:raised_stack] && @panels[_domain][:raised_stack].length > 0
+	    ret = @panels[_domain][:raised_stack][-1]
+	  end
+	  ret
+	end
+	
 	def raise_panel(_domain, _extension)
     p = @panels[_domain]
-    p[:raised_name]=_extension if p
+    if p
+      #p[:raised_name]=_extension 
+      p[:raised_stack].delete(_extension)
+      p[:raised_stack] << _extension
+    end
     if @tabbed
       if p && p['notebook'] != nil
         p['notebook'].raise(_extension)
@@ -2528,7 +2543,8 @@ class ArcadiaLayout
         ret=p['notebook'].raise == _name
       end
     else
-      ret = @panels[_domain][:raised_name] == _name
+      #ret = @panels[_domain][:raised_name] == _name
+      ret = raised_name(_domain) == _name
     end
     ret
 	end
@@ -2550,7 +2566,8 @@ class ArcadiaLayout
       end
     else
       p['sons'].each{|k,v|
-        if k == @panels[_domain][:raised_name]
+#        if k == @panels[_domain][:raised_name]
+        if k == raised_name(_domain)
           ret = v
           break
         end
@@ -3181,10 +3198,8 @@ class ArcadiaLayout
   end
 
   def change_domain(_target_domain, _source_name)
-    #tt1= @panels[_target_domain]['root'].top_text
     source_domain = @wrappers[_source_name].domain
     source_has_domain = !source_domain.nil?
-    #tt2= @panels[source_domain]['root'].top_text if source_has_domain
     if @arcadia.conf('layout.exchange_panel_if_no_tabbed')=='true' && source_has_domain && @panels[source_domain]['sons'].length ==1 && @panels[_target_domain]['sons'].length > 0
       # change ------
       ffw1 = raised_fixed_frame(_target_domain)
@@ -3195,8 +3210,6 @@ class ArcadiaLayout
       ffw2.domain = _target_domain
       register_panel(ffw1, ffw1.hinner_frame) if ffw1
       register_panel(ffw2, ffw2.hinner_frame)
-      #@panels[_target_domain]['root'].top_text(tt2)
-      #@panels[source_domain]['root'].top_text(tt1)
       @panels[_target_domain]['root'].save_caption(ffw2.name, @panels[source_domain]['root'].last_caption(ffw2.name), @panels[source_domain]['root'].last_caption_image(ffw2.name))
       @panels[source_domain]['root'].save_caption(ffw1.name, @panels[_target_domain]['root'].last_caption(ffw1.name), @panels[_target_domain]['root'].last_caption_image(ffw1.name))
       @panels[_target_domain]['root'].restore_caption(ffw2.name)
@@ -3208,8 +3221,6 @@ class ArcadiaLayout
       unregister_panel(ffw2, false, false)
       ffw2.domain = _target_domain
       register_panel(ffw2, ffw2.hinner_frame)
-      #@panels[_target_domain]['root'].top_text(tt2)
-      #@panels[source_domain]['root'].top_text('')
       @panels[_target_domain]['root'].save_caption(ffw2.name, @panels[source_domain]['root'].last_caption(ffw2.name), @panels[source_domain]['root'].last_caption_image(ffw2.name))
       @panels[_target_domain]['root'].restore_caption(ffw2.name)
       @panels[_target_domain]['root'].change_adapters(ffw2.name, @panels[source_domain]['root'].forge_transient_adapter(ffw2.name))
@@ -3311,7 +3322,8 @@ class ArcadiaLayout
              :hidemargin => true
           )
         else 
-          if @panels[_ffw.domain][:raised_name] == _ffw.name
+#          if @panels[_ffw.domain][:raised_name] == _ffw.name
+          if raised_name(_ffw.domain) == _ffw.name
             mymenu.insert(index,:command,
                :label=>"close \"#{_ffw.title}\"",
                :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
@@ -3410,7 +3422,9 @@ class ArcadiaLayout
       else
         root_frame = pan['root']
       end
-      @panels[_domain_name][:raised_name]=_name
+      #@panels[_domain_name][:raised_name]=_name
+      @panels[_domain_name][:raised_stack] = [] if @panels[_domain_name][:raised_stack].nil?
+      @panels[_domain_name][:raised_stack] << _name
       if @tabbed
         if (num == 0 && @autotab)
           pan['sons'][_name] = _ffw
@@ -3496,8 +3510,6 @@ class ArcadiaLayout
 
 
   def unregister_panel(_ffw, delete_wrapper=true, refresh_menu=true)
-    p " < unregister_panel #{_ffw.title}"
-
     _domain_name = _ffw.domain
     _name = _ffw.name
     @panels[_domain_name]['sons'][_name].hinner_frame.detach_frame
@@ -3508,31 +3520,30 @@ class ArcadiaLayout
       @wrappers[_name].domain=nil
     end
     @panels[_domain_name]['sons'].delete(_name)
+    @panels[_domain_name][:raised_stack].delete(_name)
     #p "unregister #{_name} ------> 2"
-    if @panels[_domain_name]['sons'].length == 1
-      w = @panels[_domain_name]['sons'].values[0].hinner_frame
-      t = @panels[_domain_name]['sons'].values[0].title
-      n = @panels[_domain_name]['sons'].values[0].name
-      w.detach_frame
-      w.attach_frame(@panels[_domain_name]['root'].frame)
+    if @panels[_domain_name]['sons'].length >= 1
+      n = @panels[_domain_name][:raised_stack][-1]
+      w = @panels[_domain_name]['sons'][n].hinner_frame
+      t = @panels[_domain_name]['sons'][n].title
       @panels[_domain_name]['root'].title(t)
       @panels[_domain_name]['root'].restore_caption(n)
+      @panels[_domain_name]['root'].shift_on if !@panels[_domain_name]['sons'][n].kind_of?(ArcadiaExtPlus)
       @panels[_domain_name]['root'].change_adapters_name(n)
+      if !@tabbed || @panels[_domain_name]['sons'].length == 1
+        w.detach_frame
+        w.attach_frame(@panels[_domain_name]['root'].frame)
+      end 
       if @tabbed
-        @panels[_domain_name]['notebook'].destroy
-        @panels[_domain_name]['notebook']=nil
+        if @panels[_domain_name]['sons'].length == 1
+          @panels[_domain_name]['notebook'].destroy
+          @panels[_domain_name]['notebook']=nil
+        else
+          @panels[_domain_name]['notebook'].delete(_name) if @panels[_domain_name]['notebook'].index(_name) > 0
+          new_raise_key = @panels[_domain_name]['sons'].keys[@panels[_domain_name]['sons'].length-1]
+          @panels[_domain_name]['notebook'].raise(new_raise_key)
+        end
       end
-    elsif @panels[_domain_name]['sons'].length > 1
-      if @tabbed
-        @panels[_domain_name]['notebook'].delete(_name) if @panels[_domain_name]['notebook'].index(_name) > 0
-      end
-      #p "unregister #{_name} ------> 3"
-      new_raise_key = @panels[_domain_name]['sons'].keys[@panels[_domain_name]['sons'].length-1]
-      #p "unregister #{_name} ------> 4"
-      if @tabbed
-        @panels[_domain_name]['notebook'].raise(new_raise_key)
-      end
-      #p "unregister #{_name} ------> 5"
     elsif @panels[_domain_name]['sons'].length == 0
       @panels[_domain_name]['root'].title('')
       @panels[_domain_name]['root'].top_text_clear

@@ -970,13 +970,15 @@ module Configurable
   end
 
   def make_value(_self_context=self, _value='')
+    return nil if _value.nil?
     value = _value.strip
     if value[0..0]=='!'
       value=_self_context.instance_eval(value[1..-1])
     end
     value
   end
-
+  
+  #@deprecated
   def make_locale_value(_value='', _locale_hash=nil)
     value = _value.strip if _value
     if value && _locale_hash && value.length > 3 && value[0..2]==LC_SYMBOL

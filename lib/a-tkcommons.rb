@@ -779,8 +779,6 @@ class TkBaseTitledFrame < TkFrame
     @title_height = 18
     @top = TkFrame.new(self){
       background  Arcadia.conf('titlelabel.background')
-      #foreground  'white'
-      #anchor 'w'
     }.place('x'=>0, 'y'=>0,'height'=>@title_height, 'relwidth'=>1)
     #.pack('fill'=> 'x','ipady'=> @title_height, 'side'=>'top')
     @frame = create_frame
@@ -793,7 +791,7 @@ class TkBaseTitledFrame < TkFrame
     @button_frame=TkFrame.new(@top){
       #background  '#303b50'
       background  Arcadia.conf('titlelabel.background')
-    }.pack('side'=> 'right','anchor'=> 'w')
+    }.pack('side'=> 'right','anchor'=> 'w', 'fill'=>'both', 'expand'=>'true')
 
     @buttons = Hash.new
     @menu_buttons = Hash.new
@@ -1024,6 +1022,10 @@ class TkTitledFrame < TkBaseTitledFrame
 
   def top_text_clear
     @right_label.configure('text'=>'', 'image'=>nil)
+  end
+
+  def top_text_hide
+    @right_label.unpack
   end
 
   def top_text(_text=nil, _image=nil)

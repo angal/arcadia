@@ -3407,7 +3407,7 @@ class AgMultiEditorView
   end
   
   def initialize_tabs
-    @enb = Tk::BWidget::NoteBook.new(@parent.hinner_frame, Arcadia.style('tabpanel')){
+    @enb = Tk::BWidget::NoteBook.new(@parent.frame.hinner_frame, Arcadia.style('tabpanel')){
       tabbevelsize 0
       internalborderwidth 2
       side Arcadia.conf('editor.tabs.side')
@@ -3457,7 +3457,7 @@ class AgMultiEditorView
     if @usetabs
       @enb
     else
-      @parent.hinner_frame
+      @parent.frame.hinner_frame
     end
   end
   
@@ -3509,7 +3509,9 @@ class AgMultiEditorView
         title = @pages[_name]['text'] if @pages[_name]
       end
     end
-    @parent.root.top_text(page(_name)['text'], page(_name)['image']) if page(_name) && raised?(_name)
+    #@parent.frame.root.top_text(page(_name)['text'], page(_name)['image']) if page(_name) && raised?(_name)
+    @parent.frame.root.top_text(nil, page(_name)['image']) if page(_name) && raised?(_name)
+    @parent.make_buffer_string(page(_name)['text'])
     title
   end
   
@@ -3523,10 +3525,10 @@ class AgMultiEditorView
         'raisecmd'=>_raise_proc
       )
     else
-      frame = TkFrame.new(@parent.hinner_frame) #.pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
+      frame = TkFrame.new(@parent.frame.hinner_frame) #.pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
     end
     if _adapter.nil?
-      adapted_frame = TkFrameAdapter.new(@parent.hinner_frame)
+      adapted_frame = TkFrameAdapter.new(@parent.frame.hinner_frame)
     else
       adapted_frame = _adapter
     end
@@ -3549,9 +3551,9 @@ class AgMultiEditorView
     @page_binds[_event] = _proc
     if @usetabs
       @enb.tabbind_append("Button-3",_proc)
-      @parent.root.top_text_bind_remove("Button-3")   
+      @parent.frame.root.top_text_bind_remove("Button-3")   
     else
-      @parent.root.top_text_bind_append("Button-3", _proc)   
+      @parent.frame.root.top_text_bind_append("Button-3", _proc)   
     end    
   end
 
@@ -4007,7 +4009,7 @@ class AgMultiEditor < ArcadiaExtPlus
   def on_build(_event)
 #    self.frame.hinner_frame.bind_append("Enter", proc{activate})
     @usetabs = conf('use-tabs')=='yes'
-    @main_frame = AgMultiEditorView.new(self.frame, @usetabs)
+    @main_frame = AgMultiEditorView.new(self, @usetabs)
     @@outline_bar = AgEditorOutlineToolbar.new(self) if !defined?(@@outline_bar)
     create_find # this is the "find within current file" one
     begin
@@ -4022,10 +4024,24 @@ class AgMultiEditor < ArcadiaExtPlus
       CLOSE_DOCUMENT_GIF)
     frame.root.add_sep(self.name, 1)
     @buffer_number = TkVariable.new
+    @buffer_string = TkVariable.new
+    @buffer_string.value = ''
     @buffer_number.value = 0
-    @buffer_menu = frame.root.add_menu_button(
-      self.name, 'files', DOCUMENT_COMBO_GIF, 'right', 
-      {'relief'=>:raised, 'borderwidth'=>1, 'compound'=> 'left','anchor'=>'w', 'textvariable'=> @buffer_number, 'width'=>40}).cget('menu')
+    @buffer_menu_button = frame.root.add_menu_button(
+#      self.name, 'files', DOCUMENT_COMBO_GIF, 'right', 
+      self.name, 'files', nil, 'right', 
+#      {'relief'=>:raised, 'borderwidth'=>1, 'compound'=> 'left','anchor'=>'w', 'textvariable'=> @buffer_string, 'width'=>40})
+      {'relief'=>:flat, 
+       'borderwidth'=>1, 
+       'compound'=> 'left',
+       'anchor'=>'w',
+       'font'=> "#{Arcadia.conf('titlelabel.font')} italic",
+       'foreground' => Arcadia.conf('titlecontext.foreground'),
+       'textvariable'=> @buffer_string})
+    @buffer_menu = @buffer_menu_button.cget('menu')
+    @buffer_menu_button.pack('fill'=>'x', 'expand'=>'true', 'side'=> 'left','anchor'=> 'w')
+#    TkWinfo.parent(TkWinfo.parent(@buffer_menu_button).frame).pack('fill'=>'x', 'expand'=>'true', 'side'=> 'right','anchor'=> 'w')
+    @buffer_menu_button.bind_append("Double-Button-1", proc{frame.root.resize; @buffer_menu.unpost })
     load_languages_hash
   end
 
@@ -4841,13 +4857,20 @@ class AgMultiEditor < ArcadiaExtPlus
     end
   end
 
+  def make_buffer_string(_str=nil)
+    @buffer_string.value = "[#{@buffer_number.value}] #{_str}"
+  end
+
   def change_frame_caption(_name, _new_caption)
     if @arcadia.layout.headed?
       if frame.root.title == frame.title
-        frame.root.top_text(@main_frame.page(_name)['text'], @main_frame.page(_name)['image']) if @main_frame.page(_name)
+        make_buffer_string(@main_frame.page(_name)['text']) if @main_frame.page(_name)
+        #@buffer_menu_button.configure('image'=>@main_frame.page(_name)['image']) if @main_frame.page(_name)
+#        frame.root.top_text(@main_frame.page(_name)['text'], @main_frame.page(_name)['image']) if @main_frame.page(_name)
+        frame.root.top_text(nil, @main_frame.page(_name)['image']) if @main_frame.page(_name)
         frame.root.top_text_hint(_new_caption)
       end  
-      frame.root.save_caption(frame.name, @main_frame.page(_name)['text'], @main_frame.page(_name)['image'])
+#      frame.root.save_caption(frame.name, @main_frame.page(_name)['text'], @main_frame.page(_name)['image'])
     end
   end
 

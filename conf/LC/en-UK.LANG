@@ -38,8 +38,14 @@ main.menu.help=Help
 main.menu.help.about=About
 
 #main.splash
-main.splash.spep.creating_extension=... creating @ARG0
-
+main.splash.creating_extension=... creating $0
+main.splash.initializing_layout=... initializing layout
+main.splash.building_extensions=... building extensions
+main.splash.loading_common_user_controls=... loading common user controls
+main.splash.loading_keys_binding=... loading keys binding
+main.splash.loading_ext_user_controls=... loading $0 user controls
+main.splash.loading_runners=... loading runners
+main.splash.initializing_extensions=... initializing extensions
 #Extensions
 
 # editor

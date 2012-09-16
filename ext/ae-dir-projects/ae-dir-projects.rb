@@ -56,7 +56,7 @@ class DirProjects < ArcadiaExtPlus
     
     @button_box.add(Arcadia.style('toolbarbutton').update({
       'name'=>'new_proj',
-      'anchor' => 'nw',
+      'anchor' => 'center',
       'command'=>proc{self.do_new_project},
       'helptext'=>'New dir Project',
       'image'=> Arcadia.image_res(NEW_GIF)})
@@ -64,7 +64,7 @@ class DirProjects < ArcadiaExtPlus
 
     @button_box.add(Arcadia.style('toolbarbutton').update({
       'name'=>'open_proj',
-      'anchor' => 'nw',
+      'anchor' => 'center',
       'command'=>proc{self.do_open_project},
       'helptext'=>'Open dir as Project',
       'image'=> Arcadia.image_res(OPEN_PROJECT_GIF)})
@@ -72,7 +72,7 @@ class DirProjects < ArcadiaExtPlus
 
     @button_box.add(Arcadia.style('toolbarbutton').update({
       'name'=>'parent_folder',
-      'anchor' => 'nw',
+      'anchor' => 'center',
       'command'=>proc{self.do_goto_parent_folder},
       'helptext'=>'Go to parent folder',
       'image'=> Arcadia.image_res(PARENTFOLDER_GIF)})
@@ -80,7 +80,7 @@ class DirProjects < ArcadiaExtPlus
     
     @button_box.add(Arcadia.style('toolbarbutton').update({
       'name'=>'search_in_files',
-      'anchor' => 'nw',
+      'anchor' => 'center',
       'command'=>proc{self.do_search_files},
       'helptext'=>'Search in files from current folder',
       'image'=> Arcadia.image_res(SEARCH_FILES_GIF)})
@@ -88,7 +88,7 @@ class DirProjects < ArcadiaExtPlus
 
     @button_box.add(Arcadia.style('toolbarbutton').update({
       'name'=>'terminal',
-      'anchor' => 'nw',
+      'anchor' => 'center',
       'command'=>proc{self.do_open_term},
       'helptext'=>'Open terminal from current folder',
       'image'=> Arcadia.image_res(TERMINAL_GIF)})
