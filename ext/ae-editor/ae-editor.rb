@@ -3394,8 +3394,9 @@ end
 
 class AgMultiEditorView
   #attr_reader :enb
-  def initialize(parent=nil, _usetabs=true)
-    @parent = parent
+  def initialize(_parent=nil, _frame=nil, _usetabs=true)
+    @parent = _parent
+    @frame = _frame
     @usetabs = _usetabs
     if @usetabs
       initialize_tabs
@@ -3407,7 +3408,7 @@ class AgMultiEditorView
   end
   
   def initialize_tabs
-    @enb = Tk::BWidget::NoteBook.new(@parent.frame.hinner_frame, Arcadia.style('tabpanel')){
+    @enb = Tk::BWidget::NoteBook.new(@frame.hinner_frame, Arcadia.style('tabpanel')){
       tabbevelsize 0
       internalborderwidth 2
       side Arcadia.conf('editor.tabs.side')
@@ -3457,7 +3458,7 @@ class AgMultiEditorView
     if @usetabs
       @enb
     else
-      @parent.frame.hinner_frame
+      @frame.hinner_frame
     end
   end
   
@@ -3509,9 +3510,11 @@ class AgMultiEditorView
         title = @pages[_name]['text'] if @pages[_name]
       end
     end
-    #@parent.frame.root.top_text(page(_name)['text'], page(_name)['image']) if page(_name) && raised?(_name)
-    @parent.frame.root.top_text(nil, page(_name)['image']) if page(_name) && raised?(_name)
-    @parent.make_buffer_string(page(_name)['text'])
+    #@frame.root.top_text(page(_name)['text'], page(_name)['image']) if page(_name) && raised?(_name)
+    if page(_name) && raised?(_name)
+      @frame.root.top_text(@parent.top_text_string, page(_name)['image']) 
+      @parent.make_buffer_string(page(_name)['text'])
+    end
     title
   end
   
@@ -3525,10 +3528,10 @@ class AgMultiEditorView
         'raisecmd'=>_raise_proc
       )
     else
-      frame = TkFrame.new(@parent.frame.hinner_frame) #.pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
+      frame = TkFrame.new(@frame.hinner_frame) #.pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
     end
     if _adapter.nil?
-      adapted_frame = TkFrameAdapter.new(@parent.frame.hinner_frame)
+      adapted_frame = TkFrameAdapter.new(@frame.hinner_frame)
     else
       adapted_frame = _adapter
     end
@@ -3551,9 +3554,9 @@ class AgMultiEditorView
     @page_binds[_event] = _proc
     if @usetabs
       @enb.tabbind_append("Button-3",_proc)
-      @parent.frame.root.top_text_bind_remove("Button-3")   
+      @frame.root.top_text_bind_remove("Button-3")   
     else
-      @parent.frame.root.top_text_bind_append("Button-3", _proc)   
+      @frame.root.top_text_bind_append("Button-3", _proc)   
     end    
   end
 
@@ -4009,7 +4012,7 @@ class AgMultiEditor < ArcadiaExtPlus
   def on_build(_event)
 #    self.frame.hinner_frame.bind_append("Enter", proc{activate})
     @usetabs = conf('use-tabs')=='yes'
-    @main_frame = AgMultiEditorView.new(self, @usetabs)
+    @main_frame = AgMultiEditorView.new(self, self.frame, @usetabs)
     @@outline_bar = AgEditorOutlineToolbar.new(self) if !defined?(@@outline_bar)
     create_find # this is the "find within current file" one
     begin
@@ -4026,6 +4029,7 @@ class AgMultiEditor < ArcadiaExtPlus
     @buffer_number = TkVariable.new
     @buffer_string = TkVariable.new
     @buffer_string.value = ''
+#    @buffer_string = ''
     @buffer_number.value = 0
     @buffer_menu_button = frame.root.add_menu_button(
 #      self.name, 'files', DOCUMENT_COMBO_GIF, 'right', 
@@ -4036,12 +4040,15 @@ class AgMultiEditor < ArcadiaExtPlus
        'compound'=> 'left',
        'anchor'=>'w',
        'font'=> "#{Arcadia.conf('titlelabel.font')} italic",
+       'activebackground'=>Arcadia.conf('titlelabel.background'),
        'foreground' => Arcadia.conf('titlecontext.foreground'),
-       'textvariable'=> @buffer_string})
+       'textvariable'=> @buffer_string
+       #'text'=> @buffer_string
+       })
     @buffer_menu = @buffer_menu_button.cget('menu')
     @buffer_menu_button.pack('fill'=>'x', 'expand'=>'true', 'side'=> 'left','anchor'=> 'w')
 #    TkWinfo.parent(TkWinfo.parent(@buffer_menu_button).frame).pack('fill'=>'x', 'expand'=>'true', 'side'=> 'right','anchor'=> 'w')
-    @buffer_menu_button.bind_append("Double-Button-1", proc{frame.root.resize; @buffer_menu.unpost })
+    @buffer_menu_button.bind_append("Double-Button-1", proc{frame.root.resize})
     load_languages_hash
   end
 
@@ -4077,22 +4084,46 @@ class AgMultiEditor < ArcadiaExtPlus
         end
       }
     end
-    
+    select_buffer = proc{
+      if is_file
+        open_file(_filename)
+      else
+        open_buffer(tab_name(_filename))             
+      end
+    }
     @buffer_menu.insert(index,:radio,
       :label=>File.basename(_filename),
+#      :label=>buffer_menu_item_label(_filename, is_file),
+      :accelerator=>buffer_menu_item_accelerator(_filename, is_file),
       :value=>_filename,
       :image=> Arcadia.file_icon(_filename),
       :compound=>'left',
-      :command=>proc{
-        if is_file
-          open_file(_filename)
-        else
-          open_buffer(tab_name(_filename))             
-        end
-      },
+      :command=>select_buffer,
       :hidemargin => true
-    )
+    ).bind_append('KeyRelease'){|e|
+#      case e.keysym
+#        when 'Return'
+#          Tk.callback_break
+#      end
+    }
   end
+
+#  def buffer_menu_item_label(_text, _is_file=true)
+#    if _is_file
+#    #  "#{File.basename(_text)} - #{File.dirname(_text)}"
+#      File.basename(_text)
+#    else
+#      _text
+#    end
+#  end 
+
+  def buffer_menu_item_accelerator(_text, _is_file=true)
+    if _is_file
+      File.dirname(_text)
+    else
+      '...'
+    end
+  end 
 
   def del_buffer_menu_item(_file)
     @buffer_number.numeric -= 1
@@ -4126,9 +4157,24 @@ class AgMultiEditor < ArcadiaExtPlus
         end
       end
     }
-    @buffer_menu.entryconfigure(to_mod, 'label'=>_newtext) if to_mod != -1
+    if _file != nil && _newvalue.nil? && File.exists?(_file)
+      #new_label = buffer_menu_item_label(_file, true)
+      new_accelerator = buffer_menu_item_accelerator(_file, true)
+    else
+      is_file = _newvalue != nil && File.exists?(_newvalue)
+      if is_file
+       # new_label = buffer_menu_item_label(_newvalue, is_file)
+        new_accelerator = buffer_menu_item_accelerator(_newvalue, is_file)
+      else
+        #new_label = buffer_menu_item_label(_newtext, is_file)
+        new_accelerator = buffer_menu_item_accelerator(_newtext, is_file)
+      end
+    end  
+    
+    @buffer_menu.entryconfigure(to_mod, 'label'=>_newtext, 'accelerator'=>new_accelerator) if to_mod != -1
+#    @buffer_menu.entryconfigure(to_mod, 'label'=>_newtext) if to_mod != -1
     if to_mod != -1 && _newvalue != nil
-      is_file = File.exists?(_newvalue)
+#      is_file = File.exists?(_newvalue)
       @buffer_menu.entryconfigure(to_mod, 
         :value => _newvalue,
         :image=> Arcadia.file_icon(_newvalue),
@@ -4858,7 +4904,14 @@ class AgMultiEditor < ArcadiaExtPlus
   end
 
   def make_buffer_string(_str=nil)
-    @buffer_string.value = "[#{@buffer_number.value}] #{_str}"
+    value = "[#{@buffer_number.value}] #{_str}"
+    #@buffer_menu_button.configure(:text => )
+    @buffer_string.value = value
+  end
+
+  def top_text_string
+    nil
+    #"[#{@buffer_number.value}]"
   end
 
   def change_frame_caption(_name, _new_caption)
@@ -4867,7 +4920,7 @@ class AgMultiEditor < ArcadiaExtPlus
         make_buffer_string(@main_frame.page(_name)['text']) if @main_frame.page(_name)
         #@buffer_menu_button.configure('image'=>@main_frame.page(_name)['image']) if @main_frame.page(_name)
 #        frame.root.top_text(@main_frame.page(_name)['text'], @main_frame.page(_name)['image']) if @main_frame.page(_name)
-        frame.root.top_text(nil, @main_frame.page(_name)['image']) if @main_frame.page(_name)
+        frame.root.top_text(top_text_string, @main_frame.page(_name)['image']) if @main_frame.page(_name)
         frame.root.top_text_hint(_new_caption)
       end  
 #      frame.root.save_caption(frame.name, @main_frame.page(_name)['text'], @main_frame.page(_name)['image'])
