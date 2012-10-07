@@ -115,6 +115,19 @@ class FilesHistrory < ArcadiaExt
     @sync = false
     @cb_sync.command(do_check)
     
+    @list_label="Show as list"
+    @tree_label="Show as tree"
+    @is_tree = conf("view") == "tree"
+    if @is_tree 
+      image = LIST_VIEW_GIF
+      label = @list_label
+    else
+      image = TREE_VIEW_GIF
+      label = @tree_label
+    end
+    
+    @btoggle_list_tree = frame.root.add_button(self.name, label, proc{toggle_list_tree}, image)
+    
     do_select_item = proc{|_self|
       _selected = @htree.selected
       _dir, _file = _selected.sub("%%%",":").split('@@@')
@@ -137,7 +150,8 @@ class FilesHistrory < ArcadiaExt
 
     @font =  Arcadia.conf('treeitem.font')
     @font_b = "#{Arcadia.conf('treeitem.font')} bold"
-
+    @font_italic = "#{Arcadia.conf('treeitem.font')} italic"
+    
 	  @htree = BWidgetTreePatched.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
       showlines false
       deltay 18
@@ -147,7 +161,7 @@ class FilesHistrory < ArcadiaExt
       selectcommand proc{ do_select_item.call(self) } 
 #      place('relwidth' => 1,'relheight' => '1', 'x' => '0','y' => '22', 'height' => -22)
     }
-    @htree.extend(TkScrollableWidget).show(0,0)
+    @htree.extend(TkScrollableWidget)
 
     do_double_click = proc{
         #_selected = @htree.selection_get[0]
@@ -168,10 +182,46 @@ class FilesHistrory < ArcadiaExt
     }
     
     @htree.textbind_append('Double-1',do_double_click)
+     
+    @history_lines = []
+    refresh_history_lines
+   
+    build_tree
+    pop_up_menu_tree
     
-    self.build_tree
-    self.pop_up_menu_tree
-
+    @hlist = TkText.new(self.frame.hinner_frame, Arcadia.style('text')){|j|
+      wrap 'none'
+      font @font_italic
+      cursor nil
+    }
+    @hlist.bind_append('KeyPress'){|e| Tk.callback_break }
+    @hlist.bind_append('KeyRelease'){|e| Tk.callback_break }
+    @hlist.extend(TkScrollableWidget)
+    @hlist.tag_configure("file_selected", 'foreground' => Arcadia.conf('hightlight.link.foreground'))
+	  build_list
+	  if @is_tree 
+	    @htree.show
+	  else
+	    @hlist.show
+	  end
+	end
+	
+	def toggle_list_tree
+    Tk::BWidget::DynamicHelp::delete(@btoggle_list_tree)
+	  if @is_tree
+	    @htree.hide
+	    @hlist.show
+	    label = @tree_label
+	    image = Arcadia.image_res(TREE_VIEW_GIF)
+	  else
+	    @hlist.hide
+	    @htree.show
+	    label = @list_label
+	    image = Arcadia.image_res(LIST_VIEW_GIF)
+	  end
+    @btoggle_list_tree.configure(:image=> image)
+    Tk::BWidget::DynamicHelp::add(@btoggle_list_tree, 'text'=>label)
+    @is_tree = !@is_tree
 	end
 
 	def on_after_build(_event)
@@ -204,8 +254,9 @@ class FilesHistrory < ArcadiaExt
 
   def on_after_open_buffer(_event)
     if _event.file && File.exist?(_event.file)
-      self.add2history(_event.file)
+      add2history(_event.file)
       add_to_tree(_event.file)
+      build_list
     end
   end
 
@@ -279,6 +330,15 @@ class FilesHistrory < ArcadiaExt
       end
       @htree.call_after_next_show_h_scroll(proc{Tk.update;@htree.see(_file_node_rif)})
     end
+
+    @hlist.tag_remove("file_selected",'1.0', 'end')
+    @history_lines.each_with_index{|line, i|
+      if line.include?(File.expand_path(_file))
+        index = "#{i+1}.0"
+        @hlist.tag_add("file_selected",index, "#{index} lineend")
+        @hlist.see(index)
+      end
+    }
   end
 		
   def on_buffer_raised(_event)
@@ -312,29 +372,69 @@ class FilesHistrory < ArcadiaExt
     return @root
   end
   
-  def build_tree
-    file_dir = Hash.new
-    nodes = Array.new
+  def read_history
+    to_ret = []
     if File.exist?(history_file)
       f = File::open(history_file,'r')
-      f_open = $arcadia['pers']['editor.files.open'].split("|") if $arcadia['pers']['editor.files.open']
-      begin
-        _lines = f.readlines.collect!{| line | line.chomp+"\n" }
-        _lines.sort.each{|_line|
-          _file, _index = _line.split(';')
-          if FileTest::exist?(_file)
-                @h_stack[File.expand_path(_file)]=_index
-						dir,fil =File.split(File.expand_path(_file))
-						dir = dir.downcase if Arcadia.is_windows?
-						fil = fil.downcase if Arcadia.is_windows?
-						file_dir[dir] = Array.new if file_dir[dir] == nil
-						file_dir[dir] << fil if !file_dir[dir].include?(fil)
-          end
-        }
+      begin 
+        to_ret = f.readlines.collect!{| line | line.chomp }
       ensure
         f.close unless f.nil?
       end
     end
+  end
+  
+  def refresh_history_lines
+    @history_lines = read_history
+  end 
+  
+  def build_list
+    @hlist.delete('1.0','end')
+    @history_lines.each_with_index{|line,i|
+      file, index = line.split(';')
+      if FileTest::exist?(file)
+        dir,fil =File.split(File.expand_path(file))
+        dir = dir.downcase if Arcadia.is_windows?
+        fil = fil.downcase if Arcadia.is_windows?
+        tag_name = "tag_#{i}"
+        @hlist.tag_remove(tag_name,'1.0', 'end')
+        @hlist.tag_delete(tag_name)
+
+        @hlist.tag_bind(tag_name,"Enter",  
+          proc{
+            Tk::BWidget::DynamicHelp::add(@hlist, 'text'=>file)
+            @hlist.configure('cursor'=> 'hand2')
+            @hlist.tag_configure(tag_name, 'underline'=>true)
+          }  
+        )
+        @hlist.tag_bind(tag_name,"Leave",
+          proc{
+            Tk::BWidget::DynamicHelp::delete(@hlist)
+            @hlist.configure('cursor'=> nil)
+            @hlist.tag_configure(tag_name, 'underline'=>false) 
+          }
+        )
+        @hlist.insert("end", "#{File.basename(file)}\n", tag_name)
+        @hlist.tag_bind(tag_name,"ButtonPress-1", proc{ OpenBufferTransientEvent.new(self,'file'=>file).go!})
+      end
+    }
+  end
+  
+  def build_tree
+    file_dir = Hash.new
+    nodes = Array.new
+    _lines = @history_lines
+    _lines.sort.each{|_line|
+      _file, _index = _line.split(';')
+      if _file && FileTest::exist?(_file)
+        @h_stack[File.expand_path(_file)]=_index
+        dir,fil =File.split(File.expand_path(_file))
+        dir = dir.downcase if Arcadia.is_windows?
+        fil = fil.downcase if Arcadia.is_windows?
+        file_dir[dir] = Array.new if file_dir[dir] == nil
+        file_dir[dir] << fil if !file_dir[dir].include?(fil)
+      end
+    }
 
     file_dir.keys.sort.each{|_dir|
     				node = root.dir(_dir)
@@ -497,6 +597,11 @@ class FilesHistrory < ArcadiaExt
   end
 
   def on_finalize(_event)
+    if @is_tree
+      conf('view','tree') 
+    else
+      conf('view','list') 
+    end
     return if !@h_stack_changed 
     if File.exist?(history_file)
       f = File::open(history_file,'r')
@@ -527,7 +632,7 @@ class FilesHistrory < ArcadiaExt
   end
 
   def add2history(_filename, _text_index='1.0')
-    return if !@h_stack[_filename].nil?
+    #return if !@h_stack[_filename].nil?
     if _filename && File.exist?(_filename)
       _filename = _filename.sub(Dir::pwd+'/',"")
       _filename = File.expand_path(_filename)
@@ -536,22 +641,27 @@ class FilesHistrory < ArcadiaExt
      	 #Arcadia.new_error_msg(self, "add2history history_file=#{history_file}")
 
       if File.exist?(history_file)
-        f = File::open(history_file,'r')
-        begin
-          _lines = f.readlines.collect!{| line | line.chomp}
-        ensure
-          f.close unless f.nil?
-        end
+#        f = File::open(history_file,'r')
+#        begin
+#          _lines = f.readlines.collect!{| line | line.chomp}
+#        ensure
+#          f.close unless f.nil?
+#        end
         f = File.new(history_file, "w")
         begin
           if f
-            _l= conf('length').to_i
+            max= conf('length').to_i
+            i = 0
             f.syswrite(_filename_index+"\n")
-            _lines[0.._l-2].each{|_line|
+            @history_lines.each{|_line|
               _lfile = _line.split(';')
               if _lfile
-                f.syswrite(_line+"\n") if (_lfile[0] != _filename)&&(_line.length > 0)
+                if (_lfile[0] != _filename) && (_line.length > 0) 
+                  f.syswrite(_line+"\n")
+                  i=+1 
+                end
               end
+              break if i >= max
             }
           end
         ensure
@@ -569,6 +679,7 @@ class FilesHistrory < ArcadiaExt
           f.close unless f.nil?
         end
       end
+      refresh_history_lines
     end
   end
 end

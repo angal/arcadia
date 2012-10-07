@@ -213,7 +213,6 @@ class RubySourceStructure < SourceStructure
     parse_source(_source)
   end
 
-
   def parse_source(_source)
     _row = 1
     _liv = 0
@@ -373,30 +372,6 @@ class SafeCompleteCode
     @words = Array.new
     process_source
   end
-  
-#  def dot_trip(_var_name)
-#    ret = "_class=#{_var_name}.class.name\n"
-#    ret = ret +" _methods=#{_var_name}.methods\n"
-#    ret = ret +"owner_on = Method.instance_methods.include?('owner')\n"
-#    ret = ret + "_methods.each{|m|\n"
-#    ret = ret + "meth = #{_var_name}.method(m)\n"
-#    ret = ret +"if owner_on\n"
-#    ret = ret +"_owner=meth.owner.name\n"
-#    ret = ret +"else\n"
-#    ret = ret +"meth_insp = meth.inspect\n"
-#    ret = ret +"to_sub ='#<Method:\s'+_class\n"
-#    ret = ret +"_owner=meth_insp.sub(to_sub,'').split('#')[0].strip.sub('(','').sub(')','')\n"
-#    ret = ret +"_owner=_class if _owner.strip.length==0\n"
-#    ret = ret +"end\n"
-#    ret = ret + "if _owner != _class\n"
-#    ret = ret + "print _owner+'#'+m+'#'+meth.arity.to_s+'\n'\n"
-#    ret = ret +"else\n"
-#    ret = ret + "print ''+'#'+m+'#'+meth.arity.to_s+'\n'\n"
-#    ret = ret +"end\n"
-#    ret = ret + "}\n"
-#    ret = ret + "exit\n"
-#    ret
-#  end
 
   def dot_trip(_var_name)
     ret = "_class=#{_var_name}.class.name\n"
@@ -488,22 +463,8 @@ class SafeCompleteCode
     @modified_row = @row
     @modified_col = @col
     source_array = @source.split("\n")
-    #---------------------------------
     focus_line = source_array[@row-1]
     focus_line = focus_line[0..@col] if focus_line
-    #-----
-#    if ["\s",'(','{','['].include?(focus_line[-1..-1])
-#      p "focus_line[-1..-1] e uguale a #{focus_line[-1..-1]}"
-#      focus_line = ''
-#    else
-#      focus_line_split = focus_line.split
-#      if focus_line_split && focus_line_split.length >0
-#        old_focus_line_length = focus_line.length 
-#        focus_line = focus_line_split[-1]
-#        @col = @col - (old_focus_line_length = focus_line.length)
-#      end
-#    end
-    #---
     focus_line = '' if focus_line.nil?
     focus_world = ''
     if focus_line && focus_line.strip.length > 0
@@ -529,7 +490,6 @@ class SafeCompleteCode
     end
     @class_node = @ss.class_node_by_line(@row)
     focus_line_to_evaluate = focus_line
-    #---------------------------------
     @modified_source = "#{@modified_source}Dir.chdir('#{File.dirname(@editor.file)}')\n" if @editor.file
     @modified_row = @modified_row+1
     source_array.each_with_index{|line,j|
@@ -550,15 +510,13 @@ class SafeCompleteCode
         end   
         
              
-      # 1) includiano i require
+      # 1) include require
       elsif line.strip.length>7 && (line.strip[0..7]=="require " || line.strip[0..7]=="require(")
         @modified_source = "#{@modified_source}#{line}\n"
         if line.strip[8..-1].include?("tk")
           @modified_source = "#{@modified_source}Tk.root.destroy if Tk && Tk.root\n"
         end
-        #@modified_row = @modified_row+1
-        #Arcadia.console(self, 'msg'=>"per require @modified_row=#{@modified_row}")
-      # 2) includiano la riga da evaluare con un $SAFE 3
+      # 2) include evalueting row with a $SAFE 3
       elsif j.to_i == @row-1
         focus_line_to_evaluate = line
         break
@@ -569,7 +527,7 @@ class SafeCompleteCode
       break if j.to_i >= @row - 1
     }
     if focus_line_to_evaluate
-      # ricerchiamo una eventuale dichiarazione
+      # search an optional declaration
         if focus_world && focus_world.strip.length > 0
           begin
             re = Regexp::new('[\s\n\t\;]('+focus_world.strip+')[\s\t]*=(.)*')
@@ -4142,6 +4100,7 @@ class AgMultiEditor < ArcadiaExtPlus
       end
     }
     @buffer_menu.delete(to_del) if to_del != -1
+    make_buffer_string("") if @buffer_menu.index('end').nil?
   end
 
   def mod_buffer_menu_item(_file, _newtext, _newvalue = nil)
@@ -5341,7 +5300,6 @@ class AgMultiEditor < ArcadiaExtPlus
     @tabs_editor.delete(_name)
     @tabs_file.delete(_name)
     @raw_buffer_name.delete_if {|key, value| value == _name }  
-   
     _index = @main_frame.index(_name)
     @main_frame.delete_page(_name)
     if !@main_frame.pages.empty?

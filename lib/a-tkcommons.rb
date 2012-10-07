@@ -828,7 +828,6 @@ class TkBaseTitledFrame < TkFrame
       @last_for_frame[_frame] = TkButton.new(_frame, Arcadia.style('titletoolbarbutton')){
         text  _label if _label
         image  Arcadia.image_res(_image) if _image
-        font 'helvetica 8 bold'
         padx 0
         pady 0
         if last

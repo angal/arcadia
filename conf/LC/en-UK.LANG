@@ -37,6 +37,22 @@ main.menu.tools.load_from_edited_prefs=Load from edited prefs
 main.menu.help=Help
 main.menu.help.about=About
 
+#main.button
+main.button.file.new.hint=New file
+main.button.file.new.submenu.item=New $0 file ...
+main.button.file.open.hint=Open file
+main.button.file.save.hint=Save current file
+main.button.file.find.hint=Search into current file
+main.button.run.curr.hint=Run current
+main.button.run.last.hint=Run last
+main.button.run.submenu.manage_runner.hint=Manage runner ...
+main.button.run.submenu.manage_runner.caption=Manage runner ...
+main.button.sys.exit.hint=Exit from Arcadia
+
+#main.runner
+main.runner.run_selected.title=Run selected as $0 file
+main.runner.compile_and_run_selected.title=Compile and Run selected as $0 file
+
 #main.splash
 main.splash.creating_extension=... creating $0
 main.splash.initializing_layout=... initializing layout
@@ -46,8 +62,80 @@ main.splash.loading_keys_binding=... loading keys binding
 main.splash.loading_ext_user_controls=... loading $0 user controls
 main.splash.loading_runners=... loading runners
 main.splash.initializing_extensions=... initializing extensions
+
+#error
+main.e.during_build_event.msg=During build event processing($0) : $1 at : $2
+main.e.during_build_event.title=(Arcadia) During build event processing
+main.e.loading_ext.msg=Loading "$0" ($1) : $2 at : $3
+main.e.loading_ext.title=(Arcadia) Extensions '$0'
+main.e.creating_ext.msg=Creating "$0" ($1) : $2 at : $3"
+main.e.creating_ext.title=(Arcadia) Extensions '$0'
+main.e.loading_layout.msg=Loading layout: ($0 : $1 at : $2)
+main.e.loading_layout.title=(Arcadia) Layout
+main.e.loading_runner.msg=Loading runners : probably bud runner conf '$0' : $1
+main.e.loading_runner.title=(Arcadia) Runner $0 
+main.e.loading_user_control.msg=Loading $0 ->$1 ($2 : $3 at : $4)
+main.e.loading_user_control.title=(Arcadia) $0 
+main.e.runtime.title=Runtime Error
+main.e.adding_new_menu_item.msg=During build of menu item '$0' rif '$1' not found!
+main.e.adding_new_menu_item.title=(Arcadia) $0 
+main.e.gem_missing.msg=Appears that gem : '$0' required by : '$1' is not installed! Install it from gem?
+main.e.gem_missing.title=Gem '$0' missing!
+
+#dialog
+main.d.confirm_exit.msg=Do you want exit?
+main.d.confirm_exit.title=(Arcadia) Exit
+main.d.confirm_delete_runner.msg=Do you want delete runner item '$0'?
+main.d.confirm_delete_runner.title=(Arcadia) Manage runners
+
+main.about.by=by $0
+main.about.contributors=Contributors: $0
+
+main.ps.title=Arcadia problems
+main.ps.problem=$0 problem
+main.ps.problems=$0 problems
+main.ps.dependences_missing=Dependences missing
+main.ps.runtime_errors=Runtime errors
+
 #Extensions
 
 # editor
 ext.editor.menu.view.show_hide_line_number=Show/Hide editor line numbers
 ext.editor.menu.view.show_hide_tabs=Show/Hide editor tabs
+
+# dir_projects
+ext.dir_projects.button.link.hint=Link open editors with content in the Navigator
+ext.dir_projects.button.new.hint=New dir Project
+ext.dir_projects.button.open.hint=Open dir as Project
+ext.dir_projects.button.up.hint=Go to parent folder
+ext.dir_projects.button.search.hint=Search in files from current folder
+ext.dir_projects.button.term.hint=Open terminal from current folder
+
+ext.dir_projects.menu.title=Menu tree
+ext.dir_projects.menu.new=New
+ext.dir_projects.menu.new_dir_proj=New dir Project
+ext.dir_projects.menu.new_folder=New folder
+ext.dir_projects.menu.new_file=New file
+ext.dir_projects.menu.refactor=Refactor
+ext.dir_projects.menu.refactor.rename=Rename
+ext.dir_projects.menu.refactor.move=Move
+ext.dir_projects.menu.search=Search from here
+ext.dir_projects.menu.search.find=Find in files...
+ext.dir_projects.menu.search.act=Act in files...
+ext.dir_projects.menu.term=Terminal from here
+ext.dir_projects.menu.open=Open dir as Project
+ext.dir_projects.menu.close=Close Project
+ext.dir_projects.menu.refresh=Refresh
+ext.dir_projects.menu.copy=Copy
+ext.dir_projects.menu.paste=Paste
+ext.dir_projects.menu.delete=Delete
+
+ext.dir_projects.d.move.msg=Move $0 to $1?
+ext.dir_projects.d.move.title=Confirm move
+ext.dir_projects.d.paste.msg=Copy $0 to $1?
+ext.dir_projects.d.paste.title=Confirm copy
+ext.dir_projects.d.delete.msg=Delete $0 $1 ?
+ext.dir_projects.d.delete.msg2=$0 isn't empty. Shure to delete all sub entries ?
+ext.dir_projects.d.delete.title=Confirm delete
+
+

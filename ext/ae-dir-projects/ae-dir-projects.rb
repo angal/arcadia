@@ -58,7 +58,7 @@ class DirProjects < ArcadiaExtPlus
       'name'=>'new_proj',
       'anchor' => 'center',
       'command'=>proc{self.do_new_project},
-      'helptext'=>'New dir Project',
+      'helptext'=>Arcadia.text('ext.dir_projects.button.new.hint'),
       'image'=> Arcadia.image_res(NEW_GIF)})
     )
 
@@ -66,7 +66,7 @@ class DirProjects < ArcadiaExtPlus
       'name'=>'open_proj',
       'anchor' => 'center',
       'command'=>proc{self.do_open_project},
-      'helptext'=>'Open dir as Project',
+      'helptext'=>Arcadia.text('ext.dir_projects.button.open.hint'),
       'image'=> Arcadia.image_res(OPEN_PROJECT_GIF)})
     )
 
@@ -74,7 +74,7 @@ class DirProjects < ArcadiaExtPlus
       'name'=>'parent_folder',
       'anchor' => 'center',
       'command'=>proc{self.do_goto_parent_folder},
-      'helptext'=>'Go to parent folder',
+      'helptext'=>Arcadia.text('ext.dir_projects.button.up.hint'),
       'image'=> Arcadia.image_res(PARENTFOLDER_GIF)})
     )
     
@@ -82,7 +82,7 @@ class DirProjects < ArcadiaExtPlus
       'name'=>'search_in_files',
       'anchor' => 'center',
       'command'=>proc{self.do_search_files},
-      'helptext'=>'Search in files from current folder',
+      'helptext'=>Arcadia.text('ext.dir_projects.button.search.hint'),
       'image'=> Arcadia.image_res(SEARCH_FILES_GIF)})
     )
 
@@ -90,7 +90,7 @@ class DirProjects < ArcadiaExtPlus
       'name'=>'terminal',
       'anchor' => 'center',
       'command'=>proc{self.do_open_term},
-      'helptext'=>'Open terminal from current folder',
+      'helptext'=>Arcadia.text('ext.dir_projects.button.term.hint'),
       'image'=> Arcadia.image_res(TERMINAL_GIF)})
     )
 
@@ -106,7 +106,7 @@ class DirProjects < ArcadiaExtPlus
     }
 
     Tk::BWidget::DynamicHelp::add(@cb_sync, 
-      'text'=>'Link open editors with content in the Navigator')
+      'text'=>Arcadia.text('ext.dir_projects.button.link.hint'))
 
     do_check = proc {
       if @cb_sync.cget('onvalue')==@cb_sync.cget('variable').value.to_i
@@ -292,7 +292,7 @@ class DirProjects < ArcadiaExtPlus
     @pop_up_tree = TkMenu.new(
       :parent=>@htree,
       :tearoff=>0,
-      :title => 'Menu tree'
+      :title => Arcadia.text('ext.dir_projects.menu.title')
     )
     @pop_up_tree.extend(TkAutoPostMenu)
     @pop_up_tree.configure(Arcadia.style('menu'))
@@ -300,20 +300,20 @@ class DirProjects < ArcadiaExtPlus
     sub_new = TkMenu.new(
       :parent=>@pop_up_tree,
       :tearoff=>0,
-      :title => 'New'
+      :title => Arcadia.text('ext.dir_projects.menu.new')
     )
     sub_new.extend(TkAutoPostMenu)
     sub_new.configure(Arcadia.style('menu'))
     sub_new.insert('end',
       :command,
-      :label=>'New dir Project',
+      :label=>Arcadia.text('ext.dir_projects.menu.new_dir_proj'),
       :hidemargin => false,
       :command=> proc{do_new_project}
     )
 
     sub_new.insert('end',
       :command,
-      :label=>'New folder',
+      :label=>Arcadia.text('ext.dir_projects.menu.new_folder'),
       :hidemargin => false,
       :command=> proc{
         _selected = @htree.selected
@@ -325,7 +325,7 @@ class DirProjects < ArcadiaExtPlus
 
     sub_new.insert('end',
       :command,
-      :label=>'New file',
+      :label=>Arcadia.text('ext.dir_projects.menu.new_file'),
       :hidemargin => false,
       :command=> proc{
         _selected = @htree.selected
@@ -337,7 +337,7 @@ class DirProjects < ArcadiaExtPlus
 
     @pop_up_tree.insert('end',
       :cascade,
-      :label=>'New',
+      :label=>Arcadia.text('ext.dir_projects.menu.new'),
       :menu=>sub_new,
       :hidemargin => false
     )
@@ -346,13 +346,13 @@ class DirProjects < ArcadiaExtPlus
     sub_ref = TkMenu.new(
       :parent=>@pop_up_tree,
       :tearoff=>0,
-      :title => 'Ref'
+      :title => Arcadia.text('ext.dir_projects.menu.refactor')
     )
     sub_ref.extend(TkAutoPostMenu)
     sub_ref.configure(Arcadia.style('menu'))
     sub_ref.insert('end',
       :command,
-      :label=>'Rename',
+      :label=>Arcadia.text('ext.dir_projects.menu.refactor.rename'),
       :hidemargin => false,
       :command=> proc{
         _selected = @htree.selected
@@ -363,7 +363,7 @@ class DirProjects < ArcadiaExtPlus
     )
     sub_ref.insert('end',
       :command,
-      :label=>'Move',
+      :label=>Arcadia.text('ext.dir_projects.menu.refactor.move'),
       :hidemargin => false,
       :command=> proc{
         _selected = @htree.selected
@@ -376,7 +376,7 @@ class DirProjects < ArcadiaExtPlus
     )
     @pop_up_tree.insert('end',
       :cascade,
-      :label=>'Refactor',
+      :label=>Arcadia.text('ext.dir_projects.menu.refactor'),
       :menu=>sub_ref,
       :hidemargin => false
     )
@@ -386,20 +386,20 @@ class DirProjects < ArcadiaExtPlus
     sub_ref_search = TkMenu.new(
       :parent=>@pop_up_tree,
       :tearoff=>0,
-      :title => 'Ref'
+      :title => Arcadia.text('ext.dir_projects.menu.search')
     )
     sub_ref_search.extend(TkAutoPostMenu)
     sub_ref_search.configure(Arcadia.style('menu'))
     sub_ref_search.insert('end',
       :command,
-      :label=>'Find in files...',
+      :label=>Arcadia.text('ext.dir_projects.menu.search.find'),
       :hidemargin => false,
       :command=> proc{ do_search_files }
     )
     
     sub_ref_search.insert('end',
       :command,
-      :label=>'Act in files...',
+      :label=>Arcadia.text('ext.dir_projects.menu.search.act'),
       :hidemargin => false,
       :command=> proc{
         _target = @htree.selected
@@ -411,7 +411,7 @@ class DirProjects < ArcadiaExtPlus
     )
     @pop_up_tree.insert('end',
       :cascade,
-      :label=>'Search from here',
+      :label=>Arcadia.text('ext.dir_projects.menu.search'),
       :menu=>sub_ref_search,
       :hidemargin => false
     )
@@ -419,7 +419,7 @@ class DirProjects < ArcadiaExtPlus
 
     @pop_up_tree.insert('end',
       :command,
-      :label=>'Terminal from here',
+      :label=>Arcadia.text('ext.dir_projects.menu.term'),
       :hidemargin => false,
       :command=> proc{do_open_term}
     )
@@ -428,13 +428,13 @@ class DirProjects < ArcadiaExtPlus
     
     @pop_up_tree.insert('end',
       :command,
-      :label=>'Open dir as Project',
+      :label=>Arcadia.text('ext.dir_projects.menu.open'),
       :hidemargin => false,
       :command=> proc{do_open_project}
     )
     @pop_up_tree.insert('end',
       :command,
-      :label=>'Close Project',
+      :label=>Arcadia.text('ext.dir_projects.menu.close'),
       :hidemargin => false,
       :command=> proc{
         _selected = @htree.selected
@@ -446,7 +446,7 @@ class DirProjects < ArcadiaExtPlus
     )
     @pop_up_tree.insert('end',
       :command,
-      :label=>'Refresh',
+      :label=>Arcadia.text('ext.dir_projects.menu.refresh'),
       :hidemargin => false,
       :command=> proc{
         _selected = @htree.selected
@@ -455,7 +455,7 @@ class DirProjects < ArcadiaExtPlus
     )
     @pop_up_tree.insert('end',
       :command,
-      :label=>'Copy',
+      :label=>Arcadia.text('ext.dir_projects.menu.copy'),
       :hidemargin => false,
       :command=> proc{
         _selected = @htree.selected
@@ -467,7 +467,7 @@ class DirProjects < ArcadiaExtPlus
     
     @pop_up_tree.insert('end',
       :command,
-      :label=>'Paste',
+      :label=>Arcadia.text('ext.dir_projects.menu.paste'),
       :hidemargin => false,
       :command=> proc{
         _selected = @htree.selected
@@ -478,7 +478,7 @@ class DirProjects < ArcadiaExtPlus
     )
     @pop_up_tree.insert('end',
       :command,
-      :label=>'Delete',
+      :label=>Arcadia.text('ext.dir_projects.menu.delete'),
       :hidemargin => false,
       :command=> proc{
         _selected = @htree.selected
@@ -509,7 +509,6 @@ class DirProjects < ArcadiaExtPlus
     _target = @htree.selected
     if _target
       _target = File.dirname(_target) if File.ftype(_target) == 'file'
-      #Arcadia.runtime_error_msg("Creo evento XtermEvent con dir = #{_target} e title =  #{_target}")
       TermEvent.new(self,'dir'=>_target, 'title'=>_target).go!
     end
   end
@@ -677,8 +676,8 @@ class DirProjects < ArcadiaExtPlus
   end
 
   def do_move(_source, _destination, _interactive = true)
-    _msg = "Move #{_source} to #{_destination}?"
-    if !_interactive || Arcadia.dialog(self,'type'=>'yes_no', 'level'=>'warning','title' => 'Confirm move', 'msg'=>_msg)=='yes'
+    _msg = Arcadia.text('ext.dir_projects.d.move.msg', [_source, _destination])
+    if !_interactive || Arcadia.dialog(self,'type'=>'yes_no', 'level'=>'warning','title' => Arcadia.text('ext.dir_projects.d.move.title'), 'msg'=>_msg)=='yes'
       if File.exists?(_source) 
         type = File.ftype(node2file(_source))
         source_basename = _source.split(File::SEPARATOR)[-1]
@@ -744,8 +743,8 @@ class DirProjects < ArcadiaExtPlus
   end
 
   def do_paste(_source, _destination, _interactive = true)
-    _msg = "Copy #{_source} to #{_destination}?"
-    if !_interactive || Arcadia.dialog(self,'type'=>'yes_no', 'level'=>'warning','title' => 'Confirm copy', 'msg'=>_msg)=='yes'
+    _msg = Arcadia.text("ext.dir_projects.d.paste.msg", [_source, _destination])
+    if !_interactive || Arcadia.dialog(self,'type'=>'yes_no', 'level'=>'warning','title' => Arcadia.text("ext.dir_projects.d.paste.title"), 'msg'=>_msg)=='yes'
       if File.exists?(_source) 
         require "fileutils"
         type = File.ftype(node2file(_source))
@@ -777,11 +776,11 @@ class DirProjects < ArcadiaExtPlus
     if File.exists?(node2file(_node)) 
       type = File.ftype(node2file(_node))
       if type == 'directory'
-        _msg = "Delete #{_node} directory ?"
+        _msg = Arcadia.text("ext.dir_projects.d.delete.msg", [_node, 'directory'])
       else
-        _msg = "Delete #{_node} file ?"
+        _msg = Arcadia.text("ext.dir_projects.d.delete.msg", [_node, 'file'])
       end
-      if !_interactive || Arcadia.dialog(self,'type'=>'yes_no', 'level'=>'warning','title' => 'Confirm delete', 'msg'=>_msg)=='yes'
+      if !_interactive || Arcadia.dialog(self,'type'=>'yes_no', 'level'=>'warning','title' => Arcadia.text("ext.dir_projects.d.delete.title"), 'msg'=>_msg)=='yes'
         delete_node = true
         if type == 'directory'
           entries = Dir.entries(node2file(_node))
@@ -789,11 +788,11 @@ class DirProjects < ArcadiaExtPlus
           entries.delete('..')
           #is_project = @htree.exist?(_node) && @htree.parent(_node)=='root'
           if entries.length > 0
-            _msg2 = "#{_node} isn't empty. Shure to delete all sub entries ?"
+            _msg2 = Arcadia.text("ext.dir_projects.d.delete.msg2", [_node])
             entries.each{|en|
               _msg2 = "#{_msg2}\n#{en}"
             }
-            if !_interactive || Arcadia.dialog(self,'type'=>'yes_no', 'level'=>'warning','title' => 'Confirm deletion', 'msg'=>_msg2)=='yes'
+            if !_interactive || Arcadia.dialog(self,'type'=>'yes_no', 'level'=>'warning','title' => Arcadia.text("ext.dir_projects.d.delete.title"), 'msg'=>_msg2)=='yes'
               entries.each{|en|
                 do_delete(File.join(node2file(_node),en),false)
               }
@@ -1071,12 +1070,6 @@ class DirProjects < ArcadiaExtPlus
       elsif _kind == 'file'
         return Arcadia.file_icon(_label)
       end
-
-#      elsif _kind == 'file' && _label.include?('.rb')
-#        return @image_kfile_rb
-#      else
-#        return @image_kfile
-#      end
   end
 
 

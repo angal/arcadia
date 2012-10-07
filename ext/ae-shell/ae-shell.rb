@@ -246,29 +246,38 @@ class Shell < ArcadiaExt
 
                 input_break = false
                 ti = Thread.new(stdin, input_break) do |tin|
-                  while (tin && !tin.closed? && !input_break)
-                    if th.status != false && to.status == 'sleep'
-                      begin
-                        input = Arcadia.console_input(self)
-                        tin.puts(input) if input != nil
+                  begin
+                    while (tin && !tin.closed? && !input_break)
+                      if th.status != false && to.status == 'sleep'
+                        begin
+                          input = Arcadia.console_input(self)
+                          tin.puts(input) if input != nil
+                          sleep(0.1)
+                        rescue Exception => e
+                          output_mark = Arcadia.console(self,'msg'=>e.to_s, 'level'=>'debug', 'mark'=>output_mark)
+                        end
+                      else
                         sleep(0.1)
-                      rescue Exception => e
-                        output_mark = Arcadia.console(self,'msg'=>e.to_s, 'level'=>'debug', 'mark'=>output_mark)
                       end
-                    else
-                      sleep(0.1)
                     end
+                  rescue Exception => e
+                    output_mark = Arcadia.console(self,'msg'=>e.to_s, 'level'=>'debug', 'mark'=>output_mark)
                   end
                end
 
                te = Thread.new(stderr) do |terr|
-                  while (line = terr.gets)
-                    output_mark = Arcadia.console(self,'msg'=>line, 'level'=>'error', 'mark'=>output_mark)
-                    _event.add_result(self, 'output'=>line)
+                  begin
+                    while (line = terr.gets)
+                      output_mark = Arcadia.console(self,'msg'=>line, 'level'=>'error', 'mark'=>output_mark)
+                      _event.add_result(self, 'output'=>line)
+                    end
+                  rescue Exception => e
+                    output_mark = Arcadia.console(self,'msg'=>e.to_s, 'level'=>'debug', 'mark'=>output_mark)
                   end
                end
 
                to.join
+               te.join
                input_event = Arcadia.console_input_event
                if input_event != nil
                  input_event.break

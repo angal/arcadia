@@ -22,23 +22,23 @@ class Arcadia < TkApplication
   attr_reader :localization
   def initialize
     super(
-      ApplicationParams.new(
-        'arcadia',
-        '0.12.0',
-        'conf/arcadia.conf',
-        'conf/arcadia.pers'
-      )
-    ) 
+    ApplicationParams.new(
+    'arcadia',
+    '0.12.0',
+    'conf/arcadia.conf',
+    'conf/arcadia.pers'
+    )
+    )
     load_config
     @localization = ArcadiaLocalization.new
     if self['conf']['encoding']
       Tk.encoding=self['conf']['encoding']
     end
-#    @use_splash = self['conf']['splash.show']=='yes'
-#    @splash = ArcadiaAboutSplash.new if @use_splash
-#    @splash.set_progress(50) if @splash
-#    @splash.deiconify if @splash
-#    Tk.update
+    #    @use_splash = self['conf']['splash.show']=='yes'
+    #    @splash = ArcadiaAboutSplash.new if @use_splash
+    #    @splash.set_progress(50) if @splash
+    #    @splash.deiconify if @splash
+    #    Tk.update
     @wf = TkWidgetFactory.new
     ArcadiaProblemsShower.new(self)
     ArcadiaDialogManager.new(self)
@@ -51,8 +51,8 @@ class Arcadia < TkApplication
     #_title = "Arcadia Ruby ide :: [Platform = #{RUBY_PLATFORM}] [Ruby version = #{RUBY_VERSION}] [TclTk version = #{tcltk_info.level}]"
     _title = "Arcadia"
     @root = TkRoot.new(
-      'background'=> self['conf']['background']
-      ){
+    'background'=> self['conf']['background']
+    ){
       title _title
       withdraw
       protocol( "WM_DELETE_WINDOW", proc{Arcadia.process_event(QuitEvent.new(self))})
@@ -62,20 +62,20 @@ class Arcadia < TkApplication
     @on_event = Hash.new
 
     @main_menu_bar = TkMenubar.new(
-      'background'=> self['conf']['background']
+    'background'=> self['conf']['background']
     ).pack('fill'=>'x')
     @mf_root = Tk::BWidget::MainFrame.new(@root,
-     'background'=> self['conf']['background'],
-     'height'=> 0
-      ){
+    'background'=> self['conf']['background'],
+    'height'=> 0
+    ){
       menu @main_menu_bar
     }.pack(
-      'anchor'=> 'center',
-      'fill'=> 'both',
-      'expand'=> 1
+    'anchor'=> 'center',
+    'fill'=> 'both',
+    'expand'=> 1
     )
     #.place('x'=>0,'y'=>0,'relwidth'=>1,'relheight'=>1)
-    
+
     @mf_root.show_statusbar('status')
     Arcadia.new_statusbar_item("Platform").text=RUBY_PLATFORM
     self['toolbar']= ArcadiaMainToolbar.new(self, @mf_root.add_toolbar)
@@ -83,7 +83,7 @@ class Arcadia < TkApplication
     @mf_root.show_toolbar(0,@is_toolbar_show)
     @use_splash = self['conf']['splash.show']=='yes'
     @splash = ArcadiaAboutSplash.new if @use_splash
-    @splash.set_progress(50) if @splash
+    @splash.set_progress(31) if @splash
     @splash.deiconify if @splash
     Tk.update
     @screenwidth=TkWinfo.screenwidth(@root)
@@ -98,18 +98,18 @@ class Arcadia < TkApplication
         g_array << (@screenwidth - x0.to_i).to_s
         @need_resize = true
         @x_scale = @screenwidth.to_f/w0.to_f
-      else 
+      else
         g_array << w0
-      end 
+      end
       if @screenheight > 0 && h0.to_i > @screenheight
         g_array << (@screenheight - y0.to_i).to_s
         @need_resize = true
-        @y_scale = @screenheight.to_f/h0.to_f 
-      else 
+        @y_scale = @screenheight.to_f/h0.to_f
+      else
         g_array << h0
       end
-      g_array << x0 
-      g_array << y0 
+      g_array << x0
+      g_array << y0
       geometry = geometry_from_a(g_array)
     else
       start_width = (@screenwidth-4)
@@ -171,12 +171,13 @@ class Arcadia < TkApplication
     end
     Arcadia.attach_listener(self, QuitEvent)
     Arcadia.persistent("version", self['applicationParams'].version)
+    @@last_input_keyboard_query_event=nil
   end
 
   def on_quit(_event)
     self.do_exit
   end
-  
+
   def register(_ext)
     @exts_i << _ext
   end
@@ -184,31 +185,31 @@ class Arcadia < TkApplication
   def unregister(_ext)
     @exts_i.delete(_ext)
   end
-  
+
   def last_focused_text_widget
     @focus_event_manager.last_focus_widget
-  end   
-      
+  end
+
   def show_hide_toolbar
     if @is_toolbar_show
-    		@mf_root.show_toolbar(0,false)
-    		@is_toolbar_show = false
+      @mf_root.show_toolbar(0,false)
+      @is_toolbar_show = false
     else
-    		@mf_root.show_toolbar(0,true)
-    		Tk.update
-    		@is_toolbar_show = true
+      @mf_root.show_toolbar(0,true)
+      Tk.update
+      @is_toolbar_show = true
     end
-  		
+
   end
-  
-  
+
+
   def Arcadia.finalize(id)
     puts "\nArcadia #{id} dying at #{Time.new}"
   end
-	
+
   def ext_active?(_name)
-	 return (self['conf'][_name+'.active'] != nil && self['conf'][_name+'.active']=='yes')||
-       	  (self['conf'][_name+'.active'] == nil)
+    return (self['conf'][_name+'.active'] != nil && self['conf'][_name+'.active']=='yes')||
+    (self['conf'][_name+'.active'] == nil)
   end
 
   def ext_source_must_be_loaded?(_name)
@@ -223,57 +224,57 @@ class Arcadia < TkApplication
     end
     ret
   end
-  
+
   def load_exts_conf
-  		@exts = Array.new
-  		@exts_i = Array.new
-  		@exts_dip = Hash.new
-  		@exts_loaded = Array.new
-  		load_exts_conf_from('ext')
+    @exts = Array.new
+    @exts_i = Array.new
+    @exts_dip = Hash.new
+    @exts_loaded = Array.new
+    load_exts_conf_from('ext')
   end
-	
+
   def load_exts_conf_from(_dir='',_ext_root=nil)
-  		dirs = Array.new
-  		files = Dir["#{_dir}/*"].concat(Dir[ENV["HOME"]+"/.arcadia/#{_dir}/*"]).sort
-  		files.each{|f|
-  			 dirs << f if File.stat(f).directory? && FileTest.exist?(f+'/'+File.basename(f)+'.conf')
-  		}
-  		dirs.each{|ext_dir|
-  	    conf_hash = self.properties_file2hash(ext_dir+'/'+File.basename(ext_dir)+'.conf') 
-     	 conf_hash2 = Hash.new
-     	 name = conf_hash['name']
-       	 conf_hash.each{|key, value|
-           var_plat = key.split(':')
-           if var_plat.length > 1
-             new_key = var_plat[0] + ':' + name + '.' + var_plat[1]
-           else
-             begin
-              new_key = name+'.'+key
-             rescue => e
-              puts 'is an extension missing a name?'
-              raise e
-             end
-           end	
-       	   conf_hash2[new_key]= value
-       	 }
-       @exts << name
-       if _ext_root
-         @exts_dip[name] = _ext_root
-       end	 	
-    		 self['conf'].update(conf_hash2)	
-    		 self['origin_conf'].update(conf_hash2)	
-    		 self['conf_without_local'].update(conf_hash2)	
-    		 load_exts_conf_from("#{ext_dir}/ext",name)
-  		}
+    dirs = Array.new
+    files = Dir["#{_dir}/*"].concat(Dir[ENV["HOME"]+"/.arcadia/#{_dir}/*"]).sort
+    files.each{|f|
+      dirs << f if File.stat(f).directory? && FileTest.exist?(f+'/'+File.basename(f)+'.conf')
+    }
+    dirs.each{|ext_dir|
+      conf_hash = self.properties_file2hash(ext_dir+'/'+File.basename(ext_dir)+'.conf')
+      conf_hash2 = Hash.new
+      name = conf_hash['name']
+      conf_hash.each{|key, value|
+        var_plat = key.split(':')
+        if var_plat.length > 1
+          new_key = var_plat[0] + ':' + name + '.' + var_plat[1]
+        else
+          begin
+            new_key = name+'.'+key
+          rescue => e
+            puts 'is an extension missing a name?'
+            raise e
+          end
+        end
+        conf_hash2[new_key]= value
+      }
+      @exts << name
+      if _ext_root
+        @exts_dip[name] = _ext_root
+      end
+      self['conf'].update(conf_hash2)
+      self['origin_conf'].update(conf_hash2)
+      self['conf_without_local'].update(conf_hash2)
+      load_exts_conf_from("#{ext_dir}/ext",name)
+    }
   end
 
   def Arcadia.gem_available?(_gem)
     #TODO : Gem::Specification::find_by_name(_gem)
     if Gem::Specification.respond_to?(:find_by_name)
       begin
-	    !Gem::Specification::find_by_name(_gem).nil?
+        !Gem::Specification::find_by_name(_gem).nil?
       rescue Exception => e
-	    false
+        false
       end
     elsif Gem.respond_to?(:available?)
       return Gem.available?(_gem)
@@ -308,16 +309,16 @@ class Arcadia < TkApplication
               @splash.withdraw  if @splash
               _event = Arcadia.process_event(NeedRubyGemWizardEvent.new(self, args))
               ret = ret &&  Arcadia.gem_available?(gem)
-#              if _event && _event.results
-#                ret = ret && _event.results[0].installed
-#              end
+              #              if _event && _event.results
+              #                ret = ret && _event.results[0].installed
+              #              end
               @splash.deiconify  if @splash
             end
             break if !ret
           end
-        } 
-      end 
-    end 
+        }
+      end
+    end
     ret
   end
 
@@ -333,8 +334,8 @@ class Arcadia < TkApplication
         elsif ext_active?(extension)
           @splash.next_step(Arcadia.text("main.splash.creating_extension", [extension])) if @splash
           #@splash.next_step('... creating '+extension)  if @splash
-          @exts.delete(extension) unless 
-            (((@exts_dip[extension] != nil && @exts_loaded.include?(@exts_dip[extension]))||@exts_dip[extension] == nil) && ext_create(extension)) 
+          @exts.delete(extension) unless
+          (((@exts_dip[extension] != nil && @exts_loaded.include?(@exts_dip[extension]))||@exts_dip[extension] == nil) && ext_create(extension))
         end
       end
     }
@@ -342,16 +343,13 @@ class Arcadia < TkApplication
       _build_event = Arcadia.process_event(BuildEvent.new(self))
     rescue Exception => e
       ret = false
-      msg = "During build event processing(#{$!.class.to_s}) : #{$!} at : #{$@.to_s}"
-      ans = Arcadia.dialog(self, 
-            'type'=>'abort_retry_ignore', 
-            'title' => "(Arcadia) During build event processing", 
-            'msg'=>msg,
-            'exception'=>e,
-            'level'=>'error')
-#      ans = Tk.messageBox('icon' => 'error', 'type' => 'abortretryignore',
-#      'title' => "(Arcadia) Build face", 'parent' => @root,
-#      'message' => msg)
+      msg = Arcadia.text("main.e.during_build_event.msg", [ $!.class.to_s , $!.to_s , $@.to_s ] )
+      ans = Arcadia.dialog(self,
+      'type'=>'abort_retry_ignore',
+      'title' => Arcadia.text("main.e.during_build_event.title"),
+      'msg'=>msg,
+      'exception'=>e,
+      'level'=>'error')
       if  ans == 'abort'
         raise
         exit
@@ -366,7 +364,7 @@ class Arcadia < TkApplication
   def do_initialize
     _build_event = Arcadia.process_event(InitializeEvent.new(self))
   end
-  
+
   def do_make_clones
     Array.new.concat(@exts_i).each{|ext|
       if ext.kind_of?(ArcadiaExtPlus)
@@ -377,10 +375,10 @@ class Arcadia < TkApplication
       end
     }
   end
-  
+
   def load_maximized
     lm = self['conf']['layout.maximized']
-    if lm    
+    if lm
       ext,index=lm.split(',')
       maxed = false
       if ext && index
@@ -392,31 +390,28 @@ class Arcadia < TkApplication
             maxed=true
             break
           end
-        }    
+        }
       end
     end
   end
-  
+
   def ext_load(_extension)
     ret = true
     begin
       source = self['conf'][_extension+'.require']
       if source.strip.length > 0
-	      require "#{Dir.pwd}/#{source}" 
+        require "#{Dir.pwd}/#{source}"
       end
       @exts_loaded << _extension
     rescue Exception,LoadError => e
       ret = false
-      msg = "Loading \"#{_extension}\" (#{$!.class.to_s}) : #{$!} at : #{$@.to_s}"
-      ans = Arcadia.dialog(self, 
-            'type'=>'abort_retry_ignore', 
-            'title' => "(Arcadia) Extensions '#{_extension}'", 
-            'msg'=>msg,
-            'exception'=>e,
-            'level'=>'error')
-#      ans = Tk.messageBox('icon' => 'error', 'type' => 'abortretryignore',
-#      'title' => "(Arcadia) Extensions '#{_extension}'", 'parent' => @root,
-#      'message' => msg)
+      msg = Arcadia.text("main.e.loading_ext.msg", [_extension, $!.class.to_s, $!.to_s, $@.to_s ] )
+      ans = Arcadia.dialog(self,
+      'type'=>'abort_retry_ignore',
+      'title' => Arcadia.text("main.e.loading_ext.title", [_extension]),
+      'msg'=>msg,
+      'exception'=>e,
+      'level'=>'error')
       if  ans == 'abort'
         raise
         exit
@@ -445,16 +440,16 @@ class Arcadia < TkApplication
       end
     rescue Exception,LoadError => e
       ret = false
-      msg = "Loading \"#{_extension}\" (#{$!.class.to_s}) : #{$!} at : #{$@.to_s}" 
-      ans = Arcadia.dialog(self, 
-            'type'=>'abort_retry_ignore', 
-            'title' => "(Arcadia) Extensions '#{_extension}'", 
-            'msg'=>msg,
-            'exception'=>e,
-            'level'=>'error')
-#      ans = Tk.messageBox('icon' => 'error', 'type' => 'abortretryignore',
-#      'title' => "(Arcadia) Extensions '#{_extension}'", 'parent' => @root,
-#      'message' => msg)
+      msg = Arcadia.text("main.e.creating_ext.msg", [_extension, $!.class.to_s, $!, $@.to_s])
+      ans = Arcadia.dialog(self,
+      'type'=>'abort_retry_ignore',
+      'title' => Arcadia.text("main.e.creating_ext.title", [_extension]),
+      'msg'=>msg,
+      'exception'=>e,
+      'level'=>'error')
+      #      ans = Tk.messageBox('icon' => 'error', 'type' => 'abortretryignore',
+      #      'title' => "(Arcadia) Extensions '#{_extension}'", 'parent' => @root,
+      #      'message' => msg)
       if  ans == 'abort'
         raise
         exit
@@ -467,30 +462,27 @@ class Arcadia < TkApplication
     ret
   end
 
-  def ext_method(_extension, _method)
-    begin
-      self[_extension].send(_method)
-    rescue Exception => e
-      msg = _method.to_s+' "'+_extension.to_s+'"'+" ("+$!.class.to_s+") "+" : "+$! + "\n at : "+$@.to_s
-      ans = Arcadia.dialog(self, 
-            'type'=>'abort_retry_ignore', 
-            'title' => "(Arcadia) Extensions", 
-            'msg'=>msg,
-            'exception'=>e,
-            'level'=>'error')
-#      ans = Tk.messageBox('icon' => 'warning', 'type' => 'abortretryignore',
-#      'title' => '(Arcadia) Extensions', 'parent' => @root,
-#      'message' => msg)
-      if ans == 'abort'
-        raise
-        exit
-      elsif ans == 'retry'
-        retry
-      else
-        Tk.update
-      end
-    end
-  end
+  #  def ext_method(_extension, _method)
+  #    begin
+  #      self[_extension].send(_method)
+  #    rescue Exception => e
+  #      msg = _method.to_s+' "'+_extension.to_s+'"'+" ("+$!.class.to_s+") "+" : "+$! + "\n at : "+$@.to_s
+  #      ans = Arcadia.dialog(self,
+  #            'type'=>'abort_retry_ignore',
+  #            'title' => "(Arcadia) Extensions",
+  #            'msg'=>msg,
+  #            'exception'=>e,
+  #            'level'=>'error')
+  #      if ans == 'abort'
+  #        raise
+  #        exit
+  #      elsif ans == 'retry'
+  #        retry
+  #      else
+  #        Tk.update
+  #      end
+  #    end
+  #  end
 
   def initialize_layout
     @layout = ArcadiaLayout.new(self, @mf_root.get_frame)
@@ -510,7 +502,7 @@ class Arcadia < TkApplication
               pt = c[0].split('.')
               perc = c[1].include?('%')
               w = c[1].sub('%','')
-              if perc 
+              if perc
                 @layout.add_cols_perc(pt[0].to_i, pt[1].to_i, w.to_i)
               else
                 if @need_resize
@@ -526,7 +518,7 @@ class Arcadia < TkApplication
                 pt = r[0].split('.')
                 perc = r[1].include?('%')
                 w = r[1].sub('%','')
-                if perc 
+                if perc
                   @layout.add_rows_perc(pt[0].to_i, pt[1].to_i, w.to_i)
                 else
                   if @need_resize
@@ -538,14 +530,13 @@ class Arcadia < TkApplication
                 end
               end
             end
-            
           rescue Exception
-            msg = "Loading layout: (#{$!.class.to_s} : #{$!.to_s} at : #{$@.to_s})"
-            if Arcadia.dialog(self, 
-              'type'=>'ok_cancel', 
+            msg = Arcadia.text('main.e.loading_layout.msg', [$!.class.to_s, $!.to_s, $@.to_s])
+            if Arcadia.dialog(self,
+              'type'=>'ok_cancel',
               'level'=>'error',
-              'title' => '(Arcadia) Layout',
-              'exception' => $!, 
+              'title' => Arcadia.text('main.e.loading_layout.title'),
+              'exception' => $!,
               'msg'=>msg)=='cancel'
               raise
               exit
@@ -572,7 +563,7 @@ class Arcadia < TkApplication
     self.load_sysdefaultproperty
   end
 
-  def load_sysdefaultproperty  
+  def load_sysdefaultproperty
     Tk.tk_call "eval","option add *background #{self['conf']['background']}"
     Tk.tk_call "eval","option add *foreground #{self['conf']['foreground']}"
     Tk.tk_call "eval","option add *activebackground #{self['conf']['activebackground']}"
@@ -590,7 +581,7 @@ class Arcadia < TkApplication
         Arcadia.runtime_error(e)
       end
     end
-    
+
   end
 
   def prepare
@@ -599,7 +590,7 @@ class Arcadia < TkApplication
     #load_config
     initialize_layout
     publish('buffers.code.in_memory',Hash.new)
-    #provvisorio 
+    #provvisorio
     @keytest = KeyTest.new
     @keytest.on_close=proc{@keytest.hide}
     @keytest.hide
@@ -612,15 +603,15 @@ class Arcadia < TkApplication
     self.do_build
     publish('objic.action.raise_active_obj',
     proc{
-    		InspectorContract.instance.raise_active_toplevel(self)
+      InspectorContract.instance.raise_active_toplevel(self)
     }
     )
-    @splash.next_step(Arcadia.text('main.splash.loading_common_user_controls'))  if @splash   
+    @splash.next_step(Arcadia.text('main.splash.loading_common_user_controls'))  if @splash
     #Arcadia control
     load_user_control(self['toolbar'])
     load_user_control(self['menubar'])
     #Extension control
-    @splash.next_step(Arcadia.text('main.splash.loading_keys_binding'))  if @splash   
+    @splash.next_step(Arcadia.text('main.splash.loading_keys_binding'))  if @splash
     load_key_binding
     @exts.each{|ext|
       @splash.next_step(Arcadia.text("main.splash.loading_ext_user_controls",[ext]))  if @splash
@@ -630,14 +621,14 @@ class Arcadia < TkApplication
     }
     load_user_control(self['toolbar'],"","e")
     load_user_control(self['menubar'],"","e")
-    @splash.next_step(Arcadia.text('main.splash.loading_runners'))  if @splash   
+    @splash.next_step(Arcadia.text('main.splash.loading_runners'))  if @splash
     load_runners
     do_make_clones
-    @splash.next_step(Arcadia.text('main.splash.initializing_extensions'))  if @splash   
+    @splash.next_step(Arcadia.text('main.splash.initializing_extensions'))  if @splash
     do_initialize
     #@layout.build_invert_menu
   end
-  
+
   def load_runners
     self['runners'] = Hash.new
     self['runners_by_ext'] = Hash.new
@@ -662,18 +653,18 @@ class Arcadia < TkApplication
       run[:title] = nil
       run[:runner_name] = name
       _command = proc{
-          _event = Arcadia.process_event(
-            RunCmdEvent.new(self, run)
-          )
+        _event = Arcadia.process_event(
+        RunCmdEvent.new(self, run)
+        )
       }
-      mr.insert('0', 
-        :command ,{
-          :image => Arcadia.file_icon(run[:file_exts]),
-          :label => _run_title,
-          :font => Arcadia.conf('menu.font'),
-          :compound => 'left',
-          :command => _command
-        }
+      mr.insert('0',
+      :command ,{
+        :image => Arcadia.file_icon(run[:file_exts]),
+        :label => _run_title,
+        :font => Arcadia.conf('menu.font'),
+        :compound => 'left',
+        :command => _command
+      }
       )
     }
 
@@ -686,18 +677,18 @@ class Arcadia < TkApplication
       run[:title] = nil
       run[:runner_name] = name
       _command = proc{
-         _event = Arcadia.process_event(
-           RunCmdEvent.new(self, run)
-         )
+        _event = Arcadia.process_event(
+        RunCmdEvent.new(self, run)
+        )
       }
-      mr.insert('0', 
-        :command ,{
-          :image => Arcadia.file_icon(run[:file_exts]),
-          :label => _run_title,
-          :font => Arcadia.conf('menu.font'),
-          :compound => 'left',
-          :command => _command
-        }
+      mr.insert('0',
+      :command ,{
+        :image => Arcadia.file_icon(run[:file_exts]),
+        :label => _run_title,
+        :font => Arcadia.conf('menu.font'),
+        :compound => 'left',
+        :command => _command
+      }
       )
     }
 
@@ -708,7 +699,7 @@ class Arcadia < TkApplication
     runs.each{|name, hash_string|
       self['runners'][name]=eval hash_string
     }
-    
+
     self['runners'].each{|name, run|
       insert_runner_item.call(name, run)
     }
@@ -721,11 +712,12 @@ class Arcadia < TkApplication
       begin
         pers_runner[name]=eval hash_string
       rescue Exception => e
-        p  "Loading runners : probably bud runner conf '#{hash_string}' : #{e.message}"
+        p Arcadia("main.e.loading_runner.title", [name])
+        p Arcadia("main.e.loading_runner.msg", [hash_string, e.message])
         Arcadia.unpersistent("runners.#{name}")
       end
     }
-    
+
     pers_runner.each{|name, run|
       insert_runner_instance_item.call(name, run)
     }
@@ -737,10 +729,9 @@ class Arcadia < TkApplication
       @runm.on_close=proc{@runm.hide}
     end
     @runm.show
-    @runm.load_items 
-
+    @runm.load_items
   end
-  
+
   def register_key_binding(_self_target, k, v)
     value = v.strip
     key_dits = k.split('[')
@@ -755,10 +746,10 @@ class Arcadia < TkApplication
       end
     }
   end
-  
+
   def load_key_binding(_ext='')
     return unless _ext && ext_active?(_ext)
-    if _ext.length > 0 
+    if _ext.length > 0
       if self[_ext]
         _self_on_eval = self[_ext]
       else
@@ -774,10 +765,10 @@ class Arcadia < TkApplication
       register_key_binding(_self_on_eval, k, v)
     }
   end
-  
+
   def load_user_control(_user_control, _ext='', _pre='')
     return unless _ext && ext_active?(_ext)
-    
+
     if _ext.length > 0 && self[_ext]
       _self_on_eval = self[_ext]
       suf = "#{_ext}.#{_user_control.class::SUF}"
@@ -789,7 +780,6 @@ class Arcadia < TkApplication
       suf = "#{_pre}.#{suf}"
     end
     contexts = self['conf']["#{suf}.contexts"]
-#    contexts_caption = make_locale_value(self['conf']["#{suf}.contexts.caption"], @localization.lc_lang)
     contexts_caption = make_value(_self_on_eval, self['conf']["#{suf}.contexts.caption"])
     return if contexts.nil?
     groups = contexts.split(',')
@@ -807,11 +797,9 @@ class Arcadia < TkApplication
             disabled = !self['conf']["#{suf2}.disabled"].nil?
             iprops=Arcadia.conf_group(suf2)
             item_args = Hash.new
-            
             iprops.each{|k,v|
               item_args[k]=make_value(_self_on_eval, v)
             }
-            #item_args['caption'] = make_locale_value(item_args['caption'], @localization.lc_lang) if item_args['caption']
             item_args['name'] = item if item_args['name'].nil?
             item_args['rif'] = rif
             item_args['context'] = group
@@ -822,10 +810,10 @@ class Arcadia < TkApplication
             i.enable=false if disabled
           }
         rescue Exception
-          msg = "Loading #{groups} ->#{items} (#{$!.class.to_s} : #{$!.to_s} at : #{$@.to_s})"
-          if Arcadia.dialog(self, 
-            'type'=>'ok_cancel', 
-            'title' => "(Arcadia) #{_user_control.class::SUF}", 
+          msg = Arcadia.text("main.e.loading_user_control.msg", [groups, items, $!.class.to_s, $!.to_s, $@.to_s])
+          if Arcadia.dialog(self,
+            'type'=>'ok_cancel',
+            'title' => Arcadia.text("main.e.loading_user_control.title", [_user_control.class::SUF]),
             'msg'=>msg,
             'exception'=>$!,
             'level'=>'error')=='cancel'
@@ -837,20 +825,20 @@ class Arcadia < TkApplication
         end
       end
     }
-    
+
   end
 
   def do_exit
     q1 = conf('confirm-on-exit')!='yes' || (Arcadia.dialog(self,
-                        'type'=>'yes_no',
-                        'msg'=>"Do you want exit?",
-                        'title' => '(Arcadia) Exit',
-                        'level' => 'question')=='yes')
+    'type'=>'yes_no',
+    'msg'=> Arcadia.text("main.d.confirm_exit.msg"),
+    'title' => Arcadia.text("main.d.confirm_exit.title"),
+    'level' => 'question')=='yes')
     if q1 && can_exit?
       do_finalize
       @root.destroy
-#      Tk.mainloop_exist?
-#      Tk.destroy
+      #      Tk.mainloop_exist?
+      #      Tk.destroy
       Tk.exit
     end
   end
@@ -903,8 +891,8 @@ class Arcadia < TkApplication
     @exts_i.each{|e|
       found = false
       if e.conf('frames')
-        frs = e.conf('frames').split(',') 
-      else 
+        frs = e.conf('frames').split(',')
+      else
         frs = Array.new
       end
       frs.each_index{|i|
@@ -914,7 +902,7 @@ class Arcadia < TkApplication
           found=true
           break
         end
-      } 
+      }
       break if found
     }
     # layouts
@@ -931,8 +919,8 @@ class Arcadia < TkApplication
     # domains
     @exts_i.each{|e|
       if e.conf('frames')
-        frs = e.conf('frames').split(',') 
-      else 
+        frs = e.conf('frames').split(',')
+      else
         frs = Array.new
       end
       str_frames=''
@@ -960,7 +948,7 @@ class Arcadia < TkApplication
       }
       if str_frames.length > 0
         self['conf']["#{e.conf('name')}.frames"]=str_frames
- #     p "#{e.conf('name')}.frames=#{str_frames}"
+        #     p "#{e.conf('name')}.frames=#{str_frames}"
       end
     }
     # toolbar
@@ -970,7 +958,7 @@ class Arcadia < TkApplication
       self['conf']['user_toolbar_show']='no'
     end
   end
-  
+
   def do_finalize
     self.save_layout
     _event = Arcadia.process_event(FinalizeEvent.new(self))
@@ -1013,25 +1001,25 @@ class Arcadia < TkApplication
 
   def  Arcadia.runner_for_file(_filename=nil)
     if @@instance
-      return @@instance['runners_by_ext'][Arcadia.file_extension(_filename)]  
+      return @@instance['runners_by_ext'][Arcadia.file_extension(_filename)]
     end
   end
 
   def  Arcadia.runner_for_lang(_lang=nil)
     if @@instance
-      return @@instance['runners_by_lang'][_lang]  
+      return @@instance['runners_by_lang'][_lang]
     end
   end
 
   def  Arcadia.runner(_name=nil)
     if @@instance
-      return @@instance['runners'][_name]  
+      return @@instance['runners'][_name]
     end
   end
 
-  
+
   def Arcadia.dialog(_sender, _args=Hash.new)
-    _event = process_event(DialogEvent.new(_sender, _args))  
+    _event = process_event(DialogEvent.new(_sender, _args))
     return _event.results[0].value if _event
   end
 
@@ -1065,39 +1053,39 @@ class Arcadia < TkApplication
       @@instance['conf']["#{_path_target}.#{k}"]=v
     }
   end
- 
+
   def Arcadia.persistent(_property, _value=nil, _immediate=false)
     if @@instance
       if _value.nil?
         return @@instance['pers'][_property]
       else
-	      @@instance['pers'][_property] = _value 
-	    end
-	    if _immediate      
-	      @@instance.append_persistent_property(@@instance['applicationParams'].persistent_file,_property, _value )
+        @@instance['pers'][_property] = _value
       end
-	  end
+      if _immediate
+        @@instance.append_persistent_property(@@instance['applicationParams'].persistent_file,_property, _value )
+      end
+    end
   end
 
   def Arcadia.unpersistent(_property, _immediate=false)
     if @@instance
       @@instance['pers'].delete(_property)
-      if _immediate      
+      if _immediate
         # not yet supported
       end
-	  end
+    end
   end
 
   def Arcadia.layout
     if @@instance
-        return @@instance.layout
-	  end
+      return @@instance.layout
+    end
   end
 
   def Arcadia.wf
     if @@instance
-        return @@instance.wf
-	  end
+      return @@instance.wf
+    end
   end
 
   def Arcadia.text(_key=nil, _params=nil)
@@ -1105,15 +1093,15 @@ class Arcadia < TkApplication
       return @@instance.localization.text(_key, _params)
     end
   end
-  
+
   def Arcadia.open_file_dialog
-     Tk.getOpenFile 'initialdir' => MonitorLastUsedDir.get_last_dir
+    Tk.getOpenFile 'initialdir' => MonitorLastUsedDir.get_last_dir
   end
 
   def Arcadia.is_windows?
     RUBY_PLATFORM =~ /mingw|mswin/
   end
-  
+
   def Arcadia.ruby
     @ruby_interpreter=Gem.ruby if !defined?(@ruby_interpreter)
     @ruby_interpreter
@@ -1151,7 +1139,7 @@ class Arcadia < TkApplication
       if FileTest.exist?(_file)
         _ret = _file
         break
-      end      
+      end
     } if gem_path && gem_path.kind_of?(Array)
     # gem specific bin check
     if _ret.nil?
@@ -1167,9 +1155,9 @@ class Arcadia < TkApplication
   def Arcadia.[](_name)
     @@instance[_name]
   end
-  
+
   def Arcadia.new_statusbar_item(_help=nil)
-    _other =  @@last_status_item if defined?(@@last_status_item) 
+    _other =  @@last_status_item if defined?(@@last_status_item)
     @@last_status_item=@@instance.mf_root.add_indicator()
     @@last_status_item.configure(:background=>Arcadia.conf("background"))
     @@last_status_item.configure(:foreground=>Arcadia.conf("foreground"))
@@ -1182,7 +1170,7 @@ class Arcadia < TkApplication
     end
     @@last_status_item
   end
-  
+
   def Arcadia.menu_root(_menu_root_name, _menu_root=nil)
     if @@instance['menu_roots'] == nil
       @@instance['menu_roots'] = Hash.new
@@ -1196,7 +1184,7 @@ class Arcadia < TkApplication
   def Arcadia.image_res(_name)
     if @@instance['image_res'] == nil
       @@instance['image_res'] = Hash.new
-    end 
+    end
     if @@instance['image_res'][_name].nil?
       @@instance['image_res'][_name] = TkPhotoImage.new('data' => _name)
     end
@@ -1204,18 +1192,18 @@ class Arcadia < TkApplication
   end
 
   def Arcadia.lang_icon(_lang=nil)
-    icon = "FILE_ICON_#{_lang.upcase if _lang}" 
+    icon = "FILE_ICON_#{_lang.upcase if _lang}"
     if _lang && eval("defined?(#{icon})")
       image_res(eval(icon))
     else
       image_res(FILE_ICON_DEFAULT)
     end
   end
-    
+
   def Arcadia.file_icon(_file_name)
     _file_name = '' if _file_name.nil?
     if @@instance['file_icons'] == nil
-      @@instance['file_icons'] = Hash.new 
+      @@instance['file_icons'] = Hash.new
       @@instance['file_icons']['default']= image_res(FILE_ICON_DEFAULT)
       #TkPhotoImage.new('dat' => FILE_ICON_DEFAULT)
     end
@@ -1229,7 +1217,7 @@ class Arcadia < TkApplication
       file_icon_name="FILE_ICON_#{file_dn.upcase}"
       begin
         if eval("defined?(#{file_icon_name})")
-          @@instance['file_icons'][file_dn]=image_res(eval(file_icon_name)) 
+          @@instance['file_icons'][file_dn]=image_res(eval(file_icon_name))
           #TkPhotoImage.new('dat' => eval(file_icon_name))
         else
           @@instance['file_icons'][file_dn]= @@instance['file_icons']['default']
@@ -1241,35 +1229,35 @@ class Arcadia < TkApplication
     @@instance['file_icons'][file_dn]
   end
 
-#  def Arcadia.res(_res)
-#    theme = Arcadia.instance['conf']['theme']
-#    if theme
-#      ret = eval("#{theme}::#{_res}")
-#    end
-#    ret=Res::_res if ret.nil?
-#    return ret
-#  end
+  #  def Arcadia.res(_res)
+  #    theme = Arcadia.instance['conf']['theme']
+  #    if theme
+  #      ret = eval("#{theme}::#{_res}")
+  #    end
+  #    ret=Res::_res if ret.nil?
+  #    return ret
+  #  end
 
   def Arcadia.menubar_item(_name=nil)
     if _name && @@instance && @@instance['menubar']
-        return @@instance['menubar'].items(_name)
-	  end
+      return @@instance['menubar'].items(_name)
+    end
   end
 
   def Arcadia.toolbar_item(_name=nil)
     if _name && @@instance && @@instance['toolbar']
-        #@@instance['toolbar'].items.each{|k, v | p k}
-        return @@instance['toolbar'].items[_name]
-	  end
+      #@@instance['toolbar'].items.each{|k, v | p k}
+      return @@instance['toolbar'].items[_name]
+    end
   end
 
-  def Arcadia.runtime_error(_e, _title="Runtime Error")
+  def Arcadia.runtime_error(_e, _title=Arcadia.text("main.e.runtime.title"))
     ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::RUNTIME_ERROR_TYPE,"title"=>"#{_title} : [#{_e.class}] #{_e.message} at :", "detail"=>_e.backtrace).go!
-  end 
+  end
 
-  def Arcadia.runtime_error_msg(_msg, _title="Runtime Error")
+  def Arcadia.runtime_error_msg(_msg, _title=Arcadia.text("main.e.runtime.title"))
     ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::RUNTIME_ERROR_TYPE,"title"=>"#{_title} at :", "detail"=>_msg).go!
-  end 
+  end
 end
 
 class ArcadiaUserControl
@@ -1288,48 +1276,48 @@ class ArcadiaUserControl
     attr_reader :item_obj
     def initialize(_sender, _args)
       @sender = _sender
-      if _args 
+      if _args
         _args.each do |key, value|
           self.send(key+'=', value) if self.respond_to?(key)
         end
       end
-      if @action 
+      if @action
         @command = proc{Arcadia.process_event(_sender.instance_eval(@action))}
       elsif @event_class
         @command = proc{Arcadia.process_event(@event_class.new(_sender, @event_args))}
       end
     end
 
-    def method_missing(m, *args)  
+    def method_missing(m, *args)
       if @item_obj && @item_obj.respond_to?(m)
         @item_obj.send(m, *args)
       end
-    end  
+    end
 
-        
+
     def enable=(_value)
     end
-    
+
     def background
     end
-    
+
     def foreground
     end
-    
+
   end
-#  def initialize
-#    @items = Hash.new
-#  end
+  #  def initialize
+  #    @items = Hash.new
+  #  end
   def items
     @items = Hash.new if @items.nil?
     @items
   end
-  
+
   def new_item(_sender, _args)
     item = self.class::UserItem.new(_sender, _args)
     items[_args['name']]= item if _args['name']
   end
-  
+
 end
 
 
@@ -1367,8 +1355,8 @@ class ArcadiaMainToolbar < ArcadiaUserControl
           padx 0
           pady 0
           pack('side'=> 'left','anchor'=> 's','pady'=>3)
-        }     
-        Arcadia.menu_root(_args['name'], @menu_button.cget('menu'))  
+        }
+        Arcadia.menu_root(_args['name'], @menu_button.cget('menu'))
       end
       #Tk::BWidget::Separator.new(@frame, :orient=>'vertical').pack('side' =>'left', :padx=>2, :pady=>2, :fill=>'y',:anchor=> 'w')
     end
@@ -1381,16 +1369,16 @@ class ArcadiaMainToolbar < ArcadiaUserControl
       end
     end
   end
-  
-  
+
+
   def initialize(_arcadia, _frame)
     @arcadia = _arcadia
     @frame = _frame
     @frame.borderwidth(Arcadia.conf('panel.borderwidth'))
     #@frame.highlightbackground(Arcadia.conf('panel.highlightbackground'))
     @frame.relief(Arcadia.conf('panel.relief'))
- 
-    @context_frames = Hash.new  
+
+    @context_frames = Hash.new
     @last_context = nil
     @last_item_for_context = Hash.new
   end
@@ -1398,8 +1386,8 @@ class ArcadiaMainToolbar < ArcadiaUserControl
   def new_item(_sender, _args= nil)
     _context = _args['context']
     _context_path = _args['context_path']
-    
-    if @last_context && _context != @last_context && _context_path.nil? 
+
+    if @last_context && _context != @last_context && _context_path.nil?
       new_separator
     end
     @last_context = _context
@@ -1407,7 +1395,7 @@ class ArcadiaMainToolbar < ArcadiaUserControl
     if _context_path && @last_item_for_context[_context_path]
       _args['last_item_for_context']=@last_item_for_context[_context_path]
     end
-    
+
     super(_sender, _args)
     if _context_path && items[_args['name']]
       @last_item_for_context[_context_path] = items[_args['name']]
@@ -1418,12 +1406,12 @@ class ArcadiaMainToolbar < ArcadiaUserControl
   end
 
   def new_separator
-    Tk::BWidget::Separator.new(@frame, 
+    Tk::BWidget::Separator.new(@frame,
     :orient=>'vertical',
     :background=>Arcadia.conf('button.highlightbackground')
     ).pack('side' =>'left', :padx=>2, :pady=>2, :fill=>'y',:anchor=> 'w')
   end
-  
+
 end
 
 class ArcadiaMainMenu < ArcadiaUserControl
@@ -1459,7 +1447,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
       end
     end
   end
-  
+
   def initialize(menu)
     # create main menu
     @menu = menu
@@ -1479,7 +1467,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
     menubuttons.each_with_index{|mb, i|
       _t = mb[0].cget('text')
       if _t==_context
-        m_i = i 
+        m_i = i
         break
       end
     }
@@ -1489,10 +1477,10 @@ class ArcadiaMainMenu < ArcadiaUserControl
       _menubar.add_menu([[_context,_underline],[]])[1].delete(0)
     end
   end
-  
+
   def get_sub_menu(menu_context, folder=nil)
     if folder
-      s_i = -1 
+      s_i = -1
       i_end = menu_context.index('end')
       if i_end
         0.upto(i_end){|j|
@@ -1500,8 +1488,8 @@ class ArcadiaMainMenu < ArcadiaUserControl
           if type != 'separator'
             l = menu_context.entrycget(j,'label')
             if l == folder && type == 'cascade'
-             s_i = j
-             break
+              s_i = j
+              break
             end
           end
         }
@@ -1511,22 +1499,22 @@ class ArcadiaMainMenu < ArcadiaUserControl
       sub = menu_context.entrycget(s_i, 'menu')
     else
       sub = TkMenu.new(
-        :parent=>@pop_up,
-        :tearoff=>0
+      :parent=>@pop_up,
+      :tearoff=>0
       )
       sub.configure(Arcadia.style('menu'))
       sub.extend(TkAutoPostMenu)
       #update_style(sub)
       menu_context.insert('end',
-        :cascade,
-        :label=>folder,
-        :menu=>sub,
-        :hidemargin => false
+      :cascade,
+      :label=>folder,
+      :menu=>sub,
+      :hidemargin => false
       )
     end
     sub
   end
-  
+
   def make_menu_in_menubar(_menubar, _context, context_path, context_underline=nil)
     context_menu = get_menu_context(_menubar, _context, context_underline)
     make_menu(context_menu, context_path, context_underline)
@@ -1554,12 +1542,12 @@ class ArcadiaMainMenu < ArcadiaUserControl
       if Arcadia.menu_root(_args['rif'])
         _args['menu']=make_menu(Arcadia.menu_root(_args['rif']), _args['context_path'], _args['context_underline'])
       else
-        msg = "During building of menu item \"#{_args['name']}\" rif \"#{_args['rif']}\" not found!"
-        Arcadia.dialog(self, 
-            'type'=>'ok', 
-            'title' => "(Arcadia) #{self.class::SUF}", 
-            'msg'=>msg,
-            'level'=>'error')
+        msg = Arcadia.text("main.e.adding_new_menu_item.msg", [_args['name'], _args['rif']])
+        Arcadia.dialog(self,
+        'type'=>'ok',
+        'title' => Arcadia.text("main.e.adding_new_menu_item.title",[self.class::SUF]),
+        'msg'=>msg,
+        'level'=>'error')
 
         _args['menu']=make_menu_in_menubar(@menu, conte, _args['context_path'], _args['context_underline'])
       end
@@ -1577,9 +1565,9 @@ class ArcadiaMainMenu < ArcadiaUserControl
       [Arcadia.text('main.menu.file.save'), proc{Arcadia.process_event(SaveBufferEvent.new(self))},0],
       [Arcadia.text('main.menu.file.save_as'), proc{Arcadia.process_event(SaveAsBufferEvent.new(self))},0],
       '---',
-      [Arcadia.text('main.menu.file.quit'), proc{Arcadia.process_event(QuitEvent.new(self))}, 0]]
-      
-      menu_spec_edit = [[Arcadia.text('main.menu.edit'), 0],
+    [Arcadia.text('main.menu.file.quit'), proc{Arcadia.process_event(QuitEvent.new(self))}, 0]]
+
+    menu_spec_edit = [[Arcadia.text('main.menu.edit'), 0],
       [Arcadia.text('main.menu.edit.cut'), proc{Arcadia.process_event(CutTextEvent.new(self))}, 2],
       [Arcadia.text('main.menu.edit.copy'), proc{Arcadia.process_event(CopyTextEvent.new(self))}, 0],
       [Arcadia.text('main.menu.edit.paste'), proc{Arcadia.process_event(PasteTextEvent.new(self))}, 0],
@@ -1590,21 +1578,21 @@ class ArcadiaMainMenu < ArcadiaUserControl
       [Arcadia.text('main.menu.edit.uppercase'), proc{Arcadia.process_event(UpperCaseTextEvent.new(self))}, 0],
       [Arcadia.text('main.menu.edit.lowercase'), proc{Arcadia.process_event(LowerCaseTextEvent.new(self))}, 0],
       [Arcadia.text('main.menu.edit.prettify_current'), proc{Arcadia.process_event(PrettifyTextEvent.new(self))}, 0],
-       '---',
-      [Arcadia.text('main.menu.edit.preferences'), proc{}, 0]]
-      
-      menu_spec_search = [[Arcadia.text('main.menu.search'), 0],
+      '---',
+    [Arcadia.text('main.menu.edit.preferences'), proc{}, 0]]
+
+    menu_spec_search = [[Arcadia.text('main.menu.search'), 0],
       [Arcadia.text('main.menu.search.find_replace'), proc{Arcadia.process_event(SearchBufferEvent.new(self))}, 2],
       [Arcadia.text('main.menu.search.find_in_files'), proc{Arcadia.process_event(SearchInFilesEvent.new(self))}, 2],
       [Arcadia.text('main.menu.search.ack_im_file'), proc{Arcadia.process_event(AckInFilesEvent.new(self))}, 2],
-      [Arcadia.text('main.menu.search.go_to_line'), proc{Arcadia.process_event(GoToLineBufferEvent.new(self))}, 2]]
-      
-      menu_spec_view = [[Arcadia.text('main.menu.view'), 0],
+    [Arcadia.text('main.menu.search.go_to_line'), proc{Arcadia.process_event(GoToLineBufferEvent.new(self))}, 2]]
+
+    menu_spec_view = [[Arcadia.text('main.menu.view'), 0],
       [Arcadia.text('main.menu.view.show_hide_toolbar'), proc{$arcadia.show_hide_toolbar}, 2],
       [Arcadia.text('main.menu.view.close_current_tab'), proc{Arcadia.process_event(CloseCurrentTabEvent.new(self))}, 0],
-      ]
-      
-      menu_spec_tools = [[Arcadia.text('main.menu.tools'), 0],
+    ]
+
+    menu_spec_tools = [[Arcadia.text('main.menu.tools'), 0],
       [Arcadia.text('main.menu.tools.keys_test'), $arcadia['action.test.keys'], 2],
       [Arcadia.text('main.menu.tools.edit_prefs'), proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>$arcadia.local_file_config))}, 0],
       [Arcadia.text('main.menu.tools.load_from_edited_prefs'), proc{$arcadia.load_local_config}, 0]
@@ -1622,61 +1610,61 @@ class ArcadiaMainMenu < ArcadiaUserControl
       #p "RuntimeError : #{e.message}"
       Arcadia.runtime_error(e)
     end
-#    #@menu.bind_append("1", proc{
-#      chs = TkWinfo.children(@menu)
-#      hh = 25
-#      @last_post = nil
-#      chs.each{|ch|
-#        ch.bind_append("Enter", proc{|x,y,rx,ry|
-#          @last_post.unpost if @last_post && @last_post != ch.menu
-#          ch.menu.post(x-rx,y-ry+hh)
-#          @last_post=ch.menu}, "%X %Y %x %y")
-#        ch.bind_append("Leave", proc{
-#          @last_post.unpost if @last_post
-#          @last_post=nil
-#        })
-#      }
-#
-#    #})
+    #    #@menu.bind_append("1", proc{
+    #      chs = TkWinfo.children(@menu)
+    #      hh = 25
+    #      @last_post = nil
+    #      chs.each{|ch|
+    #        ch.bind_append("Enter", proc{|x,y,rx,ry|
+    #          @last_post.unpost if @last_post && @last_post != ch.menu
+    #          ch.menu.post(x-rx,y-ry+hh)
+    #          @last_post=ch.menu}, "%X %Y %x %y")
+    #        ch.bind_append("Leave", proc{
+    #          @last_post.unpost if @last_post
+    #          @last_post=nil
+    #        })
+    #      }
+    #
+    #    #})
 
-#      @menu.bind_append("Leave", proc{
-#        if Tk.focus != @last_menu_posted 
-#          @last_post.unpost if @last_post
-#          @last_post=nil
-#        end
-#      })
-#      
+    #      @menu.bind_append("Leave", proc{
+    #        if Tk.focus != @last_menu_posted
+    #          @last_post.unpost if @last_post
+    #          @last_post=nil
+    #        end
+    #      })
+    #
 
 
-#      chs = TkWinfo.children(@menu)
-#      hh = 25
-#      @last_post = nil
-#      chs.each{|ch|
-#        ch.bind_append("Enter", proc{|x,y,rx,ry|
-#          @last_post.unpost if @last_post && @last_post != ch.menu
-#          ch.menu.post(x-rx,y-ry+hh)
-#          chmenus = TkWinfo.children(ch)
-#          @last_menu_posted = chmenus[0]
-#          @last_menu_posted.set_focus
-#          #@last_post=ch.menu
-#          }, "%X %Y %x %y")
-#        ch.bind_append("Leave", proc{
-#          @last_post.unpost if @last_post
-#          #@last_post=nil
-#          @last_post=ch.menu
-#        })
-#      }
-#      @menu.bind_append("Leave", proc{
-#        if Tk.focus != @last_menu_posted 
-#          @last_post.unpost if @last_post
-#          @last_post=nil
-#        end
-#      })
+    #      chs = TkWinfo.children(@menu)
+    #      hh = 25
+    #      @last_post = nil
+    #      chs.each{|ch|
+    #        ch.bind_append("Enter", proc{|x,y,rx,ry|
+    #          @last_post.unpost if @last_post && @last_post != ch.menu
+    #          ch.menu.post(x-rx,y-ry+hh)
+    #          chmenus = TkWinfo.children(ch)
+    #          @last_menu_posted = chmenus[0]
+    #          @last_menu_posted.set_focus
+    #          #@last_post=ch.menu
+    #          }, "%X %Y %x %y")
+    #        ch.bind_append("Leave", proc{
+    #          @last_post.unpost if @last_post
+    #          #@last_post=nil
+    #          @last_post=ch.menu
+    #        })
+    #      }
+    #      @menu.bind_append("Leave", proc{
+    #        if Tk.focus != @last_menu_posted
+    #          @last_post.unpost if @last_post
+    #          @last_post=nil
+    #        end
+    #      })
 
-     @menu.extend(TkAutoPostMenu)      
-     @menu.event_posting_on
+    @menu.extend(TkAutoPostMenu)
+    @menu.event_posting_on
   end
-  
+
 end
 
 class RunnerManager < TkFloatTitledFrame
@@ -1684,20 +1672,20 @@ class RunnerManager < TkFloatTitledFrame
     def initialize(_parent=nil, _runner_hash=nil, *args)
       super(_parent, Arcadia.style('panel'))
       @runner_hash = _runner_hash
-      Tk::BWidget::Label.new(self, 
-         'image'=> Arcadia.file_icon(_runner_hash[:file_exts]),
-         'relief'=>'flat').pack('side' =>'left')
-      Tk::BWidget::Label.new(self, 
-         'text'=>_runner_hash[:title],
-         'helptext'=>_runner_hash[:file],
-         'compound'=>:left, 
-         'relief'=>'flat').pack('fill'=>'x','side' =>'left')
+      Tk::BWidget::Label.new(self,
+      'image'=> Arcadia.file_icon(_runner_hash[:file_exts]),
+      'relief'=>'flat').pack('side' =>'left')
+      Tk::BWidget::Label.new(self,
+      'text'=>_runner_hash[:title],
+      'helptext'=>_runner_hash[:file],
+      'compound'=>:left,
+      'relief'=>'flat').pack('fill'=>'x','side' =>'left')
       _close_command = proc{
         if (Arcadia.dialog(self, 'type'=>'yes_no',
-                        'msg'=>"Do you want delete runner item '#{_runner_hash[:name]}'?",
-                        'title' => '(Arcadia) Manage runners',
-                        'level' => 'question')=='yes')
-        
+          'msg'=> Arcadia.text("main.d.confirm_delete_runner.msg", [_runner_hash[:name]]),
+          'title' => Arcadia.text("main.d.confirm_delete_runner.title"),
+          'level' => 'question')=='yes')
+
           Arcadia.unpersistent("runners.#{_runner_hash[:name]}")
           mr = Arcadia.menu_root('runcurr')
           index_to_delete = -1
@@ -1719,16 +1707,16 @@ class RunnerManager < TkFloatTitledFrame
           end
           self.destroy
         end
-      }   
-      Tk::BWidget::Button.new(self, 
-         'command'=>_close_command,
-         'helptext'=>@runner_hash[:file],
-         'background'=>'white',
-         'image'=> Arcadia.image_res(TRASH_GIF),
-         'relief'=>'flat').pack('side' =>'right','padx'=>0)
+      }
+      Tk::BWidget::Button.new(self,
+      'command'=>_close_command,
+      'helptext'=>@runner_hash[:file],
+      'background'=>'white',
+      'image'=> Arcadia.image_res(TRASH_GIF),
+      'relief'=>'flat').pack('side' =>'right','padx'=>0)
       pack('side' =>'top','anchor'=>'nw','fill'=>'x','padx'=>5, 'pady'=>5)
     end
-      
+
   end
 
   def initialize(_parent)
@@ -1737,12 +1725,12 @@ class RunnerManager < TkFloatTitledFrame
     @items = Hash.new
     place('x'=>100,'y'=>100,'height'=> 220,'width'=> 300)
   end
-  
+
   def clear_items
     @items.each_value{|i| i.destroy }
     @items.clear
   end
-  
+
   def load_items
     clear_items
     runs=Arcadia.pers_group('runners', true)
@@ -1769,24 +1757,24 @@ class ArcadiaAboutSplash < TkToplevel
     highlightbackground  _bgcolor
     highlightthickness  1
     borderwidth 2
-    withdraw 
+    withdraw
     overrideredirect(true)
-    
-    @tkLabel3 = TkLabel.new(self){
+    # dim 60x86
+    @llogo = TkLabel.new(self){
       image  Arcadia.image_res(A_LOGO_GIF)
       background  _bgcolor
       place('x'=> 20,'y' => 20)
     }
-    
-    
-#    @tkLabel1 = TkLabel.new(self){
-#      text 'Arcadia'  
-#      background  _bgcolor
-#      foreground  '#ffffff'
-#      font Arcadia.conf('splash.title.font')
-#      justify  'left'
-#      place('width' => '190','x' => 110,'y' => 10,'height' => 25)
-#    }
+
+
+    #    @tkLabel1 = TkLabel.new(self){
+    #      text 'Arcadia'
+    #      background  _bgcolor
+    #      foreground  '#ffffff'
+    #      font Arcadia.conf('splash.title.font')
+    #      justify  'left'
+    #      place('width' => '190','x' => 110,'y' => 10,'height' => 25)
+    #    }
 
     @tkLabel1 = TkLabel.new(self){
       image  Arcadia.image_res(ARCADIA_JAP_WHITE_GIF)
@@ -1800,7 +1788,7 @@ class ArcadiaAboutSplash < TkToplevel
       background  _bgcolor
       place('x'=> 210,'y' => 12)
     }
-    
+
     @tkLabel2 = TkLabel.new(self){
       text  'Arcadia Ide'
       background  _bgcolor
@@ -1818,7 +1806,7 @@ class ArcadiaAboutSplash < TkToplevel
       place('x' => 100,'y' => 65,'height' => 19)
     }
     @tkLabel21 = TkLabel.new(self){
-      text  'by Antonio Galeone - 2004/2012'
+      text  Arcadia.text("main.about.by", ['Antonio Galeone - 2004/2012'])
       background  _bgcolor
       foreground  '#ffffff'
       font Arcadia.instance['conf']['splash.credits.font']
@@ -1828,7 +1816,7 @@ class ArcadiaAboutSplash < TkToplevel
     }
 
     @tkLabelCredits = TkLabel.new(self){
-      text  'Contributors: Roger D. Pack'
+      text  Arcadia.text("main.about.contributors", ['Roger D. Pack'])
       background  _bgcolor
       foreground  '#ffffff'
       font Arcadia.instance['conf']['splash.credits.font']
@@ -1861,11 +1849,11 @@ class ArcadiaAboutSplash < TkToplevel
     set_sysinfo(info)
     Arcadia.attach_listener(self, ArcadiaProblemEvent)
   end
-  
+
   def problem_str
     @problems_nums > 1 ? "#{@problems_nums} problems found!" : "#{@problems_nums} problem found!"
   end
-  
+
   def on_arcadia_problem(_event)
     if !defined?(@problems_nums)
       @problems_nums=0
@@ -1884,7 +1872,7 @@ class ArcadiaAboutSplash < TkToplevel
         justify  'left'
         anchor 'w'
         place('width' => '210','x' => 28,'y' => 150,'height' => 25)
-      }      
+      }
     end
     @problems_nums=@problems_nums+1
     @tkLabelProblems.text=problem_str if @tkLabelProblems
@@ -1933,17 +1921,17 @@ class ArcadiaProblemsShower
     @showed = false
     @initialized = false
     #@visible = false
-    @problems = Array.new 
+    @problems = Array.new
     @seq = 0
     @dmc=0
     @rec=0
     Arcadia.attach_listener(self, ArcadiaProblemEvent)
     Arcadia.attach_listener(self, InitializeEvent)
   end
-  
+
   def on_arcadia_problem(_event)
     @problems << _event
-    if @initialized 
+    if @initialized
       if !@showed
         show_problems
       else
@@ -1952,15 +1940,15 @@ class ArcadiaProblemsShower
       end
     end
   end
-  
+
   def on_after_initialize(_event)
     @initialized = true
-    if @problems.count > 0   
+    if @problems.count > 0
       show_problems
       @ff.show
     end
   end
-  
+
   def show_problems
     begin
       initialize_gui
@@ -1976,54 +1964,54 @@ class ArcadiaProblemsShower
       @showed=true
     rescue RuntimeError => e
       Arcadia.detach_listener(self, ArcadiaProblemEvent)
-      Arcadia.detach_listener(self, InitializeEvent)      
+      Arcadia.detach_listener(self, InitializeEvent)
     end
   end
 
   def button_text
-    @problems.count > 1 ? "#{@problems.count} problems" : "#{@problems.count} problem"
+    @problems.count > 1 ? Arcadia.text("main.ps.problems", [@problems.count]) : Arcadia.text("main.ps.problem", [@problems.count])
   end
 
-  
+
   def initialize_gui
     # float_frame
     args = {'width'=>600, 'height'=>300, 'x'=>400, 'y'=>100}
     @ff = @arcadia.layout.add_float_frame(args).hide
-    @ff.title("Arcadia problems")
+    @ff.title(Arcadia.text("main.ps.title"))
 
     #tree
-	 @tree = BWidgetTreePatched.new(@ff.frame, Arcadia.style('treepanel')){
+    @tree = BWidgetTreePatched.new(@ff.frame, Arcadia.style('treepanel')){
       showlines false
       deltay 22
-     # opencmd do_open_folder_cmd
-     # closecmd do_close_folder_cmd
-     # selectcommand do_select_item
-     # crosscloseimage  TkPhotoImage.new('dat' => PLUS_GIF)
-     # crossopenimage  TkPhotoImage.new('dat' => MINUS_GIF)
+      # opencmd do_open_folder_cmd
+      # closecmd do_close_folder_cmd
+      # selectcommand do_select_item
+      # crosscloseimage  TkPhotoImage.new('dat' => PLUS_GIF)
+      # crossopenimage  TkPhotoImage.new('dat' => MINUS_GIF)
     }
     @tree.extend(TkScrollableWidget).show(0,0)
-    
+
     do_double_click = proc{
       _selected = @tree.selected
       _selected_text = @tree.itemcget(_selected, 'text')
       if _selected_text
         _file, _row, _other = _selected_text.split(':')
         if File.exist?(_file)
-           begin
-             r = _row.strip.to_i
-             integer = true
-           rescue Exception => e
-             integer = false
-           end 
-           if integer
-             OpenBufferTransientEvent.new(self,'file'=>_file, 'row'=>r).go!
-           end
+          begin
+            r = _row.strip.to_i
+            integer = true
+          rescue Exception => e
+            integer = false
+          end
+          if integer
+            OpenBufferTransientEvent.new(self,'file'=>_file, 'row'=>r).go!
+          end
         end
       end
     }
     @tree.textbind_append('Double-1',do_double_click)
 
-    
+
     # call button
     command = proc{
       if @ff.visible?
@@ -2034,103 +2022,103 @@ class ArcadiaProblemsShower
         #@visible = true
       end
     }
-        
+
     b_style = Arcadia.style('toolbarbutton')
     b_style["relief"]='groove'
-#    b_style["borderwidth"]=2
+    #    b_style["borderwidth"]=2
     b_style["highlightbackground"]='red'
-    
+
     b_text = button_text
-    
+
     @b_err = Tk::BWidget::Button.new(@arcadia['toolbar'].frame, b_style){
-        image  Arcadia.image_res(ALERT_GIF)
-        compound 'left'
-        padx  2
-        command command if command
-        #width 100
-        #height 20
-        #helptext  _hint if _hint
-        text b_text
+      image  Arcadia.image_res(ALERT_GIF)
+      compound 'left'
+      padx  2
+      command command if command
+      #width 100
+      #height 20
+      #helptext  _hint if _hint
+      text b_text
     }.pack('side' =>'left','before'=>@arcadia['toolbar'].items.values[0].item_obj, :padx=>2, :pady=>0)
-    
+
   end
-  
-  
+
+
   def new_sequence_value
     @seq+=1
   end
-  
+
   def append_problem(e)
     parent_node='root'
     case e.type
-      when ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE
-        parent_node='dependences_missing_node'
-        text = "Dependences missings"
-        if !@tree.exist?(parent_node)
-          @tree.insert('end', 'root' ,parent_node, {
-              'text' =>  text ,
-              'helptext' => text,
-              'drawcross'=>'auto',
-              'deltax'=>-1,
-              'image'=> Arcadia.image_res(BROKEN_GIF)
-            }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
-          )       
-        
-        end
-        @dmc+=1
-        @tree.itemconfigure('dependences_missing_node','text'=>"#{text} (#{@dmc})" )
-      when ArcadiaProblemEvent::RUNTIME_ERROR_TYPE
-        parent_node='runtime_error_node'
-        text = "Runtime errors"
-        if !@tree.exist?(parent_node)
-          @tree.insert('end', 'root' ,parent_node, {
-              'text' =>  text ,
-              'helptext' => text,
-              'drawcross'=>'auto',
-              'deltax'=>-1,
-              'image'=> Arcadia.image_res(ERROR_GIF)
-            }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
-          )        
-        end
-        @rec+=1
-        @tree.itemconfigure('runtime_error_node','text'=>"#{text} (#{@rec})" )
+    when ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE
+      parent_node='dependences_missing_node'
+      text = Arcadia.text("main.ps.dependences_missing")
+      if !@tree.exist?(parent_node)
+        @tree.insert('end', 'root' ,parent_node, {
+          'text' =>  text ,
+          'helptext' => text,
+          'drawcross'=>'auto',
+          'deltax'=>-1,
+          'image'=> Arcadia.image_res(BROKEN_GIF)
+        }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
+        )
+
+      end
+      @dmc+=1
+      @tree.itemconfigure('dependences_missing_node','text'=>"#{text} (#{@dmc})" )
+    when ArcadiaProblemEvent::RUNTIME_ERROR_TYPE
+      parent_node='runtime_error_node'
+      text = Arcadia.text("main.ps.runtime_errors")
+      if !@tree.exist?(parent_node)
+        @tree.insert('end', 'root' ,parent_node, {
+          'text' =>  text ,
+          'helptext' => text,
+          'drawcross'=>'auto',
+          'deltax'=>-1,
+          'image'=> Arcadia.image_res(ERROR_GIF)
+        }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
+        )
+      end
+      @rec+=1
+      @tree.itemconfigure('runtime_error_node','text'=>"#{text} (#{@rec})" )
     end
     title_node="node_#{new_sequence_value}"
     detail_node="detail_of_#{title_node}"
 
     @tree.insert('end', parent_node ,title_node, {
-        'text' =>  e.title ,
-        'helptext' => e.title,
-        'drawcross'=>'auto',
-        'deltax'=>-1,
-        'image'=> Arcadia.image_res(ITEM_GIF)
-      }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
+      'text' =>  e.title ,
+      'helptext' => e.title,
+      'drawcross'=>'auto',
+      'deltax'=>-1,
+      'image'=> Arcadia.image_res(ITEM_GIF)
+    }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
     )
     if e.detail.kind_of?(Array)
       e.detail.each_with_index{|line,i|
         @tree.insert('end', title_node , "#{detail_node}_#{i}" , {
-            'text' =>  line ,
-            'helptext' => i.to_s,
-            'drawcross'=>'auto',
-            'deltax'=>-1,
-            'image'=> Arcadia.image_res(ITEM_DETAIL_GIF)
-          }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
-        )
-         
-      }
-    else  
-      @tree.insert('end', title_node , detail_node , {
-          'text' =>  e.detail ,
-          'helptext' => e.title,
+          'text' =>  line ,
+          'helptext' => i.to_s,
           'drawcross'=>'auto',
           'deltax'=>-1,
           'image'=> Arcadia.image_res(ITEM_DETAIL_GIF)
         }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
+        )
+
+      }
+    else
+      @tree.insert('end', title_node , detail_node , {
+        'text' =>  e.detail ,
+        'helptext' => e.title,
+        'drawcross'=>'auto',
+        'deltax'=>-1,
+        'image'=> Arcadia.image_res(ITEM_DETAIL_GIF)
+      }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
       )
     end
-        
 
-  end  
+
+  end
 end
 
 class ArcadiaActionDispatcher
@@ -2139,7 +2127,7 @@ class ArcadiaActionDispatcher
     @arcadia = _arcadia
     Arcadia.attach_listener(self, ActionEvent)
   end
-  
+
   def on_action(_event)
     if _event.receiver != nil && _event.receiver.respond_to?(_event.action)
       if _event.action_args.nil?
@@ -2170,7 +2158,7 @@ class ArcadiaLocalization
       lc_lang_cache_file=File.join(Arcadia.local_dir, "#{Arcadia.conf('locale')}.LC_LANG_CACHE")
       if File.exist?(lc_lang_cache_file)
         @lc_lang = properties_file2hash(lc_lang_cache_file)
-        if @lc_lang[KEY_CACHE_VERSION] != Arcadia.version 
+        if @lc_lang[KEY_CACHE_VERSION] != Arcadia.version
           # is to update
           need_cache_update = true
         end
@@ -2191,14 +2179,14 @@ class ArcadiaLocalization
       end
     end
   end
-  
+
   def text(_key, _params = nil)
     ret = @lc_lang.nil?||@lc_lang[_key].nil? ? "?" : @lc_lang[_key]
     if !_params.nil?
-      _params.each_with_index{|param, i| ret = ret.gsub("#{PARAM_SIG}#{i}", param) }
+      _params.each_with_index{|param, i| ret = ret.gsub("#{PARAM_SIG}#{i}", param.to_s) }
     end
     ret
-  end  
+  end
 end
 
 class ArcadiaSh < TkToplevel
@@ -2228,42 +2216,42 @@ class ArcadiaSh < TkToplevel
     prompt
     @text.bind_append("KeyPress"){|e| input(e.keysym)}
   end
-  
+
   def exec_buffer
     @text.set_insert("end")
     input_buffer = @text.get(@index_cmd_begin,"insert")
     out("\n")
     exec(input_buffer)
   end
-  
+
   def input(_char)
     case _char
-      when 'Return'
-        Thread.new{exec_buffer}
-        Tk.callback_break
+    when 'Return'
+      Thread.new{exec_buffer}
+      Tk.callback_break
     end
   end
-  
+
   def prompt
-    @b_exit = TkButton.new(@text, 
-       'command'=>proc{@wait=false},
-       'text'=>'Exit',
-       'padx'=>0,
-       'pady'=>0,
-       'width'=>5,
-       'foreground' => 'white',
-       'background' => '#d92328',
-       'relief'=>'flat')
+    @b_exit = TkButton.new(@text,
+    'command'=>proc{@wait=false},
+    'text'=>'Exit',
+    'padx'=>0,
+    'pady'=>0,
+    'width'=>5,
+    'foreground' => 'white',
+    'background' => '#d92328',
+    'relief'=>'flat')
     TkTextWindow.new(@text, "end", 'window'=> @b_exit)
-    @b_exec = TkButton.new(@text, 
-       'command'=>proc{Thread.new{exec_buffer}},
-       'text'=>'Exec',
-       'padx'=>0,
-       'pady'=>0,
-       'width'=>5,
-       'foreground' => 'white',
-       'background' => '#1ba626',
-       'relief'=>'flat')
+    @b_exec = TkButton.new(@text,
+    'command'=>proc{Thread.new{exec_buffer}},
+    'text'=>'Exec',
+    'padx'=>0,
+    'pady'=>0,
+    'width'=>5,
+    'foreground' => 'white',
+    'background' => '#1ba626',
+    'relief'=>'flat')
     TkTextWindow.new(@text, "end", 'window'=> @b_exec)
     out("\n")
     out(">>> ")
@@ -2274,53 +2262,53 @@ class ArcadiaSh < TkToplevel
     out("#{_cmd}\n")
     exec(_cmd)
   end
-  
+
   def prepare_exec(_cmd)
     #@input_buffer=_cmd
     out("#{_cmd}")
   end
-  
+
   def exec(_cmd)
     return if _cmd.nil? || _cmd.length ==0
-    @b_exec.destroy if defined?(@b_exec)   
+    @b_exec.destroy if defined?(@b_exec)
     out("submitted...\n")
     case _cmd
-      when 'clear'
-        @text.delete('0.0','end')
+    when 'clear'
+      @text.delete('0.0','end')
     else
       begin
         if RUBY_PLATFORM =~ /mingw|mswin/
-         p = IO::popen("#{_cmd} 2>&1")
-         out(p.read, 'response')
-         @result = true
+          p = IO::popen("#{_cmd} 2>&1")
+          out(p.read, 'response')
+          @result = true
         else
-         require "open3"
-         Open3.popen3("#{_cmd}"){|stdin, stdout, stderr|
-          stdout.each do |line|
-            out(line,'response')
-            @result = true
-          end 
-          stderr.each do |line|
-            out(line,'error')
-            @result = false
-          end 
-       
-         }
+          require "open3"
+          Open3.popen3("#{_cmd}"){|stdin, stdout, stderr|
+            stdout.each do |line|
+              out(line,'response')
+              @result = true
+            end
+            stderr.each do |line|
+              out(line,'error')
+              @result = false
+            end
+
+          }
         end
       rescue Exception => e
-         out("#{e.message}\n",'error') 
-         @result = false
+        out("#{e.message}\n",'error')
+        @result = false
       end
     end
-    @b_exit.destroy if defined?(@b_exit)   
+    @b_exit.destroy if defined?(@b_exit)
     prompt
     @text.see('end')
   end
-  
+
   def out(_str,*tags)
     @text.insert('end',_str,*tags)
   end
-  
+
 end
 
 class EventWatcherForGem
@@ -2355,34 +2343,17 @@ class ArcadiaGemsWizard
   end
 
   def on_need_ruby_gem_wizard(_event)
-    msg = "Appears that gem : '#{_event.gem_name}' required by : '#{_event.extension_name}' is not installed!\n Install it from gem?" 
-
-    ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>"Gem '#{_event.gem_name}' missing!", "detail"=>msg).go!
-    
-#    Arcadia.process_event(ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>"Gem '#{_event.gem_name}' missing!", "detail"=>msg))
+    msg = Arcadia.text("main.e.gem_missing.msg", [_event.gem_name, _event.extension_name])
+    ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>Arcadia.text("main.e.gem_missing.title", [_event.gem_name]), "detail"=>msg).go!
   end
 
-  
-#  def on_need_ruby_gem_wizard(_event)
-#    msg = "Appears that gem : '#{_event.gem_name}' required by : '#{_event.extension_name}' is not installed!\n Do you want to try install it now?" 
-#    ans = Tk.messageBox('icon' => 'error', 'type' => 'yesno',
-#      'title' => "(Arcadia) Extensions '#{_event.extension_name}'",
-#      'message' => msg)
-#      if  ans == 'yes'
-#        _event.add_result(self, 'installed'=>try_to_install_gem(_event.gem_name,_event.gem_repository))
-#      else
-#        _event.add_result(self, 'installed'=>false)
-#      end
-#  end
-  
   def try_to_install_gem(name, repository=nil, version = '>0')
     ret = false
-    
     sh=ArcadiaSh.new
     cmd = "gem install --remote --include-dependencies #{name}"
     cmd="sudo #{cmd}" if !Arcadia.is_windows?
     cmd+=" --source=#{repository}" if repository
-    sh.prepare_exec(cmd)    
+    sh.prepare_exec(cmd)
     while sh.wait
       Tk.update
       #sleep(1)
@@ -2414,22 +2385,22 @@ class ArcadiaDialogManager
       icon = _event.level
     end
     tktype = type.gsub('_','').downcase
-    
+
     if _event.msg && _event.msg.length > 500
       msg = _event.msg[0..500]+' ...'
     else
       msg = _event.msg
     end
-    
+
     tkdialog =  Tk::BWidget::MessageDlg.new(
-            'icon' => icon,
-            'bg' => Arcadia.conf('background'),
-            'fg' => Arcadia.conf('foreground'),
-            'type' => tktype,
-            'title' => _event.title, 
-            'message' => msg)
-            
-    tkdialog.configure('font'=>'courier 6')        
+    'icon' => icon,
+    'bg' => Arcadia.conf('background'),
+    'fg' => Arcadia.conf('foreground'),
+    'type' => tktype,
+    'title' => _event.title,
+    'message' => msg)
+
+    tkdialog.configure('font'=>'courier 6')
     res = tkdialog.create
     if _event.level == 'error'
       if _event.exception != nil
@@ -2449,40 +2420,40 @@ class ArcadiaDialogManager
     end
     icon = _event.level
     tktype = type.gsub('_','').downcase
-    
+
     res =  Tk.messageBox(
-            'icon' => icon,
-            'type' => tktype,
-            'title' => _event.title, 
-            'message' => _event.msg)
+    'icon' => icon,
+    'type' => tktype,
+    'title' => _event.title,
+    'message' => _event.msg)
     _event.add_result(self, 'value'=>res)
   end
 end
 
 
 class ArcadiaLayout
-#  include Observable
-#  ArcadiaPanelInfo = Struct.new( "ArcadiaPanelInfo",
-#    :name,
-#    :title,
-#    :frame,
-#    :ffw
-#  )
+  #  include Observable
+  #  ArcadiaPanelInfo = Struct.new( "ArcadiaPanelInfo",
+  #    :name,
+  #    :title,
+  #    :frame,
+  #    :ffw
+  #  )
   HIDDEN_DOMAIN = '-1.-1'
   def initialize(_arcadia, _frame, _autotab=true)
     @arcadia = _arcadia
     @frames = Array.new
     @frames[0] = Array.new
     @frames[0][0] = _frame
-   # @domains = Array.new
-   # @domains[0] = Array.new
-   # @domains[0][0] = '_domain_root_'
+    # @domains = Array.new
+    # @domains[0] = Array.new
+    # @domains[0][0] = '_domain_root_'
     @panels = Hash.new
     @panels['_domain_root_']= Hash.new
     @panels['_domain_root_']['root']= _frame
     @panels['_domain_root_']['sons'] = Hash.new
     @panels['_domain_root_'][:raised_stack] = []
-    
+
     @panels['nil'] = Hash.new
     @panels['nil']['root'] = TkTitledFrameAdapter.new(self.root)
     @autotab = _autotab
@@ -2491,23 +2462,23 @@ class ArcadiaLayout
     @splitters=Array.new
     @tabbed = Arcadia.conf('layout.tabbed')=='true'
   end
-	
-	def root
-		@panels['_domain_root_']['root']
-	end
-	
-	def raised_name(_domain)
-	  ret = nil
-	  if @panels[_domain] && @panels[_domain][:raised_stack] && @panels[_domain][:raised_stack].length > 0
-	    ret = @panels[_domain][:raised_stack][-1]
-	  end
-	  ret
-	end
-	
-	def raise_panel(_domain, _extension)
+
+  def root
+    @panels['_domain_root_']['root']
+  end
+
+  def raised_name(_domain)
+    ret = nil
+    if @panels[_domain] && @panels[_domain][:raised_stack] && @panels[_domain][:raised_stack].length > 0
+      ret = @panels[_domain][:raised_stack][-1]
+    end
+    ret
+  end
+
+  def raise_panel(_domain, _extension)
     p = @panels[_domain]
     if p
-      #p[:raised_name]=_extension 
+      #p[:raised_name]=_extension
       p[:raised_stack].delete(_extension)
       p[:raised_stack] << _extension
     end
@@ -2519,23 +2490,23 @@ class ArcadiaLayout
     elsif p
       p['sons'].each{|k,v|
         if k == _extension
-   	      v.hinner_frame.raise
+          v.hinner_frame.raise
           p['root'].title(v.title)
           p['root'].restore_caption(k)
           p['root'].change_adapters_name(k)
           Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>k, 'frame_name'=>p['sons'][k].name))
-   	      build_invert_menu
-   	      break
-   	    end
-   	  }
+          build_invert_menu
+          break
+        end
+      }
     end
-	end
+  end
 
-#  def raise_panel(_domain_name, _name)
-#    @panels[_domain_name]['notebook'].raise(_name) if @panels[_domain_name] && @panels[_domain_name]['notebook']
-#  end
+  #  def raise_panel(_domain_name, _name)
+  #    @panels[_domain_name]['notebook'].raise(_name) if @panels[_domain_name] && @panels[_domain_name]['notebook']
+  #  end
 
-	def raised?(_domain, _name)
+  def raised?(_domain, _name)
     ret = true
     p = @panels[_domain]
     if @tabbed
@@ -2547,26 +2518,26 @@ class ArcadiaLayout
       ret = raised_name(_domain) == _name
     end
     ret
-	end
-	
-	def raised_fixed_frame(_domain)
-	  ret = nil
-	  p = @panels[_domain]
+  end
+
+  def raised_fixed_frame(_domain)
+    ret = nil
+    p = @panels[_domain]
     if @tabbed
       if p && p['notebook'] != nil
         raised_name=p['notebook'].raise
-     	  @panels[_domain]['sons'].each{|k,v|
-     	    if raised_name == k 
-     	      ret = v 
-     	      break
-     	    end
-     	  }
+        @panels[_domain]['sons'].each{|k,v|
+          if raised_name == k
+            ret = v
+            break
+          end
+        }
       elsif @panels[_domain]['sons'].length == 1
         ret = @panels[_domain]['sons'].values[0]
       end
     else
       p['sons'].each{|k,v|
-#        if k == @panels[_domain][:raised_name]
+        #        if k == @panels[_domain][:raised_name]
         if k == raised_name(_domain)
           ret = v
           break
@@ -2575,7 +2546,7 @@ class ArcadiaLayout
     end
     ret
   end
-  
+
   def _prepare_rows(_row,_col, _height, _perc=false, _top_name=nil, _bottom_name=nil)
     if (@frames[_row][_col] !=  nil)
       #source_domains = all_domains(@frames[_row][_col])
@@ -2583,36 +2554,36 @@ class ArcadiaLayout
       _h = AGTkOSplittedFrames.new(self.root,@frames[_row][_col],_height, @arcadia['conf']['layout.splitter.length'].to_i,_perc)
       @splitters << _h
       if @frames[_row + 1] == nil
-      		@frames[_row + 1] = Array.new
-      	#	@domains[_row + 1] = Array.new
+        @frames[_row + 1] = Array.new
+        #	@domains[_row + 1] = Array.new
       end
       @frames[_row][_col] = _h.top_frame
-      
+
       _top_name = _row.to_s+'.'+_col.to_s if _top_name == nil
       @panels[_top_name] = Hash.new
       @panels[_top_name]['root'] = @frames[_row][_col]
       @panels[_top_name]['sons'] = 	Hash.new
       if @panels[_top_name]['root_splitted_frames'].nil?
-        @panels[_top_name]['root_splitted_frames'] = _h 
+        @panels[_top_name]['root_splitted_frames'] = _h
       end
       @panels[_top_name]['splitted_frames'] = _h
-     # @domains[_row][_col] = _top_name
+      # @domains[_row][_col] = _top_name
 
       _bottom_name = (_row+1).to_s+'.'+_col.to_s if _bottom_name == nil
-      
+
       if !@panels[_bottom_name].nil?
         shift_bottom(_row+1, _col)
       end
-      
+
       @panels[_bottom_name] = Hash.new
       @frames[_row + 1][_col] = _h.bottom_frame
       @panels[_bottom_name]['root'] = @frames[_row + 1][_col]
       @panels[_bottom_name]['sons'] = Hash.new
       if @panels[_bottom_name]['root_splitted_frames'].nil?
-        @panels[_bottom_name]['root_splitted_frames'] = _h 
+        @panels[_bottom_name]['root_splitted_frames'] = _h
       end
       @panels[_bottom_name]['splitted_frames'] = _h
-    	#	@domains[_row + 1][_col] = _bottom_name
+      #	@domains[_row + 1][_col] = _bottom_name
     end
   end
   private :_prepare_rows
@@ -2627,31 +2598,31 @@ class ArcadiaLayout
   end
 
   def add_rows(_row,_col, _height, _top_name=nil, _bottom_name=nil)
-  		_prepare_rows(_row,_col, _height, false, _top_name, _bottom_name)
+    _prepare_rows(_row,_col, _height, false, _top_name, _bottom_name)
   end
 
   def add_rows_perc(_row,_col, _height, _top_name=nil, _bottom_name=nil)
-  		_prepare_rows(_row,_col, _height, true, _top_name, _bottom_name)
+    _prepare_rows(_row,_col, _height, true, _top_name, _bottom_name)
   end
 
-#  def others_domains(_frame, _vertical=true)
-#      if _vertical
-#        splitter_adapter_class = AGTkVSplittedFrames
-#      else
-#        splitter_adapter_class = AGTkOSplittedFrames
-#      end
-#      splitted_adapter = find_splitted_frame(_frame)
-#      consider_it = splitted_adapter.instance_of?(splitter_adapter_class) && splitted_adapter.frame1 == _frame
-#      if splitted_adapter && !consider_it && splitted_adapter != _frame
-#         rif_frame = splitted_adapter.frame
-#         ret = others_domains(rif_frame)
-#      elsif splitted_adapter && consider_it
-#        ret = domains_on_frame(splitted_adapter.frame2)
-#      else
-#        ret = Array.new
-#      end
-#      ret    
-#  end
+  #  def others_domains(_frame, _vertical=true)
+  #      if _vertical
+  #        splitter_adapter_class = AGTkVSplittedFrames
+  #      else
+  #        splitter_adapter_class = AGTkOSplittedFrames
+  #      end
+  #      splitted_adapter = find_splitted_frame(_frame)
+  #      consider_it = splitted_adapter.instance_of?(splitter_adapter_class) && splitted_adapter.frame1 == _frame
+  #      if splitted_adapter && !consider_it && splitted_adapter != _frame
+  #         rif_frame = splitted_adapter.frame
+  #         ret = others_domains(rif_frame)
+  #      elsif splitted_adapter && consider_it
+  #        ret = domains_on_frame(splitted_adapter.frame2)
+  #      else
+  #        ret = Array.new
+  #      end
+  #      ret
+  #  end
 
   def all_domains(_frame)
     splitted_adapter = find_splitted_frame(_frame)
@@ -2661,7 +2632,7 @@ class ArcadiaLayout
     else
       ret = Array.new
     end
-    ret    
+    ret
   end
 
   def all_domains_cols(_frame)
@@ -2696,11 +2667,11 @@ class ArcadiaLayout
       @panels[_left_name]['root'] = @frames[_row][_col]
       @panels[_left_name]['sons'] = Hash.new
       if @panels[_left_name]['root_splitted_frames'].nil?
-        @panels[_left_name]['root_splitted_frames'] = _w 
+        @panels[_left_name]['root_splitted_frames'] = _w
       end
       @panels[_left_name]['splitted_frames'] = _w
-     # @domains[_row][_col] = _left_name
-        
+      # @domains[_row][_col] = _left_name
+
       _right_name = _row.to_s+'.'+(_col+1).to_s if _right_name == nil
       if !@panels[_right_name].nil?
         shift_right(_row, _col+1)
@@ -2711,19 +2682,19 @@ class ArcadiaLayout
       @panels[_right_name]['root'] = @frames[_row][_col + 1]
       @panels[_right_name]['sons'] = Hash.new
       if @panels[_right_name]['root_splitted_frames'].nil?
-        @panels[_right_name]['root_splitted_frames'] = _w 
+        @panels[_right_name]['root_splitted_frames'] = _w
       end
       @panels[_right_name]['splitted_frames'] = _w
-     # @domains[_row][_col + 1] = _right_name
+      # @domains[_row][_col + 1] = _right_name
     end
   end
- 	private :_prepare_cols
-  
-  
+  private :_prepare_cols
+
+
   def domain_name(_row,_col)
     _row.to_s+'.'+_col.to_s
   end
-  
+
   def shift_right(_row,_col)
     d = domain_name(_row, _col+1)
     dj = domain_name(_row, _col)
@@ -2736,12 +2707,12 @@ class ArcadiaLayout
     #-------------------------------
     @panels[d]['sons'].each{|name,ffw| ffw.domain=d}
     @frames[_row][_col+1] = @frames[_row][_col]
-   # @domains[_row][_col+1] = @domains[_row][_col]
-    
+    # @domains[_row][_col+1] = @domains[_row][_col]
+
     @panels.delete(dj)
     #@panels[dj] = nil
     @frames[_row][_col] = nil
-   # @domains[_row][_col] = nil
+    # @domains[_row][_col] = nil
   end
 
   def shift_left(_row,_col)
@@ -2754,14 +2725,14 @@ class ArcadiaLayout
       #-------------------------------
       @panels[d]['sons'].each{|name,ffw| ffw.domain=d}
       @frames[_row][_col] = @frames[_row][_col+1]
-     # @domains[_row][_col] = @domains[_row][_col+1]
-      
+      # @domains[_row][_col] = @domains[_row][_col+1]
+
       @panels.delete(dj) # = nil
       @frames[_row][_col+1] = nil
-     # @domains[_row][_col+1] = nil
+      # @domains[_row][_col+1] = nil
       shift_left(_row,_col+1)
     end
-  
+
   end
 
   def shift_top(_row,_col)
@@ -2774,15 +2745,15 @@ class ArcadiaLayout
       #-------------------------------
       @panels[d]['sons'].each{|name,ffw| ffw.domain=d}
       @frames[_row][_col] = @frames[_row+1][_col]
-     # @domains[_row][_col] = @domains[_row+1][_col]
-      
+      # @domains[_row][_col] = @domains[_row+1][_col]
+
       @panels.delete(dj) # = nil
       @frames[_row+1][_col] = nil
-     # @domains[_row+1][_col] = nil
+      # @domains[_row+1][_col] = nil
 
       shift_top(_row+1,_col)
     end
-  
+
   end
 
 
@@ -2798,18 +2769,18 @@ class ArcadiaLayout
     #-------------------------------
     @panels[d]['sons'].each{|name,ffw| ffw.domain=d}
     if @frames[_row + 1] == nil
-    		@frames[_row + 1] = Array.new
-    	#	@domains[_row + 1] = Array.new
+      @frames[_row + 1] = Array.new
+      #	@domains[_row + 1] = Array.new
     end
     @frames[_row+1][_col] = @frames[_row][_col]
-   # @domains[_row+1][_col] = @domains[_row][_col]
-    
+    # @domains[_row+1][_col] = @domains[_row][_col]
+
     @panels.delete(dj)
     #@panels[dj] = nil
     @frames[_row][_col] = nil
-   # @domains[_row][_col] = nil
+    # @domains[_row][_col] = nil
   end
-  
+
   def add_cols(_row,_col, _width, _left_name=nil, _right_name=nil)
     _prepare_cols(_row,_col, _width, false, _left_name, _right_name)
   end
@@ -2824,7 +2795,7 @@ class ArcadiaLayout
     _saved.update(@panels[_domain]['sons'])
     _saved.each_key{|name|
       @panels['nil']['root'].change_adapters(name, @panels[_domain]['root'].transient_frame_adapter[name])
-    }     
+    }
     geometry = TkWinfo.geometry(@panels[_domain]['root'])
     width = geometry.split('x')[0].to_i/2
     _saved.each{|name,ffw|
@@ -2838,7 +2809,7 @@ class ArcadiaLayout
     _saved.each{|name,ffw|
       ffw.domain = _domain
       register_panel(ffw, ffw.hinner_frame)
-  	   @panels[_domain]['root'].change_adapters(name, @panels['nil']['root'].transient_frame_adapter[name])    
+      @panels[_domain]['root'].change_adapters(name, @panels['nil']['root'].transient_frame_adapter[name])
     }
     if saved_root_splitted_frames
       @panels[_domain]['root_splitted_frames']=saved_root_splitted_frames
@@ -2852,7 +2823,7 @@ class ArcadiaLayout
     _saved.update(@panels[_domain]['sons'])
     _saved.each_key{|name|
       @panels['nil']['root'].change_adapters(name, @panels[_domain]['root'].transient_frame_adapter[name])
-    }    
+    }
     geometry = TkWinfo.geometry(@panels[_domain]['root'])
     height = geometry.split('+')[0].split('x')[1].to_i/2
     _saved.each{|name,ffw|
@@ -2866,7 +2837,7 @@ class ArcadiaLayout
     _saved.each{|name,ffw|
       ffw.domain = _domain
       register_panel(ffw, ffw.hinner_frame)
-  	   @panels[_domain]['root'].change_adapters(name, @panels['nil']['root'].transient_frame_adapter[name])
+      @panels[_domain]['root'].change_adapters(name, @panels['nil']['root'].transient_frame_adapter[name])
     }
     if saved_root_splitted_frames
       @panels[_domain]['root_splitted_frames']=saved_root_splitted_frames
@@ -2882,7 +2853,7 @@ class ArcadiaLayout
     }
     ret
   end
-  
+
   def domains_rows(_domains)
     ret = Array.new
     if _domains
@@ -2929,7 +2900,7 @@ class ArcadiaLayout
     ret
   end
 
-  
+
   def domains_on_frame_cols(_frame)
     ret = Array.new
     domains_on_frame(_frame).each{|d|
@@ -2940,7 +2911,7 @@ class ArcadiaLayout
   end
 
   def domains_on_splitter(_splitter)
-    domains_on_frame(_splitter.frame1).concat(domains_on_frame(_splitter.frame2))  
+    domains_on_frame(_splitter.frame1).concat(domains_on_frame(_splitter.frame2))
   end
 
   def domains_on_splitter_cols(_splitter)
@@ -2967,30 +2938,30 @@ class ArcadiaLayout
     frame_found = false
     @panels.keys.each{|dom|
       if dom != '_domain_root_'
-         if (@panels[dom]['splitted_frames'] != nil && @panels[dom]['splitted_frames'].frame == _frame) || (@panels[dom]['root_splitted_frames'] != nil && @panels[dom]['root_splitted_frames'].frame  == _frame)
-           ret_doms.concat(domains_on_frame(@panels[dom]['splitted_frames'].frame1))
-           ret_doms.concat(domains_on_frame(@panels[dom]['splitted_frames'].frame2))
-           frame_found = true
-           break
-         elsif @panels[dom]['notebook'] != nil 
-           cfrs = TkWinfo.children(_frame)
-           if cfrs && cfrs.length == 1 && cfrs[0].instance_of?(TkTitledFrameAdapter) && TkWinfo.parent(@panels[dom]['notebook'])== cfrs[0].frame
-             ret_doms << dom
-             frame_found = true
-           end       
-         elsif @panels[dom]['root'].instance_of?(TkTitledFrameAdapter) && @panels[dom]['root'].parent == _frame 
-             ret_doms << dom
-             frame_found = true
-         end
+        if (@panels[dom]['splitted_frames'] != nil && @panels[dom]['splitted_frames'].frame == _frame) || (@panels[dom]['root_splitted_frames'] != nil && @panels[dom]['root_splitted_frames'].frame  == _frame)
+          ret_doms.concat(domains_on_frame(@panels[dom]['splitted_frames'].frame1))
+          ret_doms.concat(domains_on_frame(@panels[dom]['splitted_frames'].frame2))
+          frame_found = true
+          break
+        elsif @panels[dom]['notebook'] != nil
+          cfrs = TkWinfo.children(_frame)
+          if cfrs && cfrs.length == 1 && cfrs[0].instance_of?(TkTitledFrameAdapter) && TkWinfo.parent(@panels[dom]['notebook'])== cfrs[0].frame
+            ret_doms << dom
+            frame_found = true
+          end
+        elsif @panels[dom]['root'].instance_of?(TkTitledFrameAdapter) && @panels[dom]['root'].parent == _frame
+          ret_doms << dom
+          frame_found = true
+        end
       end
-    }    
-    
+    }
+
     if !frame_found
       cfrs = TkWinfo.children(_frame)
       if cfrs && cfrs.length == 1 && cfrs[0].instance_of?(TkTitledFrameAdapter)
         @wrappers.each{|name, ffw|
           if ffw.hinner_frame.frame == cfrs[0].frame
-            ret_doms << ffw.domain 
+            ret_doms << ffw.domain
           end
         }
       end
@@ -3006,7 +2977,7 @@ class ArcadiaLayout
     end
     splitted_frame
   end
-#--
+  #--
   def close_runtime(_domain)
     splitted_adapter = find_splitted_frame(@panels[_domain]['root'])
     splitted_adapter_frame = splitted_adapter.frame
@@ -3018,7 +2989,7 @@ class ArcadiaLayout
       other_ds = domains_on_frame(@panels[_domain]['splitted_frames'].frame1)
     end
 
-    return if other_ds.nil?    
+    return if other_ds.nil?
 
 
     if other_ds.length == 1
@@ -3055,7 +3026,7 @@ class ArcadiaLayout
 
     @panels.delete(_domain)
     @frames[_row.to_i][_col.to_i] = nil
-   # @domains[_row.to_i][_col.to_i] = nil
+    # @domains[_row.to_i][_col.to_i] = nil
 
     if other_root_splitted_adapter
       if other_root_splitted_adapter != @panels[other_domain]['splitted_frames']
@@ -3075,7 +3046,7 @@ class ArcadiaLayout
       other_source_save.update(@panels[other_domain]['sons']) if @panels[other_domain]
       other_source_save.each_key{|name|
         @panels['nil']['root'].change_adapters(name, @panels[other_domain]['root'].transient_frame_adapter[name])
-      }     
+      }
       other_source_save.each{|name,ffw|
         unregister_panel(ffw, false, false)
       }
@@ -3087,7 +3058,7 @@ class ArcadiaLayout
       other_source_save.each{|name,ffw|
         ffw.domain = other_domain
         register_panel(ffw, ffw.hinner_frame)
-    	   @panels[other_domain]['root'].change_adapters(name, @panels['nil']['root'].transient_frame_adapter[name])
+        @panels[other_domain]['root'].change_adapters(name, @panels['nil']['root'].transient_frame_adapter[name])
       }
       parent_splitted_adapter = find_splitted_frame(@panels[other_domain]['root'])
       if  parent_splitted_adapter
@@ -3099,8 +3070,8 @@ class ArcadiaLayout
     build_invert_menu(true)
   end
 
-#--
-  
+  #--
+
   def unbuild_titled_frame(domain)
     if @panels[domain]
       parent = @panels[domain]['root'].parent
@@ -3108,35 +3079,35 @@ class ArcadiaLayout
       @panels[domain]['root']=parent
     end
   end
-  
+
   def add_commons_menu_items(_domain, _menu)
-      _menu.insert('end', :separator)
+    _menu.insert('end', :separator)
+    _menu.insert('end', :command,
+    :label=>"add column",
+    :image=>Arcadia.image_res(ADD_GIF),
+    :compound=>'left',
+    :command=>proc{add_cols_runtime(_domain)},
+    :hidemargin => true
+    )
+    _menu.insert('end', :command,
+    :label=>"add row",
+    :image=>Arcadia.image_res(ADD_GIF),
+    :compound=>'left',
+    :command=>proc{add_rows_runtime(_domain)},
+    :hidemargin => true
+    )
+    if @panels.keys.length > 2
       _menu.insert('end', :command,
-          :label=>"add column",
-          :image=>Arcadia.image_res(ADD_GIF),
-          :compound=>'left',
-          :command=>proc{add_cols_runtime(_domain)},
-          :hidemargin => true
+      :label=>"close",
+      :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
+      :compound=>'left',
+      :command=>proc{close_runtime(_domain)},
+      :hidemargin => true
       )
-      _menu.insert('end', :command,
-          :label=>"add row",
-          :image=>Arcadia.image_res(ADD_GIF),
-          :compound=>'left',
-          :command=>proc{add_rows_runtime(_domain)},
-          :hidemargin => true
-      )
-      if @panels.keys.length > 2
-        _menu.insert('end', :command,
-            :label=>"close",
-            :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
-            :compound=>'left',
-            :command=>proc{close_runtime(_domain)},
-            :hidemargin => true
-        )
-      end
+    end
 
   end
-  
+
   def build_titled_frame(domain)
     if @panels[domain]
       tframe = TkTitledFrameAdapter.new(@panels[domain]['root']).place('x'=>0, 'y'=>0,'relheight'=>1, 'relwidth'=>1)
@@ -3146,42 +3117,42 @@ class ArcadiaLayout
       add_commons_menu_items(domain, menu)
       @panels[domain]['root']= tframe
       #-----------------------------------
-#      class << tframe
-#        def set_domain(_domain)
-#          if @label_domain.nil?
-#            @label_domail = TkLabel.new(self.frame, 'text'=>_domain).pack
-#          else
-#            @label_domain.configure('text'=>_domain)
-#          end
-#        end
-#      end
-#      tframe.set_domain(domain)
+      #      class << tframe
+      #        def set_domain(_domain)
+      #          if @label_domain.nil?
+      #            @label_domail = TkLabel.new(self.frame, 'text'=>_domain).pack
+      #          else
+      #            @label_domain.configure('text'=>_domain)
+      #          end
+      #        end
+      #      end
+      #      tframe.set_domain(domain)
       #-----------------------------------
     end
   end
-  
+
   def domains
     ret = Array.new
     @panels.keys.each{|dom|
-        if dom != '_domain_root_' && @panels[dom] && @panels[dom]['root']
-          ret << dom
-        end
+      if dom != '_domain_root_' && @panels[dom] && @panels[dom]['root']
+        ret << dom
+      end
     }
     ret
   end
-  
+
   def add_headers
     @panels.keys.each{|dom|
-        if dom != '_domain_root_' && @panels[dom] && @panels[dom]['root']
-          build_titled_frame(dom)
-        end
+      if dom != '_domain_root_' && @panels[dom] && @panels[dom]['root']
+        build_titled_frame(dom)
+      end
     }
 
-#    @domains.each{|row|
-#      row.each{|domain|
-#        build_titled_frame(domain)
-#      }
-#    }
+    #    @domains.each{|row|
+    #      row.each{|domain|
+    #        build_titled_frame(domain)
+    #      }
+    #    }
     @headed = true
   end
 
@@ -3229,7 +3200,7 @@ class ArcadiaLayout
       ffw2.domain = _target_domain
       register_panel(ffw2, ffw2.hinner_frame)
       if @panels['nil']['root'].transient_frame_adapter[ffw2.name]
-    	   @panels[ffw2.domain]['root'].change_adapters(ffw2.name, @panels['nil']['root'].transient_frame_adapter[ffw2.name])
+        @panels[ffw2.domain]['root'].change_adapters(ffw2.name, @panels['nil']['root'].transient_frame_adapter[ffw2.name])
       end
       #@panels[_target_domain]['root'].top_text('')
     end
@@ -3237,32 +3208,32 @@ class ArcadiaLayout
     build_invert_menu
   end
 
-#  def change_domain_old(_dom1, _dom2, _name2)
-#    tt1= @panels[_dom1]['root'].top_text
-#    tt2= @panels[_dom2]['root'].top_text
-#    if  @panels[_dom2]['sons'].length ==1 && @panels[_dom1]['sons'].length > 0
-#      # change ------
-#      ffw1 = raised_fixed_frame(_dom1)
-#      ffw2 = @panels[_dom2]['sons'].values[0]
-#      unregister_panel(ffw1,false,false) if ffw1
-#      unregister_panel(ffw2,false,false)
-#      ffw1.domain = _dom2 if ffw1
-#      ffw2.domain = _dom1
-#      register_panel(ffw1, ffw1.hinner_frame) if ffw1
-#      register_panel(ffw2, ffw2.hinner_frame)
-#      @panels[_dom1]['root'].top_text(tt2)
-#      @panels[_dom2]['root'].top_text(tt1)
-#    elsif @panels[_dom2]['sons'].length > 1
-#      ffw2 = @panels[_dom2]['sons'][_name2]
-#      unregister_panel(ffw2, false, false)
-#      ffw2.domain = _dom1
-#      register_panel(ffw2, ffw2.hinner_frame)
-#      @panels[_dom1]['root'].top_text(tt2)
-#      @panels[_dom2]['root'].top_text('')
-#    end
-#    # refresh -----
-#    build_invert_menu
-#  end
+  #  def change_domain_old(_dom1, _dom2, _name2)
+  #    tt1= @panels[_dom1]['root'].top_text
+  #    tt2= @panels[_dom2]['root'].top_text
+  #    if  @panels[_dom2]['sons'].length ==1 && @panels[_dom1]['sons'].length > 0
+  #      # change ------
+  #      ffw1 = raised_fixed_frame(_dom1)
+  #      ffw2 = @panels[_dom2]['sons'].values[0]
+  #      unregister_panel(ffw1,false,false) if ffw1
+  #      unregister_panel(ffw2,false,false)
+  #      ffw1.domain = _dom2 if ffw1
+  #      ffw2.domain = _dom1
+  #      register_panel(ffw1, ffw1.hinner_frame) if ffw1
+  #      register_panel(ffw2, ffw2.hinner_frame)
+  #      @panels[_dom1]['root'].top_text(tt2)
+  #      @panels[_dom2]['root'].top_text(tt1)
+  #    elsif @panels[_dom2]['sons'].length > 1
+  #      ffw2 = @panels[_dom2]['sons'][_name2]
+  #      unregister_panel(ffw2, false, false)
+  #      ffw2.domain = _dom1
+  #      register_panel(ffw2, ffw2.hinner_frame)
+  #      @panels[_dom1]['root'].top_text(tt2)
+  #      @panels[_dom2]['root'].top_text('')
+  #    end
+  #    # refresh -----
+  #    build_invert_menu
+  #  end
 
   def sorted_menu_index(_menu, _label)
     index = '0'
@@ -3291,11 +3262,11 @@ class ArcadiaLayout
           menu = @panels[dom]['root'].menu_button('ext').cget('menu')
           ind = sorted_menu_index(menu, _ffw.title)
           menu.insert(ind,:command,
-                :label=>_ffw.title,
-                :image=>Arcadia.image_res(ARROW_LEFT_GIF),
-                :compound=>'left',
-                :command=>proc{change_domain(dom, _ffw.name)},
-                :hidemargin => true
+          :label=>_ffw.title,
+          :image=>Arcadia.image_res(ARROW_LEFT_GIF),
+          :compound=>'left',
+          :command=>proc{change_domain(dom, _ffw.name)},
+          :hidemargin => true
           )
         end
       end
@@ -3315,37 +3286,37 @@ class ArcadiaLayout
         end
         if @tabbed
           mymenu.insert(index,:command,
-             :label=>"close \"#{_ffw.title}\"",
-             :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
-             :compound=>'left',
-             :command=>proc{unregister_panel(_ffw, false, true)},
-             :hidemargin => true
+          :label=>"close \"#{_ffw.title}\"",
+          :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
+          :compound=>'left',
+          :command=>proc{unregister_panel(_ffw, false, true)},
+          :hidemargin => true
           )
-        else 
-#          if @panels[_ffw.domain][:raised_name] == _ffw.name
+        else
+          #          if @panels[_ffw.domain][:raised_name] == _ffw.name
           if raised_name(_ffw.domain) == _ffw.name
             mymenu.insert(index,:command,
-               :label=>"close \"#{_ffw.title}\"",
-               :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
-               :compound=>'left',
-               :command=>proc{unregister_panel(_ffw, false, true)},
-               #:command=>proc{raise_panel(_ffw.domain, _ffw.name)},
-               :hidemargin => true
+            :label=>"close \"#{_ffw.title}\"",
+            :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
+            :compound=>'left',
+            :command=>proc{unregister_panel(_ffw, false, true)},
+            #:command=>proc{raise_panel(_ffw.domain, _ffw.name)},
+            :hidemargin => true
             )
           else
             ind = sorted_menu_index(mymenu, _ffw.title)
             mymenu.insert(ind,:command,
-                  :label=>_ffw.title,
-                  :image=>Arcadia.image_res(ARROW_LEFT_GIF),
-                  :compound=>'left',
-                  :command=>proc{change_domain(_ffw.domain, _ffw.name)},
-                  :hidemargin => true
+            :label=>_ffw.title,
+            :image=>Arcadia.image_res(ARROW_LEFT_GIF),
+            :compound=>'left',
+            :command=>proc{change_domain(_ffw.domain, _ffw.name)},
+            :hidemargin => true
             )
           end
         end
       end
     end
-    
+
   end
 
   def build_invert_menu(refresh_commons_items=false)
@@ -3379,12 +3350,12 @@ class ArcadiaLayout
               @panels[dom]['root'].menu_button('ext').cget('menu').delete('0',end_index)
             end
           end
-#          index = menu.index('end').to_i
-#          @panels[dom]['root'].menu_button('ext').cget('menu').delete('2','end') if index > 1
+          #          index = menu.index('end').to_i
+          #          @panels[dom]['root'].menu_button('ext').cget('menu').delete('2','end') if index > 1
         end
       end
     }
-    
+
     @wrappers.each{|name,ffw|
       process_frame(ffw) #if ffw.domain
     }
@@ -3409,7 +3380,7 @@ class ArcadiaLayout
         root_frame = pan['root'].frame
         pan['root'].title(_title)
         pan['root'].restore_caption(_name)
-   	    pan['root'].change_adapters_name(_name)
+        pan['root'].change_adapters_name(_name)
         if !root_frame.instance_of?(TkFrameAdapter) && num==0
           if _adapter
             adapter = _adapter
@@ -3439,14 +3410,14 @@ class ArcadiaLayout
             }
             api = pan['sons'].values[0]
             api_tab_frame = pan['notebook'].insert('end',
-              api.name,
-              'text'=>api.title,
-              'raisecmd'=>proc{
-    					    pan['root'].title(api.title)
-    					    pan['root'].restore_caption(api.name) 
-    					    pan['root'].change_adapters_name(api.name)
-                Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>pan['sons'][api.name].extension_name, 'frame_name'=>pan['sons'][api.name].name))
-              }
+            api.name,
+            'text'=>api.title,
+            'raisecmd'=>proc{
+              pan['root'].title(api.title)
+              pan['root'].restore_caption(api.name)
+              pan['root'].change_adapters_name(api.name)
+              Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>pan['sons'][api.name].extension_name, 'frame_name'=>pan['sons'][api.name].name))
+            }
             )
             adapter = api.hinner_frame
             adapter.detach_frame
@@ -3459,14 +3430,14 @@ class ArcadiaLayout
               pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
             }
           end
-          _panel = pan['notebook'].insert('end',_name , 
-          		'text'=>_title, 
-            'raisecmd'=>proc{
-              pan['root'].title(_title)            
-              pan['root'].restore_caption(_name) 
-              pan['root'].change_adapters_name(_name)
-        	     Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>_ffw.extension_name, 'frame_name'=>_ffw.name))
-            }
+          _panel = pan['notebook'].insert('end',_name ,
+          'text'=>_title,
+          'raisecmd'=>proc{
+            pan['root'].title(_title)
+            pan['root'].restore_caption(_name)
+            pan['root'].change_adapters_name(_name)
+            Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>_ffw.extension_name, 'frame_name'=>_ffw.name))
+          }
           )
           if _adapter
             adapter = _adapter
@@ -3494,11 +3465,11 @@ class ArcadiaLayout
         end
         adapter.attach_frame(root_frame)
         adapter.raise
-#        pan['sons'].each{|k,v|
-#          if k != _name
-#            unregister_panel(v,false)
-#          end
-#        }
+        #        pan['sons'].each{|k,v|
+        #          if k != _name
+        #            unregister_panel(v,false)
+        #          end
+        #        }
         return adapter
       end
     else
@@ -3515,7 +3486,7 @@ class ArcadiaLayout
     @panels[_domain_name]['sons'][_name].hinner_frame.detach_frame
     if delete_wrapper
       @wrappers[_name].root.clear_transient_adapters(_name)
-      @wrappers.delete(_name).hinner_frame.destroy 
+      @wrappers.delete(_name).hinner_frame.destroy
     else
       @wrappers[_name].domain=nil
     end
@@ -3533,7 +3504,7 @@ class ArcadiaLayout
       if !@tabbed || @panels[_domain_name]['sons'].length == 1
         w.detach_frame
         w.attach_frame(@panels[_domain_name]['root'].frame)
-      end 
+      end
       if @tabbed
         if @panels[_domain_name]['sons'].length == 1
           @panels[_domain_name]['notebook'].destroy
@@ -3560,75 +3531,75 @@ class ArcadiaLayout
   def [](_row, _col)
     @frames[_row][_col]
   end
-  
+
   def frame(_domain_name, _name)
     @panels[_domain_name]['sons'][_name].frame
   end
 
-#  def domain_for_frame(_domain_name, _name)
-#    domain(@panels[_domain_name]['sons'][_name].domain)
-#  end
+  #  def domain_for_frame(_domain_name, _name)
+  #    domain(@panels[_domain_name]['sons'][_name].domain)
+  #  end
 
   def domain(_domain_name)
     @panels[_domain_name]
   end
-  
+
   def domain_root_frame(_domain_name)
     @panels[_domain_name]['root'].frame
   end
-  
+
   def add_float_frame(_args=nil)
     if _args.nil?
-     _args = {'x'=>10, 'y'=>10, 'width'=>100, 'height'=>100}
+      _args = {'x'=>10, 'y'=>10, 'width'=>100, 'height'=>100}
     end
     _frame =  TkFloatTitledFrame.new(root)
     _frame.on_close=proc{_frame.hide}
     _frame.place(_args)
     return _frame
   end
-  
+
   def dump_splitter(_splitter)
     ret = ''
     if  _splitter.instance_of?(AGTkVSplittedFrames)
-      w = TkWinfo.width(_splitter.frame1) 
+      w = TkWinfo.width(_splitter.frame1)
       ret = "c#{w}"
     elsif _splitter.instance_of?(AGTkOSplittedFrames)
-      h = TkWinfo.height(_splitter.frame1) 
+      h = TkWinfo.height(_splitter.frame1)
       ret = "r#{h}"
     end
     ret
   end
-  
+
   def splitter_frame_on_frame(_frame)
     ret=nil
     @splitters.each{|sp|
-       if sp.frame == _frame
-         ret = sp
-         break 
-       end
+      if sp.frame == _frame
+        ret = sp
+        break
+      end
     }
     ret
   end
-  
+
   def get_hinner_frame(_frame)
     ret = _frame
-#    child = TkWinfo.children(_frame)[0]
+    #    child = TkWinfo.children(_frame)[0]
     TkWinfo.children(_frame).each{|child|
       if child.instance_of?(TkTitledFrameAdapter)
         ret = child.frame
         break
       end
     }
-#    if child.instance_of?(TkTitledFrame)
-#      ret = child.frame
-#    end
+    #    if child.instance_of?(TkTitledFrame)
+    #      ret = child.frame
+    #    end
     ret
   end
-  
+
   def shift_domain_column(_r,_c,_dom)
     Hash.new.update(_dom).each{|k,d|
       dr,dc=d.split('.')
-      if dc.to_i >= _c && dr.to_i == _r 
+      if dc.to_i >= _c && dr.to_i == _r
         #shift_domain_column(_r,dc.to_i+1,_dom)
         p "== #{d} --> #{domain_name(_r,dc.to_i+1)}"
         _dom[k]= domain_name(_r,dc.to_i+1)
@@ -3639,8 +3610,8 @@ class ArcadiaLayout
   def shift_domain_row(_r,_c,_dom)
     Hash.new.update(_dom).each{|k,d|
       dr,dc=d.split('.')
-      if dr.to_i >= _r && dc.to_i == _c 
-         #shift_domain_row(dr.to_i+1,_c,_dom)
+      if dr.to_i >= _r && dc.to_i == _c
+        #shift_domain_row(dr.to_i+1,_c,_dom)
         p "shift_domain_row == #{d} --> #{domain_name(dr.to_i+1,_c)}"
         _dom[k]=domain_name(dr.to_i+1,_c)
       end
@@ -3651,7 +3622,7 @@ class ArcadiaLayout
     ret = _c
     Hash.new.update(_dom).each{|k,d|
       dr,dc=d.split('.')
-      if dc.to_i == _c && dr.to_i == _r 
+      if dc.to_i == _c && dr.to_i == _r
         ret = gap_domain_column(_r,dc.to_i+1,_dom)
       end
     }
@@ -3662,14 +3633,14 @@ class ArcadiaLayout
     ret = _r
     Hash.new.update(_dom).each{|k,d|
       dr,dc=d.split('.')
-      if dr.to_i == _r && dc.to_i == _c 
-         ret = gap_domain_row(dr.to_i+1,_c,_dom)
+      if dr.to_i == _r && dc.to_i == _c
+        ret = gap_domain_row(dr.to_i+1,_c,_dom)
       end
     }
     ret
   end
 
-  
+
   def dump_geometry(_r=0,_c=0,_frame=root)
     spl = Array.new
     dom = Hash.new
@@ -3693,7 +3664,7 @@ class ArcadiaLayout
       spl.concat(sspl)
       dom.update(ddom)
     elsif _frame==root
-      dom[get_hinner_frame(root)]=domain_name(_r,_c) 
+      dom[get_hinner_frame(root)]=domain_name(_r,_c)
     end
     ret[0]=spl
     ret[1]=dom
@@ -3703,40 +3674,40 @@ class ArcadiaLayout
   end
 end
 
-# 
+#
 # receives messages and tracks the
 # by Roger D. Pack
 class MonitorLastUsedDir
 
   def initialize
     for event in [SaveBufferEvent, AckInFilesEvent, SearchInFilesEvent, OpenBufferEvent] do
-     Arcadia.attach_listener(self, event)
+      Arcadia.attach_listener(self, event)
     end
   end
 
   def on_after_save_as_buffer(_event)
-   MonitorLastUsedDir.set_last _event.new_file
+    MonitorLastUsedDir.set_last _event.new_file
   end
 
   def on_after_ack_in_files _event
     MonitorLastUsedDir.set_last _event.dir
   end
-  
+
   # we want this one...but...not at startup time...hmm.
   def on_after_open_buffer _event
     MonitorLastUsedDir.set_last _event.file
   end
-  
-  alias :on_after_search_in_files :on_after_ack_in_files  
+
+  alias :on_after_search_in_files :on_after_ack_in_files
 
   def self.get_last_dir
     current = $arcadia['pers']['last.used.dir']
     if current != nil && current != ''
-     current
+      current
     else
-     $pwd # startup dir
+      $pwd # startup dir
     end
-  end  
+  end
 
   def MonitorLastUsedDir.set_last to_this # TODO set as private...
     return if to_this.nil? or to_this == ''
@@ -3759,16 +3730,16 @@ class FocusEventManager
     Arcadia.attach_listener(self, FocusEvent)
     Arcadia.attach_listener(self, InputEvent)
   end
-  
+
   def on_input(_event)
     case _event
-      when InputEnterEvent
-        @last_focus_widget = _event.receiver
-      when InputExitEvent
-        @last_focus_widget = nil
-    end  
+    when InputEnterEvent
+      @last_focus_widget = _event.receiver
+    when InputExitEvent
+      @last_focus_widget = nil
+    end
   end
-  
+
   def on_focus(_event)
     if @last_focus_widget
       _event.focus_widget = @last_focus_widget
@@ -3776,27 +3747,27 @@ class FocusEventManager
       _event.focus_widget=Tk.focus
     end
     case _event
-      when CutTextEvent
-        do_cut(_event.focus_widget)
-      when CopyTextEvent
-        do_copy(_event.focus_widget)
-      when PasteTextEvent
-        do_paste(_event.focus_widget)
-      when UndoTextEvent
-        do_undo(_event.focus_widget)
-      when RedoTextEvent
-        do_redo(_event.focus_widget)
-      when SelectAllTextEvent
-        do_select_all(_event.focus_widget)
-      when InvertSelectionTextEvent
-        do_invert_selection(_event.focus_widget)
-      when UpperCaseTextEvent
-        do_upper_case(_event.focus_widget)
-      when LowerCaseTextEvent
-        do_lower_case(_event.focus_widget)
+    when CutTextEvent
+      do_cut(_event.focus_widget)
+    when CopyTextEvent
+      do_copy(_event.focus_widget)
+    when PasteTextEvent
+      do_paste(_event.focus_widget)
+    when UndoTextEvent
+      do_undo(_event.focus_widget)
+    when RedoTextEvent
+      do_redo(_event.focus_widget)
+    when SelectAllTextEvent
+      do_select_all(_event.focus_widget)
+    when InvertSelectionTextEvent
+      do_invert_selection(_event.focus_widget)
+    when UpperCaseTextEvent
+      do_upper_case(_event.focus_widget)
+    when LowerCaseTextEvent
+      do_lower_case(_event.focus_widget)
     end
   end
-  
+
   def do_cut(_focused_widget)
     if _focused_widget.respond_to?(:text_cut)
       _focused_widget.text_cut
@@ -3809,7 +3780,7 @@ class FocusEventManager
       end
     end
   end
-  
+
   def do_copy(_focused_widget)
     if _focused_widget.respond_to?(:text_copy)
       _focused_widget.text_copy
@@ -3827,7 +3798,7 @@ class FocusEventManager
       _focused_widget.text_paste
     elsif _focused_widget.kind_of?(Tk::Entry)
       _focused_widget.insert(_focused_widget.index("insert"), TkClipboard::get)
-    end      
+    end
   end
 
   def do_undo(_focused_widget)
@@ -3852,7 +3823,7 @@ class FocusEventManager
     elsif _focused_widget.kind_of?(Tk::Entry)
       _focused_widget.selection_from('0')
       _focused_widget.selection_to('end')
-    end    
+    end
   end
 
   def do_invert_selection(_focused_widget)
@@ -3878,7 +3849,7 @@ class FocusEventManager
       _replace_sel(_focused_widget, :downcase)
     end
   end
-  
+
   def _replace_sel(_focused_widget, _method)
     if _focused_widget.respond_to?(:tag_ranges)
       r = _focused_widget.tag_ranges('sel')
@@ -3916,5 +3887,5 @@ class ArcadiaUtils
       subpids.concat(unix_child_pids(ccp))
     }
     ret.concat(subpids)
-  end  
+  end
 end
