@@ -463,6 +463,7 @@ class ArcadiaExtPlus < ArcadiaExt
   end  
 
   def activate(_obj=self, _raise_event=true)
+    return if @@active_instance[self.class] == _obj
     @@active_instance[self.class] = _obj
     @@active_instance[self.class].frame.root.shift_on if @@active_instance[self.class].frame != nil
     instances.each{|i|

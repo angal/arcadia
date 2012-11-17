@@ -1070,6 +1070,10 @@ class AgEditor
     @file_info = Hash.new
   end
 
+  def set_controller(_controller)
+    @controller=_controller
+  end
+  
   def modified_from_opening?
     @modified_from_opening
   end
@@ -3197,7 +3201,6 @@ class AgEditor
   end
   
   def check_file_last_access_time
-    #@controller.activate
     if @file
       file_exist = File.exist?(@file)
       if @file_info['mtime'] && file_exist
@@ -3272,8 +3275,9 @@ class AgEditor
 #    else
 #      @fm1 = AGTkVSplittedFrames.new(@page_frame,_w2)
 #    end
-    @fm1 = AGTkVSplittedFrames.new(@page_frame,@page_frame,0,5,false,false)
+    @fm1 = AGTkVSplittedFrames.new(@page_frame, @page_frame,0,5,false,false)
     @fm1.splitter_frame.configure('relief'=>'flat')
+    @fm1.bind_append("Enter", proc{@controller.activate})    
     initialize_text(@fm1.right_frame)
     initialize_highlight(_ext)
     initialize_line_number(@fm1.left_frame)
@@ -3355,6 +3359,7 @@ class AgMultiEditorView
   def initialize(_parent=nil, _frame=nil, _usetabs=true)
     @parent = _parent
     @frame = _frame
+    
     @usetabs = _usetabs
     if @usetabs
       initialize_tabs
@@ -3377,13 +3382,13 @@ class AgMultiEditorView
       if !@enb.pages.empty?
         if @enb.raise.nil? || @enb.raise.strip.length == 0
           @enb.raise(@enb.pages[0]) 
-           @enb.see(@enb.pages[0])
+          @enb.see(@enb.pages[0])
         end
       end
     }
     @enb.bind_append("Map",refresh_after_map)
   end
-  
+
   def switch_2_tabs
     raised = raise
     @usetabs = true
@@ -3412,6 +3417,35 @@ class AgMultiEditorView
     }    
   end
   
+  def move_here(_name)
+    value = nil
+    old_instance = nil
+    @parent.instances.each{|i|
+      if i != @parent
+        value = i.main_frame.page(_name)
+        if value != nil
+          old_instance = i
+          break 
+        end
+      end
+    }
+    if value != nil
+      value['frame'].detach_frame      
+      editor = old_instance.editor_by_page_name(_name)
+      editor.set_controller(@parent)
+      @parent.register_editor(editor, _name, editor.file)
+      old_instance.close_buffer(_name, true)
+      add_page(_name, value['file'], value['text'], value['image'], proc{@parent.do_buffer_raise(_name, value['text'])}, value['frame'])
+      is_file = value['file'] != nil && File.exists?(value['file'])
+      if is_file
+        @parent.add_buffer_menu_item(value['file'], is_file, @parent)
+      else
+        @parent.add_buffer_menu_item(value['text'], is_file, @parent)
+      end
+      raise(_name)
+    end
+  end
+  
   def root_frame
     if @usetabs
       @enb
@@ -3420,13 +3454,26 @@ class AgMultiEditorView
     end
   end
   
-  def exist_buffer?(_name)
+  def exist_buffer?(_name, _sender=self)
+    to_ret = false
     if @usetabs
-      @enb.index(_name) != -1
+      to_ret = @enb.index(_name) != -1
     else
-      @pages.include?(_name)
+      to_ret = @pages.include?(_name)
     end
+    to_ret   
   end  
+  
+  def exist_buffer_in_others?(_name)
+    to_ret = false
+    @parent.instances.each{|i|
+      if i != @parent
+        to_ret = i.main_frame.exist_buffer?(_name)
+        break if to_ret  
+      end
+    }
+    to_ret   
+  end
   
   def index(_name)
     if @usetabs
@@ -3477,6 +3524,7 @@ class AgMultiEditorView
   end
   
   def add_page(_name, _file, _title, _image, _raise_proc, _adapter=nil)
+  #   p "add_page _name=#{_name}  _file=#{_file}, _title=#{_title}"
     if @usetabs
       frame = @enb.insert('end', _name ,
         'text'=> _title,
@@ -3489,7 +3537,8 @@ class AgMultiEditorView
       frame = TkFrame.new(@frame.hinner_frame) #.pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
     end
     if _adapter.nil?
-      adapted_frame = TkFrameAdapter.new(@frame.hinner_frame)
+      adapted_frame = TkFrameAdapter.new(Arcadia.layout.root)
+#      adapted_frame = TkFrameAdapter.new(@frame.hinner_frame)
     else
       adapted_frame = _adapter
     end
@@ -3499,13 +3548,15 @@ class AgMultiEditorView
     adapted_frame
   end
 
-  def delete_page(_name)
+  def delete_page(_name, _delete_adapter=true)
     if @usetabs
       @enb.delete(_name)
     end
     adapter_frame = @pages.delete(_name)['frame']
-    adapter_frame.frame.destroy if adapter_frame.frame
-    adapter_frame.destroy 
+    if _delete_adapter
+      adapter_frame.frame.destroy if adapter_frame.frame
+      adapter_frame.destroy
+    end 
   end
 
   def page_bind(_event, _proc)
@@ -3543,18 +3594,22 @@ class AgMultiEditorView
     if @usetabs
       if _page.nil?
         @raised_page = @enb.raise
-      else  
+      else
         @enb.raise(_page)
+        @enb.see(_page)        
+        @raised_page = _page
       end
     else
       if _page.nil?
         @raised_page
       elsif @raised_page != _page || @raised_page_usetabs != @usetabs 
         if @raised_page
-          @pages[@raised_page]['frame'].unpack if @pages[@raised_page]
+ #         @pages[@raised_page]['frame'].unpack if @pages[@raised_page]
+          @pages[@raised_page]['frame'].unmap("pack") if @pages[@raised_page]
         end
         @raised_page = _page
-        @pages[_page]['frame'].pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
+        @pages[_page]['frame'].map("pack")
+  #      @pages[_page]['frame'].pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
         @pages[_page]['raisecmd'].call
       end
     end
@@ -3830,6 +3885,8 @@ class AgMultiEditor < ArcadiaExtPlus
   attr_reader :splitted_frame
 #  attr_reader :outline_bar
   attr_reader :has_ctags, :ctags_string
+  attr_reader :main_frame
+  
   def on_before_build(_event)
     Arcadia.is_windows? ? @ctags_string="lib/ctags.exe" : @ctags_string='ctags'
     @has_ctags = !Arcadia.which(@ctags_string).nil?
@@ -4020,11 +4077,48 @@ class AgMultiEditor < ArcadiaExtPlus
     @last_active_instance_name = _event.name if _event.name == @name || exist_name?(_event.name)
   end
 
+  def duplicate(_name=new_name)
+    instance = super(_name)    
+    i_end = @buffer_menu.index('end')
+    if i_end
+      0.upto(i_end){|j|
+        type = @buffer_menu.menutype(j)
+        if type != 'separator'
+          #label = @buffer_menu.entrycget(j,'label')
+          #if label > _filename
+          filename = @buffer_menu.entrycget(j,'value').to_s
+          is_file = filename != nil && File.exists?(filename)
+          instance.add_buffer_menu_item(filename, is_file, self)
+        end
+      }
+    end
+    instance.move_buffer_here(raised_name)
+    instance
+  end
+
   def outline_bar
     @@outline_bar
   end
-
-  def add_buffer_menu_item(_filename, is_file=true)
+  
+  def buffer_menu_item_exist?(_filename)
+    exist = false
+    i_end = @buffer_menu.index('end')
+    if i_end
+      0.upto(i_end){|j|
+        type = @buffer_menu.menutype(j)
+        if type != 'separator'
+          value = @buffer_menu.entrycget(j,'value').to_s
+          if value == _filename
+            exist = true
+            break
+          end
+        end
+      }
+    end
+    exist
+  end
+  
+  def add_buffer_menu_item(_filename, is_file=true, _sender=self)
     @buffer_number.numeric += 1
     index = 'end'
     i_end = @buffer_menu.index('end')
@@ -4038,19 +4132,33 @@ class AgMultiEditor < ArcadiaExtPlus
           if value > _filename
             index=j
             break
+          elsif value == _filename
+            return nil
           end
         end
       }
     end
     select_buffer = proc{
-      if is_file
-        open_file(_filename)
+      if _sender == self
+        if is_file
+          open_file(_filename)
+        else
+          open_buffer(tab_name(_filename))             
+        end
       else
-        open_buffer(tab_name(_filename))             
+        if is_file
+          move_buffer_here(tab_file_name(_filename))
+        else
+          move_buffer_here(tab_name(_filename))
+        end
       end
     }
-    @buffer_menu.insert(index,:radio,
-      :label=>File.basename(_filename),
+    label = File.basename(_filename)
+#    if _sender != self
+#      label = "-->#{label}"
+#    end
+    item = @buffer_menu.insert(index,:radio,
+      :label=>label,
 #      :label=>buffer_menu_item_label(_filename, is_file),
       :accelerator=>buffer_menu_item_accelerator(_filename, is_file),
       :value=>_filename,
@@ -4058,12 +4166,17 @@ class AgMultiEditor < ArcadiaExtPlus
       :compound=>'left',
       :command=>select_buffer,
       :hidemargin => true
-    ).bind_append('KeyRelease'){|e|
-#      case e.keysym
-#        when 'Return'
-#          Tk.callback_break
-#      end
-    }
+    )
+    if _sender == self
+      instances.each{|i|
+        if i != self && !i.buffer_menu_item_exist?(_filename)
+          i.add_buffer_menu_item(_filename, is_file, self)
+          i.refresh_buffer_string
+        end
+      }
+      refresh_buffer_string
+    end
+    item
   end
 
 #  def buffer_menu_item_label(_text, _is_file=true)
@@ -4083,10 +4196,11 @@ class AgMultiEditor < ArcadiaExtPlus
     end
   end 
 
-  def del_buffer_menu_item(_file)
+  def del_buffer_menu_item(_file, _sender=self)
     @buffer_number.numeric -= 1
     to_del = -1
     i_end = @buffer_menu.index('end')
+    return if i_end.nil?
     0.upto(i_end){|j|
       type = @buffer_menu.menutype(j)
       if type != 'separator'
@@ -4101,9 +4215,17 @@ class AgMultiEditor < ArcadiaExtPlus
     }
     @buffer_menu.delete(to_del) if to_del != -1
     make_buffer_string("") if @buffer_menu.index('end').nil?
+    if _sender == self
+      instances.each{|i|
+        if i != self
+          i.del_buffer_menu_item(_file, self)
+          i.refresh_buffer_string
+        end
+      }
+    end
   end
 
-  def mod_buffer_menu_item(_file, _newtext, _newvalue = nil)
+  def mod_buffer_menu_item(_file, _newtext, _newvalue = nil, _sender=self)
     to_mod = -1
     i_end = @buffer_menu.index('end')
     0.upto(i_end){|j|
@@ -4146,6 +4268,15 @@ class AgMultiEditor < ArcadiaExtPlus
         }
       )
     end
+    if _sender == self
+      instances.each{|i|
+        if i != self && i.buffer_menu_item_exist?(_file)
+          i.mod_buffer_menu_item(_file, _newtext, _newvalue, self)
+          #i.refresh_buffer_string
+        end
+      }
+    end
+    
   end
 
   def refresh_selected_buffer_menu_item
@@ -4669,6 +4800,15 @@ class AgMultiEditor < ArcadiaExtPlus
     end
   end
 
+  def raised_name
+    if @main_frame
+      _page = @main_frame.raise
+      return resolve_tab_name(_page)
+    else
+      nil
+    end
+  end
+
   def close_raised
     _e = @tabs_editor[resolve_tab_name(@main_frame.raise)]
     close_editor(_e) if _e
@@ -4862,9 +5002,14 @@ class AgMultiEditor < ArcadiaExtPlus
     end
   end
 
+  def refresh_buffer_string
+    make_buffer_string(@last_buffer_str)
+  end
+
   def make_buffer_string(_str=nil)
     value = "[#{@buffer_number.value}] #{_str}"
     #@buffer_menu_button.configure(:text => )
+    @last_buffer_str = _str
     @buffer_string.value = value
   end
 
@@ -4875,12 +5020,13 @@ class AgMultiEditor < ArcadiaExtPlus
 
   def change_frame_caption(_name, _new_caption)
     if @arcadia.layout.headed?
-      if frame.root.title == frame.title
+      if frame.root.title == frame.title || @last_frame_caption != _new_caption
         make_buffer_string(@main_frame.page(_name)['text']) if @main_frame.page(_name)
         #@buffer_menu_button.configure('image'=>@main_frame.page(_name)['image']) if @main_frame.page(_name)
 #        frame.root.top_text(@main_frame.page(_name)['text'], @main_frame.page(_name)['image']) if @main_frame.page(_name)
         frame.root.top_text(top_text_string, @main_frame.page(_name)['image']) if @main_frame.page(_name)
         frame.root.top_text_hint(_new_caption)
+        @last_frame_caption = _new_caption
       end  
 #      frame.root.save_caption(frame.name, @main_frame.page(_name)['text'], @main_frame.page(_name)['image'])
     end
@@ -4901,9 +5047,9 @@ class AgMultiEditor < ArcadiaExtPlus
     old_text = @main_frame.page_title(p_name)
 
     if @tabs_editor[p_name] && @tabs_editor[p_name].file
-      mod_buffer_menu_item(@tabs_editor[p_name].file, _new_text, _new_file)
+      mod_buffer_menu_item(@tabs_editor[p_name].file, _new_text, _new_file, self)
     else
-      mod_buffer_menu_item(unname_modified(tab_title_by_tab_name(p_name)), _new_text)
+      mod_buffer_menu_item(unname_modified(tab_title_by_tab_name(p_name)), _new_text, nil, self)
     end
 #    mod_buffer_menu_item(@main_frame.page(p_name)['file'], _new_text)
     @main_frame.page_title(p_name, _new_text)
@@ -4929,7 +5075,6 @@ class AgMultiEditor < ArcadiaExtPlus
     change_tab_icon(_tab, _new_label)
     #change_frame_caption(_new_file)
     #@tabs_editor[tab_file_name(_new_file)]=@tabs_editor[page_name(_tab)]
-
     #@tabs_file[tab_file_name(_new_file)] = _new_file
     #@tabs_editor[tab_file_name(_new_file)] = editor_of(_new_file)
   end
@@ -5074,6 +5219,19 @@ class AgMultiEditor < ArcadiaExtPlus
     end
     _ret
   end
+
+  def editor_by_page_name(_name)
+    _ret = nil
+    _index = @main_frame.index(resolve_tab_name(_name))
+    if _index == -1
+      _name = name_read_only(_name)
+      _index = @main_frame.index(resolve_tab_name(_name))
+    end
+    if _index != -1
+      _ret = @tabs_editor[resolve_tab_name(_name)]
+    end
+    _ret
+  end
   
   def editor_exist?(_filename)
     _basefilename = File.basename(_filename)
@@ -5116,7 +5274,7 @@ class AgMultiEditor < ArcadiaExtPlus
     if _exist_buffer
       open_buffer(_tab_name)
     else
-      @tabs_file[_tab_name]= _filename
+#      @tabs_file[_tab_name]= _filename
       open_buffer(_tab_name, _basefilename, _filename)
       @tabs_editor[_tab_name].reset_highlight
       begin
@@ -5138,19 +5296,23 @@ class AgMultiEditor < ArcadiaExtPlus
     return editor
   end
 
+  def move_buffer_here(_name)
+    @main_frame.move_here(_name)
+    #@raw_buffer_name[_name]=_name
+  end
 
   def open_buffer(_buffer_name = nil, _title = nil, _filename=nil, _lang=nil)
-    _index = @main_frame.index(resolve_tab_name(_buffer_name))
-    if _buffer_name == nil
-    		_title_new = '*new'
-    		tmp_buffer_num = 0
-    		_buffer_name = tab_name(_title_new)
-    		#_buffer_name = tab_name('new')
-    end
-    if _index != -1
+    #_index = @main_frame.index(resolve_tab_name(_buffer_name))
+    if @main_frame.exist_buffer?(resolve_tab_name(_buffer_name))
       _tab = @main_frame.page_frame(resolve_tab_name(_buffer_name))
       @main_frame.raise(resolve_tab_name(_buffer_name)) if frame_visible?
     else
+      if _buffer_name == nil
+      		_title_new = '*new'
+      		tmp_buffer_num = 0
+      		_buffer_name = tab_name(_title_new)
+      		#_buffer_name = tab_name('new')
+      end
       _n = 1
       while @main_frame.index(_buffer_name) != -1
         _title_new = '*new'+_n.to_s
@@ -5171,22 +5333,22 @@ class AgMultiEditor < ArcadiaExtPlus
         _image = Arcadia.file_icon(_title)
       end
       _tab = @main_frame.add_page(_buffer_name, _filename, _title, _image, proc{do_buffer_raise(_buffer_name, _title)})
-      @raw_buffer_name[_buffer_name]=_buffer_name
+#      @raw_buffer_name[_buffer_name]=_buffer_name
       if _filename
         add_buffer_menu_item(_filename)
       else
         add_buffer_menu_item(_title, false)
       end
       _e = AgEditor.new(self, _tab)
-      @editor_seq=@editor_seq+1
-      _e.id=@editor_seq
-      @editors[@editor_seq]=_e
+      register_editor(_e, _buffer_name, _filename)
+#      @editor_seq=@editor_seq+1
+#      _e.id=@editor_seq
+#      @editors[@editor_seq]=_e
+#      @tabs_editor[_buffer_name]=_e
       ext = Arcadia.file_extension(_title)
       ext='rb' if ext.nil?
       _e.initialize_editing(ext, _lang)
       _e.text.set_focus
-      #@tabs_file[_buffer_name]= nil
-      @tabs_editor[_buffer_name]=_e
     end
     begin
       if raised != @tabs_editor[resolve_tab_name(_buffer_name)]
@@ -5201,7 +5363,24 @@ class AgMultiEditor < ArcadiaExtPlus
     end
     return _tab
   end
+  
+  def register_editor(_e, _buffer_name, _file)
+    @editor_seq=@editor_seq+1
+    _e.id=@editor_seq
+    @editors[@editor_seq]=_e
+    @tabs_editor[_buffer_name]=_e
+    @tabs_file[_buffer_name]= _file if _file 
+    @raw_buffer_name[_buffer_name]=_buffer_name
+  end
 
+  def unregister_editor(_buffer_name)
+    e = @tabs_editor[_buffer_name]
+    @tabs_editor.delete(_buffer_name)
+    @tabs_file.delete(_buffer_name)
+    @editors.delete(e.id)
+    @raw_buffer_name.delete_if {|key, value| value == _buffer_name}
+  end
+  
   def raise_editor(_editor = nil, _text_index='0.0', _mark_selected=true, _exp=true)
     return if _editor == nil
     _tab_name = nil
@@ -5283,29 +5462,36 @@ class AgMultiEditor < ArcadiaExtPlus
       r,c = index.split('.')
       _editor.destroy_outline
       change_outline_frame_caption('') if raised==_editor      
-      close_buffer(_editor.page_frame)
+      close_buffer_frame(_editor.page_frame)
       BufferClosedEvent.new(self,'file'=>file,'row'=>r.to_i, 'col'=>c.to_i).shot!
     else
       return
     end
   end
 
-  def close_buffer(_page_frame)
-    _name = page_name(_page_frame)
+  def close_buffer_frame(_page_frame, _moved=false)
+    name = page_name(_page_frame)
+    close_buffer(name, _moved)
+  end
+
+  def close_buffer(_name, _moved=false)
+    is_raised = @main_frame.raise == _name
     if @tabs_editor[_name] && @tabs_editor[_name].file
       del_buffer_menu_item(@tabs_editor[_name].file)
     else
       del_buffer_menu_item(unname_modified(tab_title_by_tab_name(_name)))
     end
-    @tabs_editor.delete(_name)
-    @tabs_file.delete(_name)
-    @raw_buffer_name.delete_if {|key, value| value == _name }  
+#    @tabs_editor.delete(_name)
+#    @tabs_file.delete(_name)
+    unregister_editor(_name)  
+#    @raw_buffer_name.delete_if {|key, value| value == _name }
     _index = @main_frame.index(_name)
-    @main_frame.delete_page(_name)
-    if !@main_frame.pages.empty?
+    @main_frame.delete_page(_name, !_moved)
+    if !@main_frame.pages.empty? && is_raised
       @main_frame.raise(@main_frame.pages[_index-1]) if TkWinfo.mapped?(@main_frame.root_frame)
     else
       frame.root.top_text_clear if TkWinfo.mapped?(frame.hinner_frame)
+      make_buffer_string("")
       reset_status
     end
   end

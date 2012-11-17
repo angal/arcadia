@@ -510,6 +510,8 @@ class DirProjects < ArcadiaExtPlus
     if _target
       _target = File.dirname(_target) if File.ftype(_target) == 'file'
       TermEvent.new(self,'dir'=>_target, 'title'=>_target).go!
+    else
+      Arcadia.dialog(self, 'type'=>'ok','title' => Arcadia.text('ext.dir_projects.d.nosel.title'), 'msg' => Arcadia.text('ext.dir_projects.d.nosel.msg'), 'level'=>'info')
     end
   end
 

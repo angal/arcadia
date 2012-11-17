@@ -184,6 +184,7 @@ class FilesHistrory < ArcadiaExt
     @htree.textbind_append('Double-1',do_double_click)
      
     @history_lines = []
+    @last_list_lines = []
     refresh_history_lines
    
     build_tree
@@ -256,7 +257,8 @@ class FilesHistrory < ArcadiaExt
     if _event.file && File.exist?(_event.file)
       add2history(_event.file)
       add_to_tree(_event.file)
-      build_list
+      add_to_list(_event.file)
+      #build_list
     end
   end
 
@@ -388,36 +390,48 @@ class FilesHistrory < ArcadiaExt
     @history_lines = read_history
   end 
   
+  def add_to_list(_file)
+    if !@last_list_lines.include?(_file)
+      build_list
+    end
+  end
+
   def build_list
     @hlist.delete('1.0','end')
+    @last_list_lines.clear
     @history_lines.each_with_index{|line,i|
       file, index = line.split(';')
-      if FileTest::exist?(file)
-        dir,fil =File.split(File.expand_path(file))
-        dir = dir.downcase if Arcadia.is_windows?
-        fil = fil.downcase if Arcadia.is_windows?
-        tag_name = "tag_#{i}"
-        @hlist.tag_remove(tag_name,'1.0', 'end')
-        @hlist.tag_delete(tag_name)
-
-        @hlist.tag_bind(tag_name,"Enter",  
-          proc{
-            Tk::BWidget::DynamicHelp::add(@hlist, 'text'=>file)
-            @hlist.configure('cursor'=> 'hand2')
-            @hlist.tag_configure(tag_name, 'underline'=>true)
-          }  
-        )
-        @hlist.tag_bind(tag_name,"Leave",
-          proc{
-            Tk::BWidget::DynamicHelp::delete(@hlist)
-            @hlist.configure('cursor'=> nil)
-            @hlist.tag_configure(tag_name, 'underline'=>false) 
-          }
-        )
-        @hlist.insert("end", "#{File.basename(file)}\n", tag_name)
-        @hlist.tag_bind(tag_name,"ButtonPress-1", proc{ OpenBufferTransientEvent.new(self,'file'=>file).go!})
+      if file && FileTest::exist?(file)
+        append_to_list(file, i)
+        @last_list_lines << file
       end
     }
+  end
+  
+  def append_to_list(_file, _i=0)
+    dir,fil =File.split(File.expand_path(_file))
+    dir = dir.downcase if Arcadia.is_windows?
+    fil = fil.downcase if Arcadia.is_windows?
+    tag_name = "tag_#{_i}"
+    @hlist.tag_remove(tag_name,'1.0', 'end')
+    @hlist.tag_delete(tag_name)
+
+    @hlist.tag_bind(tag_name,"Enter",  
+      proc{
+        Tk::BWidget::DynamicHelp::add(@hlist, 'text'=>_file)
+        @hlist.configure('cursor'=> 'hand2')
+        @hlist.tag_configure(tag_name, 'underline'=>true)
+      }  
+    )
+    @hlist.tag_bind(tag_name,"Leave",
+      proc{
+        Tk::BWidget::DynamicHelp::delete(@hlist)
+        @hlist.configure('cursor'=> nil)
+        @hlist.tag_configure(tag_name, 'underline'=>false) 
+      }
+    )
+    @hlist.insert("end", "#{File.basename(_file)}\n", tag_name)
+    @hlist.tag_bind(tag_name,"ButtonPress-1", proc{OpenBufferTransientEvent.new(self,'file'=>_file).go!})
   end
   
   def build_tree
@@ -637,28 +651,19 @@ class FilesHistrory < ArcadiaExt
       _filename = _filename.sub(Dir::pwd+'/',"")
       _filename = File.expand_path(_filename)
       _filename_index = _filename+";"+_text_index
-     	 #Arcadia.new_error_msg(self, "add2history _filename=#{_filename}")
-     	 #Arcadia.new_error_msg(self, "add2history history_file=#{history_file}")
-
       if File.exist?(history_file)
-#        f = File::open(history_file,'r')
-#        begin
-#          _lines = f.readlines.collect!{| line | line.chomp}
-#        ensure
-#          f.close unless f.nil?
-#        end
         f = File.new(history_file, "w")
         begin
           if f
             max= conf('length').to_i
-            i = 0
+            i = 1
             f.syswrite(_filename_index+"\n")
             @history_lines.each{|_line|
               _lfile = _line.split(';')
               if _lfile
                 if (_lfile[0] != _filename) && (_line.length > 0) 
                   f.syswrite(_line+"\n")
-                  i=+1 
+                  i+=1 
                 end
               end
               break if i >= max

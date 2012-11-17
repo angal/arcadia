@@ -137,5 +137,6 @@ ext.dir_projects.d.paste.title=Confirm copy
 ext.dir_projects.d.delete.msg=Delete $0 $1 ?
 ext.dir_projects.d.delete.msg2=$0 isn't empty. Shure to delete all sub entries ?
 ext.dir_projects.d.delete.title=Confirm delete
-
+ext.dir_projects.d.nosel.msg=No directory selected !
+ext.dir_projects.d.nosel.title=Info
 

@@ -22,12 +22,12 @@ class Arcadia < TkApplication
   attr_reader :localization
   def initialize
     super(
-    ApplicationParams.new(
-    'arcadia',
-    '0.12.0',
-    'conf/arcadia.conf',
-    'conf/arcadia.pers'
-    )
+      ApplicationParams.new(
+        'arcadia',
+        '0.12.0',
+        'conf/arcadia.conf',
+        'conf/arcadia.pers'
+      )
     )
     load_config
     @localization = ArcadiaLocalization.new
@@ -1038,6 +1038,7 @@ class Arcadia < TkApplication
   def Arcadia.conf_group_copy(_path_source, _path_target, _suff = 'conf')
     _target = conf_group(_path_source)
     _postfix = _path_target.sub(_path_source,"")
+#      p "====== copy ======="
     _target.each{|k,v|
       if ["frames.labels","frames.names","name"].include?(k)
         v_a = v.split(',')
@@ -1051,7 +1052,9 @@ class Arcadia < TkApplication
         v = new_val
       end
       @@instance['conf']["#{_path_target}.#{k}"]=v
+#      p "#{k} = #{v}"
     }
+#    p "====== copy ======="
   end
 
   def Arcadia.persistent(_property, _value=nil, _immediate=false)
@@ -1324,7 +1327,7 @@ end
 class ArcadiaMainToolbar < ArcadiaUserControl
   SUF='user_toolbar'
   attr_reader :frame
-  class UserItem < UserItem
+  class UserItem < ArcadiaUserControl::UserItem 
     attr_accessor :frame
     attr_accessor :menu_button
     def initialize(_sender, _args)
@@ -2495,7 +2498,6 @@ class ArcadiaLayout
           p['root'].restore_caption(k)
           p['root'].change_adapters_name(k)
           Arcadia.process_event(LayoutRaisingFrameEvent.new(self,'extension_name'=>k, 'frame_name'=>p['sons'][k].name))
-          build_invert_menu
           break
         end
       }
@@ -3368,7 +3370,6 @@ class ArcadiaLayout
 
   def register_panel(_ffw, _adapter=nil)
     #p " > register_panel #{_ffw.title} _adapter #{_adapter}"
-
     _domain_name = _ffw.domain
     _name = _ffw.name
     _title = _ffw.title

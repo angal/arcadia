@@ -286,44 +286,59 @@ class TkFrameAdapter < TkFrame
 #        @frame.bind_remove("Map")
 #        @frame.bind_remove("Unmap")
 #      end
+      self.bind_remove("Map")
+      self.unmap(@manager_forced_to_frame)
       @frame = nil
-      self.unmap
-    end
-  end
-
-  def unmap
-    if is_place?
-      self.unplace
-    elsif is_pack?
-      self.unpack
     end
   end
 
   def attach_frame(_frame)
     @frame = _frame
-    @frame_manager = TkWinfo.manager(@frame)
-    refresh
-#    if @movable
-#      @frame.bind_append("Configure",proc{refresh})
-#      @frame.bind_append("Map",proc{refresh})
-#      @frame.bind_append("Unmap",proc{unmap  if TkWinfo.mapped?(@frame)})
-#    end
+    refresh_layout_manager
+    self.map
+    self.bind("Map", proc{@frame.raise})
     self
+  end
+  
+  def refresh_layout_manager
+    @frame_manager = TkWinfo.manager(@frame)
+  end
+
+  def is_undefined?
+    @frame_manager.nil? || @frame_manager == ''
   end
 
   def is_place?
-    @frame_manager == 'place' || @frame_manager.nil? || @frame_manager == ''
+    @frame_manager == 'place' || is_undefined?
   end
 
   def is_pack?
     @frame_manager == 'pack'
   end
 
-  def refresh(_x=0, _y=0)
-    if is_place?
-      place('in'=>@frame, 'x'=>_x, 'y'=>_y, 'relheight'=> 1, 'relwidth'=>1, 'bordermode'=>'outside')
-    elsif is_pack?
-      pack('in'=>@frame, 'fill'=>'both', 'expand'=>true)
+  def map(_layout_manager=nil)
+    if _layout_manager == "place" || (_layout_manager.nil? && is_place?) 
+      if is_undefined? && _layout_manager
+        @frame.place('x'=>0, 'y'=>0, 'relheight'=> 1, 'relwidth'=>1, 'bordermode'=>'outside')
+        @manager_forced_to_frame = "place" 
+      end
+      place('in'=>@frame, 'x'=>0, 'y'=>0, 'relheight'=> 1, 'relwidth'=>1, 'bordermode'=>'outside')
+    elsif _layout_manager == "pack" || (_layout_manager.nil? && is_pack?)
+      if is_undefined? && _layout_manager
+        @frame.pack('fill'=>'both', :padx=>0, :pady=>0,  'expand'=>'yes')
+        @manager_forced_to_frame = "pack" 
+      end
+      pack('in'=>@frame, 'fill'=>'both', :padx=>0, :pady=>0,  'expand'=>'yes')
+    end
+  end
+
+  def unmap(_layout_manager=nil)
+    if _layout_manager == "place" || (_layout_manager.nil? && is_place?)
+      self.unplace
+      @frame.unplace if @frame && @manager_forced_to_frame == "place"
+    elsif _layout_manager == "pack" || (_layout_manager.nil? && is_pack?)
+      self.unpack
+      @frame.unpack if @frame  && @manager_forced_to_frame == "pack"
     end
   end
 
