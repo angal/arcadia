@@ -21,11 +21,11 @@ class SubProcessInspector < ArcadiaExt
     _event.can_exit=true
     @processs.each{|pr|
       if !pr.nil? 
-        message = "Some sub process are running! Exit anyware?"
+        message = Arcadia.text("ext.spi.d.exit_query.msg")
         r=Arcadia.dialog(self,
             'type'=>'yes_no', 
             'level'=>'warning',
-            'title'=> 'Confirm exit', 
+            'title'=> Arcadia.text("ext.spi.d.exit_query.title"), 
             'msg'=>message)
         if r=="no"
           _event.can_exit=false
@@ -58,11 +58,12 @@ class SubProcessWidget < Tk::BWidget::Button
     @parent = _parent
     @event = _event
     b_command = proc{
-      message = "Really kill pid #{_event.pid} #{_event.name} ?"
+      
+      message = Arcadia.text('ext.spi.d.kill.msg', [_event.pid, _event.name])
       r=Arcadia.dialog(self,
           'type'=>'yes_no', 
           'level'=>'warning',
-          'title'=> 'Confirm kill', 
+          'title'=> Arcadia.text('ext.spi.d.kill.title'), 
           'msg'=>message)
       if r=="yes"
         _event.abort_action.call

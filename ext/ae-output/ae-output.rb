@@ -17,7 +17,7 @@ class OutputView
     #right_frame = TkFrame.new(parent.frame.hinner_frame, Arcadia.style('panel')).place('x' => '25','y' => '0','relheight' => '1','relwidth' => '1','width' => '-25')
     parent.frame.root.add_button(
       parent.name,
-      'Clear',
+      Arcadia.text('ext.output.button.clear.hint'),
       proc{parent.main_frame.text.delete('1.0','end')}, 
       CLEAR_GIF)
 
@@ -85,7 +85,7 @@ class OutputView
     @pop_up.insert('end',
     :command,
     :state=>'disabled',
-    :label=>'Output',
+    :label=>Arcadia.text('ext.output.menu.output'),
     :background=>Arcadia.conf('titlelabel.background'),
     :font => "#{Arcadia.conf('menu.font')} bold",
     :hidemargin => true
@@ -95,7 +95,7 @@ class OutputView
     #Arcadia.instance.main_menu.update_style(@pop_up)
     @pop_up.insert('end',
     :command,
-    :label=>'Save',
+    :label=>Arcadia.text('ext.output.menu.save'),
     :hidemargin => false,
     :command=> proc{save_as}
     )
@@ -104,14 +104,14 @@ class OutputView
 
     @pop_up.insert('end',
     :command,
-    :label=>'Set wrap',
+    :label=>Arcadia.text('ext.output.menu.wrap'),
     :hidemargin => false,
     :command=> proc{@text.configure('wrap'=>'word');@text.hide_h_scroll}
     )
 
     @pop_up.insert('end',
     :command,
-    :label=>'Set no wrap',
+    :label=>Arcadia.text('ext.output.menu.nowrap'),
     :hidemargin => false,
     :command=> proc{@text.configure('wrap'=>'none');@text.show_h_scroll}
     )
@@ -179,7 +179,7 @@ class Output < ArcadiaExt
   end
 
   def on_msg(_event)
-    self.frame.show
+    self.frame.show if !self.frame.raised?
     if _event.mark
       _mark_index = _event.mark.sub(MARKSUF,'');
       _index_begin = "#{_mark_index} + 1 lines + 1 chars"

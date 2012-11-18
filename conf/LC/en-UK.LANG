@@ -36,7 +36,6 @@ main.menu.tools.load_from_edited_prefs=Load from edited prefs
 #main.menu.help
 main.menu.help=Help
 main.menu.help.about=About
-
 #main.button
 main.button.file.new.hint=New file
 main.button.file.new.submenu.item=New $0 file ...
@@ -48,11 +47,9 @@ main.button.run.last.hint=Run last
 main.button.run.submenu.manage_runner.hint=Manage runner ...
 main.button.run.submenu.manage_runner.caption=Manage runner ...
 main.button.sys.exit.hint=Exit from Arcadia
-
 #main.runner
 main.runner.run_selected.title=Run selected as $0 file
 main.runner.compile_and_run_selected.title=Compile and Run selected as $0 file
-
 #main.splash
 main.splash.creating_extension=... creating $0
 main.splash.initializing_layout=... initializing layout
@@ -62,7 +59,6 @@ main.splash.loading_keys_binding=... loading keys binding
 main.splash.loading_ext_user_controls=... loading $0 user controls
 main.splash.loading_runners=... loading runners
 main.splash.initializing_extensions=... initializing extensions
-
 #error
 main.e.during_build_event.msg=During build event processing($0) : $1 at : $2
 main.e.during_build_event.title=(Arcadia) During build event processing
@@ -81,36 +77,93 @@ main.e.adding_new_menu_item.msg=During build of menu item '$0' rif '$1' not foun
 main.e.adding_new_menu_item.title=(Arcadia) $0 
 main.e.gem_missing.msg=Appears that gem : '$0' required by : '$1' is not installed! Install it from gem?
 main.e.gem_missing.title=Gem '$0' missing!
-
+main.e.dir_not_writable.msg=Locad dir "$0" must be writable!
+main.e.dir_not_writable.title=($0)
 #dialog
 main.d.confirm_exit.msg=Do you want exit?
 main.d.confirm_exit.title=(Arcadia) Exit
 main.d.confirm_delete_runner.msg=Do you want delete runner item '$0'?
 main.d.confirm_delete_runner.title=(Arcadia) Manage runners
-
+main.d.confirm_delete_ext_instance.msg=Shure delete '$0'?
+main.d.confirm_delete_ext_instance.title=(Arcadia) Delete $0
 main.about.by=by $0
+main.about.version=version: $0
 main.about.contributors=Contributors: $0
-
 main.ps.title=Arcadia problems
 main.ps.problem=$0 problem
 main.ps.problems=$0 problems
 main.ps.dependences_missing=Dependences missing
 main.ps.runtime_errors=Runtime errors
-
-#Extensions
-
-# editor
+#extensions
+#editor
 ext.editor.menu.view.show_hide_line_number=Show/Hide editor line numbers
 ext.editor.menu.view.show_hide_tabs=Show/Hide editor tabs
-
-# dir_projects
+ext.editor.button.link.hint=Link open editors with content in the Navigator
+ext.editor.outline.rebuild_tree=.... rebuild tree
+ext.editor.outline.menu.rebuild=Rebuild
+ext.editor.text_line.menu.title=line $0
+ext.editor.text_line.menu.toggle_breakpoint=Toggle breakpoint
+ext.editor.text.menu.save=Save
+ext.editor.text.menu.save_as=Save as
+ext.editor.text.menu.close=Close
+ext.editor.text.menu.close_others=Close others
+ext.editor.text.menu.close_all=Close all
+ext.editor.text.menu.copy=Copy
+ext.editor.text.menu.cut=Cut
+ext.editor.text.menu.paste=Paste
+ext.editor.text.menu.undo=Undo
+ext.editor.text.menu.color=Color
+ext.editor.text.menu.color_from_data=View color from data
+ext.editor.text.menu.font=Font
+ext.editor.text.menu.data_from_file=Data from file
+ext.editor.text.menu.image_from_data=View image from data
+ext.editor.text.menu.data_to_file=Data image to file
+ext.editor.text.menu.eval_selected=Eval selected
+ext.editor.text.menu.debug=Debug
+ext.editor.text.menu.set_wrap=Set wrap
+ext.editor.text.menu.set_nowrap=Set no wrap
+ext.editor.text.menu.to_uppercase=Selection to uppercase
+ext.editor.text.menu.to_downcase=Selection to downcase
+ext.editor.text.menu.show_tabs=Show tabs
+ext.editor.text.menu.hide_tabs=Hide tabs
+ext.editor.text.menu.show_spaces=Show spaces
+ext.editor.text.menu.hide_spaces=Hide spaces
+ext.editor.text.menu.space_to_tab=Space to tab indentation
+ext.editor.text.menu.tab_to_space=Tab to space indentation
+ext.editor.text.menu.code=Code
+ext.editor.buffer.menu.close=Close
+ext.editor.buffer.menu.close_others=Close others
+ext.editor.buffer.menu.close_all=Close all
+ext.editor.search.label.find_what=Find what:
+ext.editor.search.label.replace_with=Replace with:
+ext.editor.search.label.use_regexp=Use Regular Expression
+ext.editor.search.label.search_back=Search backwards
+ext.editor.search.label.ignore_case=Ignore case
+ext.editor.search.label.replace_all=Replace All
+ext.editor.search.label.replace=Replace
+ext.editor.search.label.find_next=Find Next
+ext.editor.search.d.replace.msg=Replace "$0" with "$1" ?
+ext.editor.text.d.save_read-only.title=$0:read-only
+ext.editor.text.d.save_read-only.msg=The file : $0 is read-only! -- save anyway?
+ext.editor.text.d.file_changed.title=File changed!
+ext.editor.text.d.file_changed.msg=File "$0" is changed! Reload?
+ext.editor.text.d.file_deleted.title=File deleted!
+ext.editor.text.d.file_deleted.msg=Appears that file "$0" was deleted by other process! Do you want to resave it?
+ext.editor.file.save_modified.msg=$0 modified. Save?
+ext.editor.file.save_modified.title=Confirm saving
+ext.editor.file.close_modified_by_other.msg=$0 modified by other process. Continue closing?
+ext.editor.file.close_modified_by_other.title=Continue closing
+ext.editor.e.ctags.msg="ctags" package is required by class browsing, without it only ruby language is supported! 
+ext.editor.e.ctags.title=Ctags missing!
+ext.editor.e.prettify.title=(Arcadia) code prettify
+ext.editor.e.prettify.msg=Problems in prettify $0
+#dir_projects
 ext.dir_projects.button.link.hint=Link open editors with content in the Navigator
 ext.dir_projects.button.new.hint=New dir Project
 ext.dir_projects.button.open.hint=Open dir as Project
 ext.dir_projects.button.up.hint=Go to parent folder
 ext.dir_projects.button.search.hint=Search in files from current folder
 ext.dir_projects.button.term.hint=Open terminal from current folder
-
 ext.dir_projects.menu.title=Menu tree
 ext.dir_projects.menu.new=New
 ext.dir_projects.menu.new_dir_proj=New dir Project
@@ -129,7 +182,6 @@ ext.dir_projects.menu.refresh=Refresh
 ext.dir_projects.menu.copy=Copy
 ext.dir_projects.menu.paste=Paste
 ext.dir_projects.menu.delete=Delete
-
 ext.dir_projects.d.move.msg=Move $0 to $1?
 ext.dir_projects.d.move.title=Confirm move
 ext.dir_projects.d.paste.msg=Copy $0 to $1?
@@ -139,4 +191,80 @@ ext.dir_projects.d.delete.msg2=$0 isn't empty. Shure to delete all sub entries ?
 ext.dir_projects.d.delete.title=Confirm delete
 ext.dir_projects.d.nosel.msg=No directory selected !
 ext.dir_projects.d.nosel.title=Info
-
+#file_history
+ext.file_history.button.link.hint=Link open editors with content in the Navigator
+ext.file_history.button.show_as_tree.hint=Show as tree
+ext.file_history.button.show_as_list.hint=Show as list
+ext.file_history.menu.search_from_here=Search from here
+ext.file_history.menu.find_in_files=Find in files...
+ext.file_history.menu.act_in_files=Act in files...
+#output
+ext.output.menu.output=Output
+ext.output.menu.save=Save
+ext.output.menu.wrap=Set wrap
+ext.output.menu.nowrap=Set no wrap
+ext.output.button.clear.hint=Clear
+#breakpoints
+ext.breakpoints.menu.clear_selected=Clear selected breakpoint
+ext.breakpoints.menu.delete_selected=Delete selected breakpoint
+ext.breakpoints.menu.delete_all=Delete all breakpoints
+ext.breakpoints.menu.goto_selected=Goto selected breakpoint
+#ruby-debug
+ext.ruby_debug.button.step_over.hint=step over
+ext.ruby_debug.button.step_into.hint=step into
+ext.ruby_debug.button.step_out.hint=step out
+ext.ruby_debug.button.resume.hint=resume
+ext.ruby_debug.button.quit.hint=quit
+ext.ruby_debug.node.local_var.caption=Local variables
+ext.ruby_debug.node.instance_var.caption=Instance variables
+ext.ruby_debug.node.class_var.caption=Class variables
+ext.ruby_debug.node.global_var.caption=Global variables
+ext.ruby_debug.freeze_at=$0 freeze at $1
+ext.ruby_debug.node.eval_selected=Eval selected
+ext.ruby_debug.server.e.on_start=Error on start server : $0:$1
+ext.ruby_debug.server.e.on_kill=Error on kill : $0:$1
+ext.ruby_debug.client.e.on_command=on command $0:$1
+ext.ruby_debug.client.e.socket_session.1=Erron on socket session : $0
+ext.ruby_debug.client.e.socket_session.2=Error on socket session : $0:$1
+ext.ruby_debug.client.e.close_session=Error on close session : $0:$1
+ext.ruby_debug.client.e.start_session=Error on start_session : $0:$1 $2
+ext.ruby_debug.client.e.stop_session=Error on stop_session : $0:$1
+ext.ruby_debug.client.e.abort_session=Debugger has finished executing: $0:$1
+ext.ruby_debug.client.e.on_command=Error on command $0: $1:$2
+ext.ruby_debug.client.e.raise.on_read.1=Debugged has finished executing
+ext.ruby_debug.client.e.raise.on_read.2=Error: on command '$0' => $1 : $2
+ext.ruby_debug.e.rdebug=Warning: Extension ae-ruby-debug depend upon rdebug command (install it or update system path!)
+ext.ruby_debug.e.do_debug=Starting debug $0 : $1
+ext.ruby_debug.d.file_not_exist.msg=File $0 not exist!
+ext.ruby_debug.d.file_not_exist.title=File not exist
+ext.ruby_debug.d.exit_query.msg=Debug in course, do you want to exit?
+ext.ruby_debug.d.exit_query.title=(Arcadia) Debug
+ext.ruby_debug.d.quit_if_debug.msg=Debug in course, stop it before exit
+ext.ruby_debug.d.quit_if_debug.title=(Arcadia) Debug
+# search_in_files
+ext.search_in_files.title=Search in files
+ext.search_in_files.search_result_title=search result for : "$0" in :"$1" [$2]
+ext.search_in_files.progress.title=Searching
+ext.search_in_files.button.clear.hint=Clear
+ext.search_in_files.search.label.find_what=Find what:
+ext.search_in_files.search.label.files_filter=Files filter:
+ext.search_in_files.search.label.dir=Directory:
+ext.search_in_files.search.button.find=Find
+ext.search_in_files.title.1=Ack in files
+ext.search_in_files.ack_result_title=ack result for : "$0" in :"$1" [$2] $3
+ext.search_in_files.progress.title.1=Running
+ext.search_in_files.progress.title.2=Parsing
+ext.search_in_files.no_search_result=None found
+# shell
+ext.shell.done=Done with $0 in $1s
+ext.shell.done.1=End running $0:
+# sub_process_inspector
+ext.spi.d.exit_query.msg=Some sub process are running! Exit anyware?
+ext.spi.d.exit_query.title=Confirm exit
+ext.spi.d.kill.msg=Really kill pid $0 $1 ?
+ext.spi.d.kill.title=Confirm kill
+#term
+ext.term.dependences_missing.xterm.msg="xterm" application is required by Term, without it integrazione with terminal isn't supported!
+ext.term.dependences_missing.xterm.title=xterm missing!
+ext.term.dependences_missing.xdotool.msg="xdotool" application is required by XTerm, without it integrazione with terminal isn't supported!
+ext.term.dependences_missing.xdotool.title=xdotool missing!

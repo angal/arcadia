@@ -4,8 +4,8 @@
 require 'rubygems'
   SPEC = Gem::Specification.new do |s|
   s.name = "arcadia"
-  s.version = "0.11.1"
-  s.date = "2011-12-11"
+  s.version = "0.12.0"
+  s.date = "2012-11-18"
   s.author = "Antonio Galeone"
   s.email = "antonio-galeone@rubyforge.org"
   s.homepage = "http://arcadia.rubyforge.org"
@@ -23,6 +23,7 @@ require 'rubygems'
     candidates << "conf/arcadia.res.rb"
     candidates << "conf/theme-dark.conf"
     candidates << "conf/theme-dark.res.rb"
+    candidates << "conf/LC/en-UK.LANG"
   s.files =  candidates.delete_if do |item|
       item.include?("CVS") || item.include?("rdoc")|| item.include?("cvs")|| item.include?(".git")
   end

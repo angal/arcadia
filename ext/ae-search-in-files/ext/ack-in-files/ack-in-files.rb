@@ -6,7 +6,7 @@
 class AckInFiles <  SearchInFiles
 
   def on_before_build(_event)
-    create_find 'Ack in files'
+    create_find Arcadia.text('ext.search_in_files.title.1')
     Arcadia.attach_listener(self, AckInFilesEvent)
   end
 
@@ -31,18 +31,19 @@ class AckInFiles <  SearchInFiles
       # ack -i -G .rb "Ack" "c:/dev/ruby/arcadia"
       command = %!ack -i -G "#{@find.e_filter.text.gsub('*', '.*')}" "#{@find.e_what.text}" "#{@find.e_dir.text}"!
 
-      _search_title = 'ack result for : "'+@find.e_what.text+'" in :"'+@find.e_dir.text+'"'+' ['+@find.e_filter.text+'] ' + command
+  
+      _search_title = Arcadia.text('ext.search_in_files.ack_result_title', [@find.e_what.text, @find.e_dir.text, @find.e_filter.text, command])
       _filter = @find.e_dir.text+'/**/'+@find.e_filter.text
       _node = @search_output.new_result(_search_title, '')
       progress_stop=false
       @progress_bar = TkProgressframe.new(self.arcadia.layout.root, 2)
-      @progress_bar.title('Running')
+      @progress_bar.title(Arcadia.text('ext.search_in_files.progress.title.1'))
 
       answer = `#{command}`
       answer_lines = answer.split("\n")
       @progress_bar.destroy # destroy the old one
       @progress_bar = TkProgressframe.new(self.arcadia.layout.root, answer_lines.length)		  
-      @progress_bar.title('Parsing')
+      @progress_bar.title(Arcadia.text('ext.search_in_files.progress.title.2'))
       @progress_bar.on_cancel=proc{progress_stop=true}
 
       # a now looks like
@@ -59,7 +60,7 @@ class AckInFiles <  SearchInFiles
         break if progress_stop # early out
       }
       if answer_lines == []
-        @search_output.new_result('None found', '')
+        @search_output.new_result(Arcadia.text('ext.search_in_files.no_search_result'), '')
       end
       
     rescue Exception => e

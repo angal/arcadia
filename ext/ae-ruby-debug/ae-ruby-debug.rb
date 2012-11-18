@@ -34,7 +34,7 @@ class RubyDebugView
     #  'background' => 'white',
       'anchor' => 'nw',
       'command'=>proc{self.debug_send(:step_over)},
-      'helptext'=>'step over',
+      'helptext'=>Arcadia.text('ext.ruby_debug.button.step_over.hint'),
       'image'=> Arcadia.image_res(D_NEXT_GIF),
       'relief'=> _relief })
     )
@@ -43,7 +43,7 @@ class RubyDebugView
     #  'background' => 'white',
       'anchor' => 'nw',
       'command'=>proc{self.debug_send(:step_into)},
-      'helptext'=>'step into',
+      'helptext'=>Arcadia.text('ext.ruby_debug.button.step_into.hint'),
       'image'=> Arcadia.image_res(D_STEP_INTO_GIF),
       'relief'=>_relief })
     )
@@ -51,7 +51,7 @@ class RubyDebugView
       'name'=>'debug_out',
     #  'background' => 'white',
       'anchor' => 'nw',
-      'helptext'=>'step out',
+      'helptext'=>Arcadia.text('ext.ruby_debug.button.step_out.hint'),
       'command'=>proc{self.debug_send(:step_out)},
       'image'=> Arcadia.image_res(D_STEP_OUT_GIF),
       'relief'=>_relief })
@@ -60,7 +60,7 @@ class RubyDebugView
       'name'=>'debug_resume',
     #  'background' => 'white',
       'anchor' => 'nw',
-      'helptext'=>'resume',
+      'helptext'=>Arcadia.text('ext.ruby_debug.button.resume.hint'),
       'image'=> Arcadia.image_res(D_RESUME_GIF),
       'command'=>proc{self.debug_send(:resume)},
       'relief'=>_relief })
@@ -70,7 +70,7 @@ class RubyDebugView
       'name'=>'debug_quit',
     #  'background' => 'white',
       'anchor' => 'nw',
-      'helptext'=>'quit',
+      'helptext'=>Arcadia.text('ext.ruby_debug.button.quit.hint'),
       'image'=> Arcadia.image_res(D_QUIT_GIF),
       'command'=>proc{self.debug_send(:quit)},
       'relief'=>_relief })
@@ -220,7 +220,7 @@ class RubyDebugView
 
     _b_relief = 'groove'
     #------------------ loacal variables -------------------
-    _loc_var_text = "Local variables"
+    _loc_var_text = Arcadia.text("ext.ruby_debug.node.local_var.caption")
     @b_local_onoff = TkButton.new(@tree_var, Arcadia.style('button')){
         image  _i_on
         state 'disabled'
@@ -244,8 +244,8 @@ class RubyDebugView
       elsif @local_state == B_STATE_FREEZE
         @b_local_onoff.image(_i_freeze)
         @tree_var.itemconfigure('local_var',
-          'text'=>"#{_loc_var_text} freeze at #{@last_position_string}",
-          'helptext'=>"#{_loc_var_text} freeze at #{@last_position_string}"
+          'text'=>Arcadia.text('ext.ruby_debug.freeze_at',[_loc_var_text,@last_position_string]),
+          'helptext'=>Arcadia.text('ext.ruby_debug.freeze_at',[_loc_var_text,@last_position_string])
         )
       elsif @local_state == B_STATE_OFF
         @b_local_onoff.image(_i_off)
@@ -266,7 +266,7 @@ class RubyDebugView
     }))
 
     #------------------ instance variables -------------------
-    _instance_var_text="Instance variables"
+    _instance_var_text=Arcadia.text("ext.ruby_debug.node.instance_var.caption")
     @b_instance_onoff = TkButton.new(@tree_var, Arcadia.style('button')){
         image  _i_on
         #relief _b_relief
@@ -291,8 +291,8 @@ class RubyDebugView
       elsif @instance_state == B_STATE_FREEZE
         @b_instance_onoff.image(_i_freeze)
         @tree_var.itemconfigure('instance_var',
-          'text'=>"#{_instance_var_text} freeze at #{@last_position_string}",
-          'helptext'=>"#{_instance_var_text} freeze at #{@last_position_string}"
+          'text'=>Arcadia.text('ext.ruby_debug.freeze_at',[_instance_var_text,@last_position_string]),
+          'helptext'=>Arcadia.text('ext.ruby_debug.freeze_at',[_instance_var_text,@last_position_string])
         )
       elsif @instance_state == B_STATE_OFF
         @b_instance_onoff.image(_i_off)
@@ -312,7 +312,7 @@ class RubyDebugView
     }))
 
     #------------------ class variables -------------------
-    _class_var_text="Class variables"
+    _class_var_text=Arcadia.text("ext.ruby_debug.node.class_var.caption")
     @b_class_onoff = TkButton.new(@tree_var, Arcadia.style('button')){
         image  _i_on
         #relief _b_relief
@@ -337,8 +337,8 @@ class RubyDebugView
       elsif @class_state == B_STATE_FREEZE
         @b_class_onoff.image(_i_freeze)
         @tree_var.itemconfigure('class_var',
-          'text'=>"#{_class_var_text} freeze at #{@last_position_string}",
-          'helptext'=>"#{_class_var_text} freeze at #{@last_position_string}"
+          'text'=> Arcadia.text('ext.ruby_debug.freeze_at',[_class_var_text,@last_position_string]),
+          'helptext'=>Arcadia.text('ext.ruby_debug.freeze_at',[_class_var_text,@last_position_string])
         )
       elsif @class_state == B_STATE_OFF
         @b_class_onoff.image(_i_off)
@@ -359,7 +359,7 @@ class RubyDebugView
 
 
     #------------------ global variables -------------------
-    _global_var_text="Global variables"
+    _global_var_text=Arcadia.text("ext.ruby_debug.node.global_var.caption")
     @b_global_onoff = TkButton.new(@tree_var, Arcadia.style('button')){
         image  _i_off
         #relief _b_relief
@@ -384,8 +384,8 @@ class RubyDebugView
       elsif @global_state == B_STATE_FREEZE
         @b_global_onoff.image(_i_freeze)
         @tree_var.itemconfigure('global_var',
-          'text'=>"#{_global_var_text} freeze at #{@last_position_string}",
-          'helptext'=>"#{_global_var_text} freeze at #{@last_position_string}"
+          'text'=>Arcadia.text('ext.ruby_debug.freeze_at',[_global_var_text,@last_position_string]),
+          'helptext'=>Arcadia.text('ext.ruby_debug.freeze_at',[_global_var_text,@last_position_string])
         )
       elsif @global_state == B_STATE_OFF
         @b_global_onoff.image(_i_off)
@@ -480,7 +480,7 @@ class RubyDebugView
     return if @controller.rdc.nil? || !@controller.rdc.is_debugging_ready? || !@controller.rds.is_alive?
     begin
       if _command == 'quit'
-        msg = "Really quit debug ? (y/n)"
+#        msg = "Really quit debug ? (y/n)"
         ans = 'yes'#Tk.messageBox('icon' => 'question', 'type' => 'yesno',
 #        'title' => '(Arcadia) Debug', 'message' => msg)
         if  ans == 'yes'
@@ -511,7 +511,7 @@ class RubyDebugView
         end
       end
     rescue Exception => e
-      Arcadia.console(self, 'msg'=>"on command #{_command}:#{e.inspect}", 'level'=>'debug')
+      Arcadia.console(self, 'msg'=>Arcadia.text('ext.ruby_debug.client.e.on_command', [_command, e.inspect]), 'level'=>'debug')
       #Arcadia.new_debug_msg(self,"on command #{_command}:#{e.inspect}")
     end
   end
@@ -577,7 +577,7 @@ class RubyDebugView
         'fill'=>Arcadia.conf('hightlight.13.foreground'),
         'open'=>true,
         'anchor'=>'w',
-        'text' =>  "Eval selection"
+        'text' =>  Arcadia.text("ext.ruby_debug.node.eval_selected")
       }))
     end
     update_variables('eval', _hash)
@@ -863,7 +863,8 @@ class RubyDebugServer
         end
       end
     rescue Exception => e
-      Arcadia.console(self, 'msg'=>"Error on start_server : #{e.class}:#{e.message}", 'level'=>'debug')
+     
+      Arcadia.console(self, 'msg'=>Arcadia.text('ext.ruby_debug.server.e.on_start', [e.class, e.message]), 'level'=>'debug')
       #Arcadia.new_debug_msg(self,"Error on start_server : #{e.class}:#{e.message}")    
     end
   end
@@ -878,8 +879,7 @@ class RubyDebugServer
       end
       notify(RDS_QUIET)
     rescue Exception => e
-      Arcadia.console(self, 'msg'=>"Error on kill : #{e.class}:#{e.message}", 'level'=>'debug')
-      #Arcadia.new_debug_msg(self,"Error on start_server : #{e.class}:#{e.message}")    
+      Arcadia.console(self, 'msg'=>Arcadia.text('ext.ruby_debug.server.e.on_kill', [e.class, e.message]), 'level'=>'debug')
     end
   end
   
@@ -1026,12 +1026,12 @@ class RubyDebugClient
           if @t > 0
             socket_session
           else
-            Arcadia.console(self, 'msg'=>"socket_session : #{e.inspect}", 'level'=>'debug')
+            Arcadia.console(self, 'msg'=>Arcadia.text('ext.ruby_debug.client.e.socket_session.1', [e.inspect]), 'level'=>'debug')
             #Arcadia.new_debug_msg(self,"socket_session : #{e.inspect}")    
           end
         rescue Exception => e
-          @session = nil
-          Arcadia.console(self, 'msg'=>"Error on socket_session : #{e.class}:#{e.message}", 'level'=>'debug')
+          @session = nil          
+          Arcadia.console(self, 'msg'=>Arcadia.text('ext.ruby_debug.client.e.socket_session.2', [e.class,e.message]), 'level'=>'debug')
           #Arcadia.new_debug_msg(self,"Error on socket_session : #{e.class}:#{e.message}")    
         end
       elsif !@controller.rds.is_alive?
@@ -1047,7 +1047,7 @@ class RubyDebugClient
       @session.close if is_alive?
       @session=nil
     rescue Exception => e
-      Arcadia.console(self, 'msg'=>"Error on close session : #{e.class}:#{e.message}", 'level'=>'debug')
+      Arcadia.console(self, 'msg'=>Arcadia.text('ext.ruby_debug.client.e.close_session',[e.class,e.message]), 'level'=>'debug')
       #Arcadia.new_debug_msg(self,"Error on close session : #{e.class}:#{e.message}")    
     end
   end
@@ -1063,7 +1063,7 @@ class RubyDebugClient
       end
       return @session
     rescue Exception => e
-      Arcadia.console(self, 'msg'=>"Error on start_session : #{e.class}:#{e.message} #{e.backtrace.join('..')}", 'level'=>'debug')
+      Arcadia.console(self, 'msg'=>Arcadia.text('ext.ruby_debug.client.e.start_session', [e.class, e.message], e.backtrace.join('..')), 'level'=>'debug')
       #Arcadia.new_debug_msg(self,"Error on start_session : #{e.class}:#{e.message}")    
     end
   end
@@ -1073,7 +1073,7 @@ class RubyDebugClient
       quit if is_debugging_ready?
       @session.close if is_alive?
     rescue Exception => e
-      Arcadia.console(self, 'msg'=>"Error on stop_session : #{e.class}:#{e.inspect}", 'level'=>'debug')    
+      Arcadia.console(self, 'msg'=>Arcadia.text('ext.ruby_debug.client.e.stop_session', [e.class, e.inspect]), 'level'=>'debug')    
       #Arcadia.new_debug_msg(self,"Error on stop_session : #{e.class}:#{e.inspect}")    
     end
   end
@@ -1094,15 +1094,13 @@ class RubyDebugClient
     rescue Errno::ECONNABORTED,Errno::ECONNRESET, Errno::EPIPE => e
       notify("quit_yes")
       #DebugContract.instance.debug_end(self)
-      Arcadia.console(self, 'msg'=>"Debugger has finished executing:\n #{e.class}:#{e.inspect}", 'level'=>'debug')
-      #Arcadia.new_debug_msg(self,"Debugger has finished executing:\n #{e.class}:#{e.inspect}")      
+      Arcadia.console(self, 'msg'=>Arcadia.text('ext.ruby_debug.client.e.abort_session', [e.class, e.inspect]), 'level'=>'debug')
       @session = nil
       @pend = true
       false
       #raise RubyDebugException.new("Debugged has finished executing")
     rescue Exception => e
-      Arcadia.console(self, 'msg'=>"Error on command #{_command}: #{e.class}:#{e.inspect}", 'level'=>'debug')
-      #Arcadia.new_debug_msg(self,"Error on command #{_command}: #{e.class}:#{e.inspect}")
+      Arcadia.console(self, 'msg'=>Arcadia.text('ext.ruby_debug.client.e.on_command', [_command, e.class, e.inspect]), 'level'=>'debug')
       false
     end
   end
@@ -1124,12 +1122,11 @@ class RubyDebugClient
     @busy = false
     result
   
-  rescue Errno::ECONNABORTED
-    raise RubyDebugException.new("Debugged has finished executing")
-  rescue Errno::ECONNRESET
-    raise RubyDebugException.new("Debugged has finished executing")
+  rescue Errno::ECONNABORTED, Errno::ECONNRESET
+    raise RubyDebugException.new(Arcadia.text("ext.ruby_debug.client.e.raise.on_read.1"))
   rescue Exception => e
-    raise RubyDebugException.new("Error: on command '#{_command}' => #{e.class} : #{e.inspect}")
+  
+    raise RubyDebugException.new(Arcadia.text("ext.ruby_debug.client.e.raise.on_read.2", [_command, e.class, e.inspect]))
   end
   private :read
 
@@ -1429,7 +1426,7 @@ class RubyDebug < ArcadiaExt
     if @rdebug_file
       Arcadia.attach_listener(self, BufferEvent)
     else
-      Arcadia.console(self, 'msg'=>"Warning: Extension ae-ruby-debug depend upon rdebug command (install it or update system path!)", 'level'=>'error')
+      Arcadia.console(self, 'msg'=>Arcadia.text("ext.ruby_debug.e.rdebug"), 'level'=>'error')
       #Arcadia.new_error_msg(self, "Warning: Extension ae-ruby-debug depend upon rdebug command (install it or update system path!)")
     end
     Arcadia.attach_listener(self, DebugEvent)
@@ -1459,8 +1456,8 @@ class RubyDebug < ArcadiaExt
         else
           Arcadia.dialog(self,
             'type'=>'ok',
-            'title'=>'File not exist',
-            'msg'=>"File #{_filename} not exist!")
+            'title'=>Arcadia.text('ext.ruby_debug.d.file_not_exist.title'),
+            'msg'=>Arcadia.text('ext.ruby_debug.d.file_not_exist.msg', [_filename]))
         end
       when StepDebugEvent
         if (_event.command == :quit_yes)
@@ -1571,11 +1568,8 @@ class RubyDebug < ArcadiaExt
   def on_exit_query(_event)
     if @rdc && @rdc.is_alive?
       query = (Arcadia.dialog(self, 'icon' => 'question', 'type' => 'yes_no',
-      'title' => '(Arcadia) Debug',
-      'message' => "Debug in course, do you want to exit?")=='yes')
-#      query = (Tk.messageBox('icon' => 'question', 'type' => 'yesno',
-#      'title' => '(Arcadia) Debug',
-#      'message' => "Debug in course, do you want to exit?")=='yes')
+      'title' => Arcadia.text("ext.ruby_debug.d.exit_query.title"),
+      'message' => Arcadia.text("ext.ruby_debug.d.exit_query.msg"))=='yes')
       if query
         debug_quit
         _event.can_exit=true
@@ -1632,7 +1626,7 @@ class RubyDebug < ArcadiaExt
           end
         end
       rescue Exception => e
-        Arcadia.console(self, 'msg'=>"---> "+e.to_s+ ' ' + e.backtrace[0], 'level'=>'debug')
+        Arcadia.console(self, Arcadia.text('ext.ruby_debug.e.do_debug', [e.to_s, e.backtrace[0]]), 'level'=>'debug')
       end
     end
   end
@@ -1662,8 +1656,8 @@ class RubyDebug < ArcadiaExt
         Thread.new{
           Arcadia.dialog(self, 
               'type'=>'ok', 
-              'title' => "(Arcadia) Debug", 
-              'msg'=>"Debug in course, stop it before exit",
+              'title' => Arcadia.text("ext.ruby_debug.d.quit_if_debug.title"), 
+              'msg'=>Arcadia.text("ext.ruby_debug.d.quit_if_debug.msg"),
               'level'=>'info')
 #          Tk.messageBox('icon' => 'info', 
 #          						'type' => 'ok',

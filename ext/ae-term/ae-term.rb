@@ -13,12 +13,12 @@ class Term < ArcadiaExtPlus
     @can_run = @has_xterm || Arcadia.is_windows? 
     if !Arcadia.is_windows?
       if !@has_xterm
-        msg = "\"xterm\" application is required by Term, without it integrazione with terminal isn't supported!" 
-        ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>"xterm missing!", "detail"=>msg).go!
+        msg = Arcadia.text("ext.term.dependences_missing.xterm.msg")
+        ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>Arcadia.text("ext.term.dependences_missing.xterm.title"), "detail"=>msg).go!
       end
       if !@has_xdotool
-        msg = "\"xdotool\" application is required by XTerm, without it integrazione with terminal isn't supported!" 
-        ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>"xdotool missing!", "detail"=>msg).go!
+        msg = Arcadia.text("ext.term.dependences_missing.xdotool.msg")
+        ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>Arcadia.text("ext.term.dependences_missing.xdotool.title"), "detail"=>msg).go!
       end
     end
   end

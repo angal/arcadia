@@ -1801,7 +1801,7 @@ class ArcadiaAboutSplash < TkToplevel
       place('x' => 100,'y' => 40,'height' => 19)
     }
     @tkLabelVersion = TkLabel.new(self){
-      text  'version: '+$arcadia['applicationParams'].version
+      text Arcadia.text('main.about.version', [$arcadia['applicationParams'].version])
       background  _bgcolor
       foreground  '#ffffff'
       font Arcadia.instance['conf']['splash.version.font']

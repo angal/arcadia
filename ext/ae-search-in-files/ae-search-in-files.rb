@@ -6,7 +6,7 @@
 class SearchInFiles < ArcadiaExt
 
   def on_before_build(_event)
-    create_find 'Search in files'
+    create_find Arcadia.text('ext.search_in_files.title')
     Arcadia.attach_listener(self, SearchInFilesEvent)
   end
   
@@ -88,14 +88,13 @@ class SearchInFiles < ArcadiaExt
     Thread.new do
       begin    
         MonitorLastUsedDir.set_last @find.e_dir.text # save it away TODO make it into a message
-        
-        _search_title = 'search result for : "'+@find.e_what.text+'" in :"'+@find.e_dir.text+'"'+' ['+@find.e_filter.text+']'
+        _search_title = Arcadia.text('ext.search_in_files.search_result_title', [@find.e_what.text, @find.e_dir.text, @find.e_filter.text])
         _filter = @find.e_dir.text+'/**/'+@find.e_filter.text
         _files = Dir[_filter]
         _node = @search_output.new_result(_search_title, _files.length)
         progress_stop=false
         progress_bar = TkProgressframe.new(self.arcadia.layout.root, _files.length)		  
-        progress_bar.title('Searching')
+        progress_bar.title(Arcadia.text('ext.search_in_files.progress.title'))
         progress_bar.on_cancel=proc{progress_stop=true}
         #@progress_bar.on_cancel=proc{cancel}
         pattern = Regexp.new(@find.e_what.text)
@@ -151,7 +150,7 @@ class SearchOutput
     
     @button_u = Tk::BWidget::Button.new(left_frame, Arcadia.style('toolbarbutton')){
       image  Arcadia.image_res(CLEAR_GIF)
-      helptext 'Clear'
+      helptext 'ext.search_in_files.button.clear.hint'
       command _proc_clear
       relief 'groove'
       pack('side' =>'top', 'anchor'=>'n',:padx=>0, :pady=>0)
@@ -233,7 +232,7 @@ class FindFrame < TkFloatTitledFrame
     y0 = 10
     d = 23    
     TkLabel.new(self.frame, Arcadia.style('label')){
-      text 'Find what:'
+      text Arcadia.text('ext.search_in_files.search.label.find_what')
    	  place('x' => 8,'y' => y0,'height' => 19)
     }
     y0 = y0 + d
@@ -252,7 +251,7 @@ class FindFrame < TkFloatTitledFrame
     
     y0 = y0 + d
     TkLabel.new(self.frame, Arcadia.style('label')){
-   	  text 'Files filter:'
+   	  text Arcadia.text('ext.search_in_files.search.label.files_filter')
    	  place('x' => 8,'y' => y0,'height' => 19)
     }
     y0 = y0 + d
@@ -263,7 +262,6 @@ class FindFrame < TkFloatTitledFrame
       autocomplete 'true'
       expand 'tab'
       takefocus 'true'
-            #pack('padx'=>10, 'fill'=>'x')
       place('relwidth' => 1, 'width'=>-16,'x' => 8,'y' => y0,'height' => 19)
     }
     @e_filter_entry = TkWinfo.children(@e_filter)[0]
@@ -276,7 +274,7 @@ class FindFrame < TkFloatTitledFrame
     y0 = y0 + d
 
     TkLabel.new(self.frame, Arcadia.style('label')){
-   	  text 'Directory:'
+   	  text Arcadia.text('ext.search_in_files.search.label.dir')
    	  place('x' => 8,'y' => y0,'height' => 19)
     }
     y0 = y0 + d
@@ -313,7 +311,7 @@ class FindFrame < TkFloatTitledFrame
     @b_go = TkButton.new(@buttons_frame, Arcadia.style('button')){|_b_go|
       compound  'none'
       default  'disabled'
-      text  'Find'
+      text  Arcadia.text('ext.search_in_files.search.button.find')
       #overrelief  'raised'
       #justify  'center'
       pack('side'=>'right','ipadx'=>5, 'padx'=>5)

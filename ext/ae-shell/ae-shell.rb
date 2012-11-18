@@ -165,7 +165,8 @@ class Shell < ArcadiaExt
               File.open(output_file_name, 'r') do |f|
                 _readed = f.read
                 _readed.strip!
-                _readed += "\n" + "Done with #{_event.title} in #{Time.now - start_time}s"
+                
+                _readed += "\n" + Arcadia.text('ext.shell.done', [_event.title, Time.now - start_time])
                 output_mark = Arcadia.console(self,'msg'=>_readed, 'level'=>'debug', 'mark'=>output_mark)
                 _event.add_result(self, 'output'=>_readed)
               end
@@ -310,7 +311,7 @@ class Shell < ArcadiaExt
 #                  end
 #                end
               }
-              output_mark = Arcadia.console(self,'msg'=>"\nEnd running #{_event.title}:", 'level'=>'debug', 'mark'=>output_mark)
+              output_mark = Arcadia.console(self,'msg'=>"\n"+Arcadia.text('ext.shell.done.1', [_event.title]), 'level'=>'debug', 'mark'=>output_mark)
 
 
 #              open(_cmd_, "r"){|f|

@@ -103,7 +103,7 @@ class FilesHistrory < ArcadiaExt
     }
 
     Tk::BWidget::DynamicHelp::add(@cb_sync, 
-      'text'=>'Link open editors with content in the Navigator')
+      'text'=>Arcadia.text('ext.file_history.button.link.hint'))
 
     do_check = proc {
       if @cb_sync.cget('onvalue')==@cb_sync.cget('variable').value.to_i
@@ -115,8 +115,8 @@ class FilesHistrory < ArcadiaExt
     @sync = false
     @cb_sync.command(do_check)
     
-    @list_label="Show as list"
-    @tree_label="Show as tree"
+    @list_label=Arcadia.text("ext.file_history.button.show_as_list.hint")
+    @tree_label=Arcadia.text("ext.file_history.button.show_as_tree.hint")
     @is_tree = conf("view") == "tree"
     if @is_tree 
       image = LIST_VIEW_GIF
@@ -482,7 +482,7 @@ class FilesHistrory < ArcadiaExt
     sub_ref_search.configure(Arcadia.style('menu'))
     sub_ref_search.insert('end',
       :command,
-      :label=>'Find in files...',
+      :label=>Arcadia.text('ext.file_history.menu.find_in_files'),
       :hidemargin => false,
       :command=> proc{
         _target = @htree.selected
@@ -495,7 +495,7 @@ class FilesHistrory < ArcadiaExt
     
     sub_ref_search.insert('end',
       :command,
-      :label=>'Act in files...',
+      :label=>Arcadia.text('ext.file_history.menu.act_in_files'),
       :hidemargin => false,
       :command=> proc{
         _target = @htree.selected
@@ -507,7 +507,7 @@ class FilesHistrory < ArcadiaExt
     )
     @pop_up_tree.insert('end',
       :cascade,
-      :label=>'Search from here',
+      :label=>Arcadia.text('ext.file_history.menu.search_from_here'),
       :menu=>sub_ref_search,
       :hidemargin => false
     )

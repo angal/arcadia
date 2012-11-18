@@ -784,7 +784,7 @@ class AgEditorOutlineToolbar
       pack
     }        
     Tk::BWidget::DynamicHelp::add(@cb_sync, 
-      'text'=>'Link open editors with content in the Navigator')
+      'text'=> Arcadia.text('ext.editor.button.link.hint'))
 
     do_check = proc {
       if @cb_sync.cget('onvalue')==@cb_sync.cget('variable').value.to_i
@@ -856,12 +856,8 @@ class AgEditorOutline
         @last_open_node=parent.rif
         parent = parent.parent
       end
-
-
       @tree_exp.close_tree(to_open) if to_open && !@opened
-
       @tree_exp.see(_node.rif)
-      
     ensure
       @tree_exp.selectcommand(_proc)
       @selecting_node = false
@@ -889,7 +885,7 @@ class AgEditorOutline
         _hinner_text = @tree_exp.itemcget(_line,'text').strip
         _editor_line = @editor.text.get(_index, _index+ '  lineend')
         if !_editor_line.include?(_hinner_text)
-          Arcadia.console(self, 'msg'=>"... rebuild tree \n")
+          Arcadia.console(self, 'msg'=>"#{Arcadia.text('ext.editor.outline.rebuild_tree')} \n")
           if @tree_thread && @tree_thread.alive?
             @tree_thread.exit # kill the old tree
           end
@@ -1021,7 +1017,7 @@ class AgEditorOutline
     #Arcadia.instance.main_menu.update_style(@pop_up_tree)
     @pop_up_tree.insert('end',
       :command,
-      :label=>'Rebuild',
+      :label=> Arcadia.text('ext.editor.outline.menu.rebuild'),
       :hidemargin => false,
       :command=> proc{build_tree}
     )
@@ -1958,7 +1954,7 @@ class AgEditor
 
     _pop_up.insert('end',
       :command,
-      :label=>'Toggle breakpoint',
+      :label=> Arcadia.text('ext.editor.text_line.menu.toggle_breakpoint'),
       :hidemargin => false,
       :command=> proc{ 
         if defined?(@text_line_num_current_index)
@@ -1971,7 +1967,7 @@ class AgEditor
       proc{|*x|
         _x = TkWinfo.pointerx(@text_line_num)
         _y = TkWinfo.pointery(@text_line_num)
-        _pop_up.entryconfigure(0,'label'=>"line #{@text_line_num_current_line}")
+        _pop_up.entryconfigure(0,'label'=> Arcadia.text('ext.editor.text_line.menu.title', [@text_line_num_current_line]))
 
         _pop_up.popup(_x,_y)
       })
@@ -2005,21 +2001,6 @@ class AgEditor
         @text_line_num.tag_remove('breakpoint',i1,i2)
       end
   end
-
-
-
-#  def add_tag_breakpoint(_index=nil)
-#      _i1 = _index+' linestart'
-#      _i2 = _i1+' + 2 chars'
-#      @text_line_num.tag_add('breakpoint',_i1,_i2)
-#  end
-  
-#  def remove_tag_breakpoint(_index=nil)
-#      _i1 = _index+' linestart'
-#      _i2 = _index+' lineend'
-#      #p "Editor: _i1:#{_i1}  _i2:#{_i2}"
-#      @text_line_num.tag_remove('breakpoint',_i1,_i2)
-#  end
 
   def toggle_breakpoint(_index=nil)
     if !_index.nil?
@@ -2202,36 +2183,37 @@ class AgEditor
     #Arcadia.instance.main_menu.update_style(@pop_up)
     @pop_up.insert('end',
       :command,
-      :label=>'Save as',
-      :hidemargin => false,
-      :command=> proc{save_as}
-    )
-    @pop_up.insert('end',
-      :command,
-      :label=>'Save',
+      :label=>Arcadia.text('ext.editor.text.menu.save'),
       :hidemargin => false,
       :command=> proc{save}
+    )
+
+    @pop_up.insert('end',
+      :command,
+      :label=>Arcadia.text('ext.editor.text.menu.save_as'),
+      :hidemargin => false,
+      :command=> proc{save_as}
     )
 
     @pop_up.insert('end', :separator)
 
     @pop_up.insert('end',
       :command,
-      :label=>'Close',
+      :label=>Arcadia.text('ext.editor.text.menu.close'),
       :hidemargin => false,
       :command=> proc{@controller.close_editor(self)}
     )
 
     @pop_up.insert('end',
       :command,
-      :label=>'Close others',
+      :label=>Arcadia.text('ext.editor.text.menu.close_others'),
       :hidemargin => false,
       :command=> proc{@controller.close_others_editor(self)}
     )
 
     @pop_up.insert('end',
       :command,
-      :label=>'Close all',
+      :label=>Arcadia.text('ext.editor.text.menu.close_all'),
       :hidemargin => false,
       :command=> proc{@controller.close_all_editor(self)}
     )
@@ -2240,7 +2222,7 @@ class AgEditor
 
     @pop_up.insert('end',
       :command,
-      :label=>'Copy',
+      :label=> Arcadia.text('ext.editor.text.menu.copy'),
       :hidemargin => false,
       :command=> proc{
         @text.event_generate("Control-KeyPress",:keysym=>'c')
@@ -2250,7 +2232,7 @@ class AgEditor
 
     @pop_up.insert('end',
       :command,
-      :label=>'Cut',
+      :label=>Arcadia.text('ext.editor.text.menu.cut'),
       :hidemargin => false,
       :command=> proc{
         @text.event_generate("Control-KeyPress",:keysym=>'x')
@@ -2261,7 +2243,7 @@ class AgEditor
 
     @pop_up.insert('end',
       :command,
-      :label=>'Paste',
+      :label=>Arcadia.text('ext.editor.text.menu.paste'),
       :hidemargin => false,
       :command=> proc{
         @text.event_generate("Control-KeyPress",:keysym=>'v')
@@ -2272,7 +2254,7 @@ class AgEditor
 
     @pop_up.insert('end',
       :command,
-      :label=>'Undo',
+      :label=>Arcadia.text('ext.editor.text.menu.undo'),
       :hidemargin => false,
       :command=> proc{
         @text.event_generate("Control-KeyPress",:keysym=>'z')
@@ -2285,7 +2267,7 @@ class AgEditor
 
     @pop_up.insert('end',
       :command,
-      :label=>'Color',
+      :label=>Arcadia.text('ext.editor.text.menu.color'),
       :hidemargin => false,
       :command=> proc{
         #@text.insert('insert',Tk.chooseColor)
@@ -2295,7 +2277,7 @@ class AgEditor
 
     @pop_up.insert('end',
       :command,
-      :label=>'View color from data',
+      :label=>Arcadia.text('ext.editor.text.menu.color_from_data'),
       :hidemargin => false,
       :command=> proc{
         _r = @text.tag_ranges('sel')
@@ -2314,7 +2296,7 @@ class AgEditor
 
     @pop_up.insert('end',
       :command,
-      :label=>'Font',
+      :label=>Arcadia.text('ext.editor.text.menu.font'),
       :hidemargin => false,
       :command=> proc{
         @text.insert('insert', $arcadia['action.get.font'].call)
@@ -2323,7 +2305,7 @@ class AgEditor
     
     @pop_up.insert('end',
       :command,
-      :label=>'Data from file',
+      :label=>Arcadia.text('ext.editor.text.menu.data_from_file'),
       :hidemargin => false,
       :command=>       proc{
         file = Arcadia.open_file_dialog
@@ -2342,7 +2324,7 @@ class AgEditor
 
     @pop_up.insert('end',
       :command,
-      :label=>'View image from data',
+      :label=>Arcadia.text('ext.editor.text.menu.image_from_data'),
       :hidemargin => false,
       :command=> proc{
         _r = @text.tag_ranges('sel')
@@ -2362,7 +2344,7 @@ class AgEditor
 
     @pop_up.insert('end',
       :command,
-      :label=>'Data image to file',
+      :label=>Arcadia.text('ext.editor.text.menu.data_to_file'),
       :hidemargin => false,
       :command=> proc{
         _r = @text.tag_ranges('sel')
@@ -2399,7 +2381,7 @@ class AgEditor
     _sub_debug.configure(Arcadia.style('menu'))
     _sub_debug.insert('end',
       :command,
-      :label=>'Eval selected',
+      :label=>Arcadia.text('ext.editor.text.menu.eval_selected'),
       :hidemargin => false,
       :command=> proc{
         _r = @text.tag_ranges('sel')
@@ -2415,7 +2397,7 @@ class AgEditor
 
     @pop_up.insert('end',
       :cascade,
-      :label=>'Debug',
+      :label=>Arcadia.text('ext.editor.text.menu.debug'),
       :menu=>_sub_debug,
       :hidemargin => false
     )
@@ -2431,28 +2413,28 @@ class AgEditor
     _sub_code.configure(Arcadia.style('menu'))
     _sub_code.insert('end',
       :command,
-      :label=>'Set wrap',
+      :label=>Arcadia.text('ext.editor.text.menu.set_wrap'),
       :hidemargin => false,
       :command=> proc{@text.configure('wrap'=>'word');@text.hide_h_scroll}
     )
 
     _sub_code.insert('end',
       :command,
-      :label=>'Set no wrap',
+      :label=>Arcadia.text('ext.editor.text.menu.set_nowrap'),
       :hidemargin => false,
       :command=> proc{@text.configure('wrap'=>'none');@text.show_h_scroll}
     )
 
     _sub_code.insert('end',
       :command,
-      :label=>'Selection to uppercase',
+      :label=>Arcadia.text('ext.editor.text.menu.to_uppercase'),
       :hidemargin => false,
       :command=> proc{do_upper_case}
     )
 
     _sub_code.insert('end',
       :command,
-      :label=>'Selection to downcase',
+      :label=>Arcadia.text('ext.editor.text.menu.to_downcase'),
       :hidemargin => false,
       :command=> proc{do_lower_case}
     )
@@ -2461,7 +2443,7 @@ class AgEditor
 
     _sub_code.insert('end',
       :command,
-      :label=>'Show tabs',
+      :label=>Arcadia.text('ext.editor.text.menu.show_tabs'),
       :hidemargin => false,
       :command=> proc{show_tabs}
     )
@@ -2469,14 +2451,14 @@ class AgEditor
 
     _sub_code.insert('end',
       :command,
-      :label=>'Hide tabs',
+      :label=>Arcadia.text('ext.editor.text.menu.hide_tabs'),
       :hidemargin => false,
       :command=> proc{hide_tabs}
     )
 
     _sub_code.insert('end',
       :command,
-      :label=>'Show spaces',
+      :label=>Arcadia.text('ext.editor.text.menu.show_spaces'),
       :hidemargin => false,
       :command=> proc{show_spaces}
     )
@@ -2484,7 +2466,7 @@ class AgEditor
 
     _sub_code.insert('end',
       :command,
-      :label=>'Hide spaces',
+      :label=>Arcadia.text('ext.editor.text.menu.hide_spaces'),
       :hidemargin => false,
       :command=> proc{hide_spaces}
     )
@@ -2492,14 +2474,14 @@ class AgEditor
 
     _sub_code.insert('end',
       :command,
-      :label=>'Space to tabs indentation',
+      :label=>Arcadia.text('ext.editor.text.menu.space_to_tab'),
       :hidemargin => false,
       :command=> proc{indentation_space_2_tabs}
     )
 
     _sub_code.insert('end',
       :command,
-      :label=>'Tabs to space indentation',
+      :label=>Arcadia.text('ext.editor.text.menu.tab_to_space'),
       :hidemargin => false,
       :command=> proc{indentation_tabs_2_space}
     )
@@ -2507,7 +2489,7 @@ class AgEditor
     
     @pop_up.insert('end',
       :cascade,
-      :label=>'Code',
+      :label=>Arcadia.text('ext.editor.text.menu.code'),
       :menu=>_sub_code,
       :hidemargin => false
     )
@@ -3111,8 +3093,8 @@ class AgEditor
     elsif @read_only && !ignore_read_only
       r=Arcadia.dialog(self,
       'type' => 'yes_no_cancel',
-      'title' =>"#{@file}:read-only",
-      'msg' =>"The file : #{@file} is read-only! -- save anyway?",
+      'title' => Arcadia.text('ext.editor.text.d.save_read-only.title', [@file]),
+      'msg' =>Arcadia.text('ext.editor.text.d.save_read-only.msg', [@file]),
       'level' =>'warning')
       if r=="yes"
         save true
@@ -3206,9 +3188,9 @@ class AgEditor
       if @file_info['mtime'] && file_exist
         ftime = File.mtime(@file)
         if @file_info['mtime'] != ftime
-          msg = 'File "'+@file+'" is changed! Reload?'
+          msg = Arcadia.text('ext.editor.text.d.file_changed.msg', [@file])
           ans = Tk.messageBox('icon' => 'error', 'type' => 'yesno',
-            'title' => '(Arcadia) Libs', 'parent' => @text,
+            'title' => Arcadia.text('ext.editor.text.d.file_changed.title'), 'parent' => @text,
             'message' => msg)
           if ans == 'yes'
             reload
@@ -3217,9 +3199,9 @@ class AgEditor
           end
         end
       elsif !file_exist
-        msg = 'Appears that file "'+@file+'" was deleted by other process! Do you want to resave it?'
+        msg = Arcadia.text('ext.editor.text.d.file_deleted.msg', [@file])
         if Tk.messageBox('icon' => 'error', 'type' => 'yesno',
-          'title' => '(Arcadia) editor', 'parent' => @text,
+          'title' => Arcadia.text('ext.editor.text.d.file_deleted.title'), 'parent' => @text,
           'message' => msg) == 'yes'
           save
         else
@@ -3526,7 +3508,7 @@ class AgMultiEditorView
   def add_page(_name, _file, _title, _image, _raise_proc, _adapter=nil)
   #   p "add_page _name=#{_name}  _file=#{_file}, _title=#{_title}"
     if @usetabs
-      frame = @enb.insert('end', _name ,
+      frame = @enb.insert(0, _name ,
         'text'=> _title,
         'image'=> _image,
         'background'=> Arcadia.style("tabpanel")["background"],
@@ -3891,8 +3873,8 @@ class AgMultiEditor < ArcadiaExtPlus
     Arcadia.is_windows? ? @ctags_string="lib/ctags.exe" : @ctags_string='ctags'
     @has_ctags = !Arcadia.which(@ctags_string).nil?
     if !@has_ctags
-      msg = "\"ctags\" package is required by class browsing, without it only ruby language is supported!" 
-      ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>"Ctags missing!", "detail"=>msg).go!
+      msg = Arcadia.text("ext.editor.e.ctags.msg")
+      ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>Arcadia.text("ext.editor.e.ctags.title"), "detail"=>msg).go!
     end
     @breakpoints =Array.new
     @tabs_file =Hash.new
@@ -4305,8 +4287,9 @@ class AgMultiEditor < ArcadiaExtPlus
     reset_status if @main_frame.pages.empty?
   end
 
-  def on_exit_query(_event)
+  def on_exit_query(_event)    
     _event.can_exit=true
+    return if _event.sender.instance_of?(AgMultiEditor) && _event.sender != self 
     @tabs_editor.each_value{|editor|
       _event.can_exit = can_close_editor?(editor)
       if !_event.can_exit
@@ -4433,7 +4416,7 @@ class AgMultiEditor < ArcadiaExtPlus
 
     @c = @pop_up.insert('end',
       :command,
-      :label=>'Close',
+      :label=>Arcadia.text('ext.editor.buffer.menu.close'),
       #:font => conf('font'),
       :hidemargin => false,
       :command=> proc{
@@ -4445,7 +4428,7 @@ class AgMultiEditor < ArcadiaExtPlus
     )
     @c = @pop_up.insert('end',
       :command,
-      :label=>'Close others',
+      :label=>Arcadia.text('ext.editor.buffer.menu.close_others'),
       #:font => conf('font'),
       :hidemargin => false,
       :command=> proc{
@@ -4457,7 +4440,7 @@ class AgMultiEditor < ArcadiaExtPlus
     )
     @c = @pop_up.insert('end',
       :command,
-      :label=>'Close all',
+      :label=>Arcadia.text('ext.editor.buffer.menu.close_all'),
       #:font => conf('font'),
       :hidemargin => false,
       :command=> proc{
@@ -4696,10 +4679,10 @@ class AgMultiEditor < ArcadiaExtPlus
         if rbea && rbea.length >1 && !rbea[1]
           raised.text_replace_value_with(rbea[0])
         else
-          msg = "Problems in prettify #{raised.tab_title}"
+          msg = Arcadia.text('ext.editor.e.prettify.msg', [raised.tab_title])
           Arcadia.dialog(self, 
             'type'=>'ok', 
-            'title' => "(Arcadia) code prettify", 
+            'title' => Arcadia.text("ext.editor.e.prettify.title"), 
             'msg'=>msg,
             'level'=>'error')
         end
@@ -5273,6 +5256,7 @@ class AgMultiEditor < ArcadiaExtPlus
     _exist_buffer = @tabs_file[_tab_name] != nil
     if _exist_buffer
       open_buffer(_tab_name)
+      _text_index = nil 
     else
 #      @tabs_file[_tab_name]= _filename
       open_buffer(_tab_name, _basefilename, _filename)
@@ -5305,7 +5289,7 @@ class AgMultiEditor < ArcadiaExtPlus
     #_index = @main_frame.index(resolve_tab_name(_buffer_name))
     if @main_frame.exist_buffer?(resolve_tab_name(_buffer_name))
       _tab = @main_frame.page_frame(resolve_tab_name(_buffer_name))
-      @main_frame.raise(resolve_tab_name(_buffer_name)) if frame_visible?
+      #@main_frame.raise(resolve_tab_name(_buffer_name)) if frame_visible?
     else
       if _buffer_name == nil
       		_title_new = '*new'
@@ -5352,12 +5336,16 @@ class AgMultiEditor < ArcadiaExtPlus
     end
     begin
       if raised != @tabs_editor[resolve_tab_name(_buffer_name)]
-        @main_frame.move(resolve_tab_name(_buffer_name), 0)
         @main_frame.raise(resolve_tab_name(_buffer_name)) if frame_visible?
         @main_frame.see(resolve_tab_name(_buffer_name))
-      else
-        @main_frame.move(resolve_tab_name(_buffer_name), 0)
       end
+#      if raised != @tabs_editor[resolve_tab_name(_buffer_name)]
+#        @main_frame.move(resolve_tab_name(_buffer_name), 0)
+#        @main_frame.raise(resolve_tab_name(_buffer_name)) if frame_visible?
+#        @main_frame.see(resolve_tab_name(_buffer_name))
+#      else
+#        @main_frame.move(resolve_tab_name(_buffer_name), 0)
+#      end
     rescue Exception => e
       Arcadia.runtime_error(e)
     end
@@ -5374,8 +5362,7 @@ class AgMultiEditor < ArcadiaExtPlus
   end
 
   def unregister_editor(_buffer_name)
-    e = @tabs_editor[_buffer_name]
-    @tabs_editor.delete(_buffer_name)
+    e = @tabs_editor.delete(_buffer_name)
     @tabs_file.delete(_buffer_name)
     @editors.delete(e.id)
     @raw_buffer_name.delete_if {|key, value| value == _buffer_name}
@@ -5423,11 +5410,11 @@ class AgMultiEditor < ArcadiaExtPlus
     ret = true
     if _editor.modified?
       filename = page_name(_editor.page_frame)
-      message = @main_frame.page_title(filename)+"\n modified. Save?"
+      message = Arcadia.text('ext.editor.file.save_modified.msg', [@main_frame.page_title(filename)])
       r=Arcadia.dialog(self,
           'type'=>'yes_no_cancel', 
           'level'=>'warning',
-          'title'=> 'Confirm saving', 
+          'title'=> Arcadia.text('ext.editor.file.save_modified.title'), 
           'msg'=>message)
       if r=="yes"
         _editor.save
@@ -5436,12 +5423,12 @@ class AgMultiEditor < ArcadiaExtPlus
         ret = false
       end
     elsif _editor.modified_by_others?
-      filename = page_name(_editor.page_frame)
-      message = @main_frame.page_title(filename)+"\n modified by other process. Continue closing?"
+      filename = page_name(_editor.page_frame)      
+      message = Arcadia.text('ext.editor.file.close_modified_by_other.msg', [@main_frame.page_title(filename)])
       r=Arcadia.dialog(self,
           'type'=>'yes_no', 
           'level'=>'warning',
-          'title'=> 'Continue closing', 
+          'title'=> Arcadia.text('ext.editor.file.close_modified_by_other.title'), 
           'msg'=>message)
       if r=="yes"
         _editor.reset_file_last_access_time
@@ -5513,17 +5500,17 @@ class AgMultiEditor < ArcadiaExtPlus
     @ok_complete = true
     if !defined?(@ok_complete)
     
-msg =<<EOS
-"Complete code" is actually based on rcodetools 
-that exec code for retreave candidades. 
-So it can be dangerous for example if you write system call. 
-Do you want to activate it?
-EOS
-      @ok_complete = Arcadia.dialog(self, 
-        'level'=>'warning',
-        'type'=>'yes_no', 
-        'title' => '(Arcadia) Complete code', 
-        'msg'=>msg.upcase)=='yes'
+#msg =<<EOS
+#"Complete code" is actually based on rcodetools 
+#that exec code for retreave candidades. 
+#So it can be dangerous for example if you write system call. 
+#Do you want to activate it?
+#EOS
+#      @ok_complete = Arcadia.dialog(self, 
+#        'level'=>'warning',
+#        'type'=>'yes_no', 
+#        'title' => '(Arcadia) Complete code', 
+#        'msg'=>msg.upcase)=='yes'
       
     end
     return @ok_complete
@@ -5539,7 +5526,7 @@ class Findview < TkFloatTitledFrame
  	  y0 = 10
     d = 23    
     TkLabel.new(self.frame, Arcadia.style('label')){
-   	  text 'Find what:'
+   	  text Arcadia.text('ext.editor.search.label.find_what')
    	  place('x' => 8,'y' => y0,'height' => 19)
     }
     y0 = y0 + d
@@ -5561,7 +5548,7 @@ class Findview < TkFloatTitledFrame
 
     y0 = y0 + d
     TkLabel.new(self.frame, Arcadia.style('label')){
-   	  text 'Replace with:'
+   	  text Arcadia.text('ext.editor.search.label.replace_with')
    	  place('x' => 8,'y' => y0,'height' => 19)
     }
     y0 = y0 + d
@@ -5580,7 +5567,7 @@ class Findview < TkFloatTitledFrame
     @e_with_entry.extend(TkInputThrow)
     y0 = y0 + d
     @cb_reg = TkCheckButton.new(self.frame, Arcadia.style('checkbox')){|_cb_reg|
-      text  'Use Regular Expression'
+      text  Arcadia.text('ext.editor.search.label.use_regexp')
       justify  'left'
       #relief  'flat'
       #pack('side'=>'left', 'anchor'=>'e')
@@ -5588,7 +5575,7 @@ class Findview < TkFloatTitledFrame
     }
     y0 = y0 + d
     @cb_back = TkCheckButton.new(self.frame, Arcadia.style('checkbox')){|_cb_reg|
-      text  'Search backwards'
+      text  Arcadia.text('ext.editor.search.label.search_back')
       justify  'left'
       #relief  'flat'
       #pack('side'=>'left', 'anchor'=>'e')
@@ -5596,7 +5583,7 @@ class Findview < TkFloatTitledFrame
     }
     y0 = y0 + d
     @cb_ignore_case = TkCheckButton.new(self.frame, Arcadia.style('checkbox')){|_cb_reg|
-      text  'Ignore case'
+      text  Arcadia.text('ext.editor.search.label.ignore_case')
       justify  'left'
       #relief  'flat'
       #pack('side'=>'left', 'anchor'=>'e')
@@ -5611,7 +5598,7 @@ class Findview < TkFloatTitledFrame
     @b_replace_all = TkButton.new(@buttons_frame, Arcadia.style('button')){|_b_go|
     		state 'disabled'
       default  'disabled'
-      text  'Replace All'
+      text  Arcadia.text('ext.editor.search.label.replace_all')
       #overrelief  'raised'
       justify  'center'
       #width 15
@@ -5623,7 +5610,7 @@ class Findview < TkFloatTitledFrame
     @b_replace = TkButton.new(@buttons_frame, Arcadia.style('button')){|_b_go|
     		state 'disabled'
       default  'disabled'
-      text  'Replace'
+      text  Arcadia.text('ext.editor.search.label.replace')
       #overrelief  'raised'
       justify  'center'
       #width 15
@@ -5635,7 +5622,7 @@ class Findview < TkFloatTitledFrame
     @b_go = TkButton.new(@buttons_frame, Arcadia.style('button')){|_b_go|
       compound  'none'
       default  'disabled'
-      text  'Find Next'
+      text  Arcadia.text('ext.editor.search.label.find_next')
       #background  '#ffffff'
       #image TkPhotoImage.new('dat' => FIND_GIF)
       #overrelief  'raised'
@@ -5709,8 +5696,8 @@ class Finder < Findview
   end
 
   def do_replace
-    if do_find_next
-        _message = 'Replace "'+@e_what.value+'" with "'+@e_with.value+'" ?'
+    if do_find_next        
+        _message = Arcadia.text('ext.editor.search.d.replace.msg'[@e_what.value, @e_with.value])
         if TkDialog2.new('message'=>_message, 'buttons'=>['Yes','No']).show() == 0
           self.editor.text.delete(@idx1,@idx2)
           self.editor.text.insert(@idx1,@e_with.value)
@@ -5721,7 +5708,7 @@ class Finder < Findview
 
   def do_replace_all
     while do_find_next
-        _message = 'Replace "'+@e_what.value+'" with "'+@e_with.value+'" ?'
+        _message = Arcadia.text('ext.editor.search.d.replace.msg'[@e_what.value, @e_with.value])
         _rc = TkDialog2.new('message'=>_message, 'buttons'=>['Yes','No','Annulla']).show()
         if _rc == 0
           self.editor.text.delete(@idx1,@idx2)

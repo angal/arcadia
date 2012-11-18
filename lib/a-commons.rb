@@ -552,8 +552,8 @@ class ArcadiaExtPlus < ArcadiaExt
 
   def deduplicate
     if (Arcadia.dialog(self, 'type'=>'yes_no',
-      'msg'=>"Shure delete '#{@name}'?",
-      'title' => "(Arcadia) Delete #{@name}",
+      'msg'=>Arcadia.text('main.d.confirm_delete_ext_instance.msg', [@name]),
+      'title' => Arcadia.text('main.d.confirm_delete_ext_instance.title', [@name]),
       'level' => 'question')=='yes')
       exit_query_event = Arcadia.process_event(ExitQueryEvent.new(self, 'can_exit'=>true))
       if exit_query_event.can_exit
@@ -1172,8 +1172,8 @@ class Application
           f.close unless f.nil?
         end
       else
-        msg = "Locad dir "+'"'+local_dir+'"'+" must be writable!"
-        Arcadia.dialog(self, 'type'=>'ok','title' => '(Arcadia)', 'msg' => msg, 'level'=>'error')
+        msg = Arcadia.text('main.e.dir_not_writable.msg', [local_dir])
+        Arcadia.dialog(self, 'type'=>'ok','title' => Arcadia.text('main.e.dir_not_writable.title', ['(Arcadia)']), 'msg' => msg, 'level'=>'error')
         exit
       end
     end
@@ -1204,8 +1204,8 @@ class Application
         Dir.mkdir(_local_dir)
         @first_run = true
       else
-        msg = "Local dir "+'"'+home+'"'+" must be writable!"
-        Arcadia.dialog(self, 'type'=>'ok', 'title' => "(#{self['applicationParams'].name})", 'msg' => msg, 'level'=>'error')
+        msg = Arcadia.text('main.e.dir_not_writable.msg', [home])
+        Arcadia.dialog(self, 'type'=>'ok', 'title' => Arcadia.text('main.e.dir_not_writable.title', [self['applicationParams'].name]), 'msg' => msg, 'level'=>'error')
         exit
       end
     end

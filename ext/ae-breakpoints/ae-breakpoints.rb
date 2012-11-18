@@ -51,34 +51,13 @@ class Breakpoints < ArcadiaExt
   end  
 
   def build_ui
-#    do_select_item = proc{|_self|
-#      if _self.selection_get[0].length >0
-#      	_selected = ""
-#      	_self.selection_get[0].each{|_block|
-#       	 _selected = _selected + _block.to_s + "\s" 
-#      	}
-#      	_selected = _selected.strip
-#      else
-#        _selected = _self.selection_get[0]
-#      end
-#      _node_name, _line = _selected.split('_')
-#      if _node_name && _line
-#        _file = _self.itemcget(_node_name, 'text')
-#        if _file
-# 	        Arcadia.process_event(OpenBufferEvent.new(self,'file'=>_file, 'row'=>_line))
-#        end
-#      end
-#    }
-
     @tree_break = BWidgetTreePatched.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
       #showlines true
       deltay 18
       padx 25
       #selectcommand proc{ do_select_item.call(self) } 
     }.place('relwidth' => 1,'relheight' => '1')
-    
     build_popup
-    
     @ui_builded = true
   end
 
@@ -145,28 +124,28 @@ class Breakpoints < ArcadiaExt
 
     _pop_up.insert('end',
       :command,
-      :label=>'Clear selected breakpoint',
+      :label=> Arcadia.text('ext.breakpoints.menu.clear_selected'),
       :hidemargin => false,
       :command=> proc{raise_clear_selected}
     )
 
     _pop_up.insert('end',
       :command,
-      :label=>'Delete selected breakpoint',
+      :label=> Arcadia.text('ext.breakpoints.menu.delete_selected'),
       :hidemargin => false,
       :command=> proc{raise_clear_selected(true)}
     )
 
     _pop_up.insert('end',
       :command,
-      :label=>'Delete all breakpoints',
+      :label=> Arcadia.text('ext.breakpoints.menu.delete_all'),
       :hidemargin => false,
       :command=> proc{clear_all(true)}
     )
 
     _pop_up.insert('end',
       :command,
-      :label=>'Goto selected breakpoint',
+      :label=>Arcadia.text('ext.breakpoints.menu.goto_selected'),
       :hidemargin => false,
       :command=> proc{goto_select_item}
     )
