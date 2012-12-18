@@ -1,8 +1,8 @@
 = Arcadia Ide
-version 0.12.0
+version 0.12.1
 
 by Antonio Galeone
-on Nov 18, 2012
+on Dec 18, 2012
 
 
 == About
@@ -17,6 +17,8 @@ Some of Arcadia ide project features include:
 * Highly extensibility architecture.
 
 == News
+[0.12.1] 
+ - fixed bug in file-history 
  
 [0.12.0]
  - added new extension : terminal's integration
@@ -25,7 +27,7 @@ Some of Arcadia ide project features include:
  - buffers' interchange between more instance of editor
  - introduced internationalization of text :
    in conf/LC/ are searched translation files in format <locale>.LANG (es. en-UK.LANG)
-   locale is settable in ~/.arcadia.arcadia.conf overriding default (locale=en-UK)
+   locale is settable in ~/.arcadia/arcadia.conf overriding default (locale=en-UK)
   ... collaborations in translations are welcome!
  - added possibility to interact with running application typing input in output's console
  - introduced in file-history a new kind of view (list view) activable by  button on toolbar  

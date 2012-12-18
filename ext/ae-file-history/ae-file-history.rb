@@ -383,7 +383,10 @@ class FilesHistrory < ArcadiaExt
       ensure
         f.close unless f.nil?
       end
+    else
+      create_history_file
     end
+    to_ret
   end
   
   def refresh_history_lines
@@ -645,6 +648,19 @@ class FilesHistrory < ArcadiaExt
     end
   end
 
+  def create_history_file(_content=nil)
+    dir,fil =File.split(File.expand_path(history_file))
+    if !File.exist?(dir)
+      Dir.mkdir(dir)
+    end
+    f = File.new(history_file, "w+")
+    begin
+      f.syswrite(_content) if f && _content
+    ensure
+      f.close unless f.nil?
+    end
+  end
+
   def add2history(_filename, _text_index='1.0')
     #return if !@h_stack[_filename].nil?
     if _filename && File.exist?(_filename)
@@ -673,16 +689,7 @@ class FilesHistrory < ArcadiaExt
           f.close unless f.nil?
         end
       else
-     			dir,fil =File.split(File.expand_path(history_file))
-     			if !File.exist?(dir)
-     			  Dir.mkdir(dir)
-     			end
-        f = File.new(history_file, "w+")
-        begin
-          f.syswrite(_filename+"\n") if f
-        ensure
-          f.close unless f.nil?
-        end
+        create_history_file(_filename+"\n")
       end
       refresh_history_lines
     end
