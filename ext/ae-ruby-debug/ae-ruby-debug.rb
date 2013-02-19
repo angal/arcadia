@@ -971,6 +971,12 @@ class RubyDebugClient
     :value,
     :value_class
   )
+  if RUBY_VERSION > '1.9.1'
+    require "syck"
+    DOMAIN_TYPE_CONSTANT = Object::Syck::DomainType
+  else
+    DOMAIN_TYPE_CONSTANT = YAML::DomainType
+  end
   
   def initialize(_controller, _server='localhost', _port=8989, _timeout=0)
     @controller = _controller
@@ -1174,7 +1180,7 @@ class RubyDebugClient
   def yaml_pseudo_load(_obj)
     just_present =  @valuobjs.include?(_obj)
     @valuobjs << _obj  
-    if _obj.class == YAML::DomainType
+    if _obj.class == DOMAIN_TYPE_CONSTANT
       return _obj.type_id if just_present
       ret = Hash.new
       ret['__CLASS__']=_obj.type_id

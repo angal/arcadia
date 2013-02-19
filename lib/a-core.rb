@@ -24,7 +24,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.12.1',
+        '0.12.2',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -57,7 +57,6 @@ class Arcadia < TkApplication
       withdraw
       protocol( "WM_DELETE_WINDOW", proc{Arcadia.process_event(QuitEvent.new(self))})
       iconphoto(Arcadia.image_res(ARCADIA_RING_GIF)) if Arcadia.instance.tcltk_info.level >= '8.4.9'
-
     }
     @on_event = Hash.new
 
@@ -1809,7 +1808,7 @@ class ArcadiaAboutSplash < TkToplevel
       place('x' => 100,'y' => 65,'height' => 19)
     }
     @tkLabel21 = TkLabel.new(self){
-      text  Arcadia.text("main.about.by", ['Antonio Galeone - 2004/2012'])
+      text  Arcadia.text("main.about.by", ['Antonio Galeone - 2004/2013'])
       background  _bgcolor
       foreground  '#ffffff'
       font Arcadia.instance['conf']['splash.credits.font']

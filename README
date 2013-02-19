@@ -1,5 +1,5 @@
 = Arcadia Ide
-version 0.12.1
+version 0.12.2
 
 by Antonio Galeone
 on Dec 18, 2012
@@ -17,6 +17,8 @@ Some of Arcadia ide project features include:
 * Highly extensibility architecture.
 
 == News
+[0.12.2]
+ - added support to debugger
 [0.12.1] 
  - fixed bug in file-history 
  
