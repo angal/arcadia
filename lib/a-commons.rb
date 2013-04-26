@@ -598,11 +598,15 @@ class Event
   attr_accessor :parent
   attr_reader :channel
   attr_reader :time
+  attr_accessor :flag #is used to give a state to event
   attr_reader :results
+  FLAG_ERROR = 'E'
+  FLAG_DEFAULT = '0'
   def initialize(_sender, _args=nil)
     @breaked = false
     @sender = _sender
     @channel = '0'
+    @flag= FLAG_DEFAULT
     if _args
       _args.each do |key, value|
         #self.send(key, value)

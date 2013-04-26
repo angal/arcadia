@@ -271,6 +271,9 @@ class Shell < ArcadiaExt
                     while (line = terr.gets)
                       output_mark = Arcadia.console(self,'msg'=>line, 'level'=>'error', 'mark'=>output_mark)
                       _event.add_result(self, 'output'=>line)
+                      if line && line.length > 0
+                        _event.flag = Event::FLAG_ERROR
+                      end
                     end
                   rescue Exception => e
                     output_mark = Arcadia.console(self,'msg'=>e.to_s, 'level'=>'debug', 'mark'=>output_mark)

@@ -3253,6 +3253,25 @@ class ArcadiaLayout
     end
     index
   end
+  
+  def menu_item_exist?(_menu, _name)
+    exist = false
+    i_end = _menu.index('end')
+    if i_end
+      0.upto(i_end){|j|
+        type = _menu.menutype(j)
+        if type != 'separator'
+          value = _menu.entrycget(j,'label').to_s
+          if value == _name
+            exist = true
+            break
+          end
+        end
+      }
+    end
+    exist
+  end
+  
 
   def process_frame(_ffw)
     #p "processo frame #{_ffw.title}"
@@ -3261,14 +3280,16 @@ class ArcadiaLayout
         titledFrame = @panels[dom]['root']
         if titledFrame.instance_of?(TkTitledFrameAdapter)
           menu = @panels[dom]['root'].menu_button('ext').cget('menu')
-          ind = sorted_menu_index(menu, _ffw.title)
-          menu.insert(ind,:command,
-          :label=>_ffw.title,
-          :image=>Arcadia.image_res(ARROW_LEFT_GIF),
-          :compound=>'left',
-          :command=>proc{change_domain(dom, _ffw.name)},
-          :hidemargin => true
-          )
+          if !menu_item_exist?(menu, _ffw.title)
+            ind = sorted_menu_index(menu, _ffw.title)
+              menu.insert(ind,:command,
+              :label=>_ffw.title,
+              :image=>Arcadia.image_res(ARROW_LEFT_GIF),
+              :compound=>'left',
+              :command=>proc{change_domain(dom, _ffw.name)},
+              :hidemargin => true
+            )
+          end
         end
       end
     }
@@ -3285,35 +3306,40 @@ class ArcadiaLayout
         if i >= 0
           index = i.to_s
         end
+        clabel = "close \"#{_ffw.title}\"" 
         if @tabbed
-          mymenu.insert(index,:command,
-          :label=>"close \"#{_ffw.title}\"",
-          :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
-          :compound=>'left',
-          :command=>proc{unregister_panel(_ffw, false, true)},
-          :hidemargin => true
-          )
-        else
-          #          if @panels[_ffw.domain][:raised_name] == _ffw.name
-          if raised_name(_ffw.domain) == _ffw.name
+          if !menu_item_exist?(mymenu, clabel)
             mymenu.insert(index,:command,
-            :label=>"close \"#{_ffw.title}\"",
+            :label=> clabel,
             :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
             :compound=>'left',
             :command=>proc{unregister_panel(_ffw, false, true)},
-            #:command=>proc{raise_panel(_ffw.domain, _ffw.name)},
-            :hidemargin => true
-            )
-          else
-            ind = sorted_menu_index(mymenu, _ffw.title)
-            mymenu.insert(ind,:command,
-            :label=>_ffw.title,
-            :image=>Arcadia.image_res(ARROW_LEFT_GIF),
-            :compound=>'left',
-            :command=>proc{change_domain(_ffw.domain, _ffw.name)},
             :hidemargin => true
             )
           end
+        else
+#          if raised_name(_ffw.domain) == _ffw.name
+           if !menu_item_exist?(mymenu, clabel)
+             mymenu.insert(index,:command,
+               :label=> clabel,
+               :image=>Arcadia.image_res(CLOSE_FRAME_GIF),
+               :compound=>'left',
+               :command=>proc{unregister_panel(_ffw, false, true)},
+               :hidemargin => true
+             )
+           end
+#          else
+            if !menu_item_exist?(mymenu, _ffw.title)
+              ind = sorted_menu_index(mymenu, _ffw.title)
+              mymenu.insert(ind,:command,
+                :label=>_ffw.title,
+                :image=>Arcadia.image_res(ARROW_LEFT_GIF),
+                :compound=>'left',
+                :command=>proc{change_domain(_ffw.domain, _ffw.name)},
+                :hidemargin => true
+              )
+            end
+#          end
         end
       end
     end

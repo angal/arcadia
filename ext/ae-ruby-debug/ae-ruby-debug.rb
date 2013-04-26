@@ -180,7 +180,7 @@ class RubyDebugView
 
   def build_var_panel(_frame)
     _open_proc = proc do |_arg|
-        inspect_node(_arg) if @nodes_to_open.include?(_arg)
+      inspect_node(_arg) if @c_on && @nodes_to_open && @nodes_to_open.include?(_arg)
     end
         
     @tree_var = BWidgetTreePatched.new(_frame, Arcadia.style('treepanel')){
@@ -473,7 +473,7 @@ class RubyDebugView
     tree_process_free
     #break_list_free
   end
-
+  
   
   def rdebug_client_update(_command, _result)
     #Arcadia.console(self,'msg'=>"on command #{_command} => #{_result}", 'level'=>'debug')
@@ -824,25 +824,13 @@ class RubyDebugServer
         end
       else
         @pid = Process.fork do
-#          pid = Process.pid
-#          abort_action = proc{
-#            ArcadiaUtils.unix_child_pids(pid).each {|pid|
-#              Process.kill(9,pid.to_i)
-#            }
-#            Process.kill(9,pid.to_i)
-#          }
-#            
-#          alive_check = proc{
-#            num = `ps -p #{pid}|wc -l`
-#            num.to_i > 1
-#          }
-#          Arcadia.process_event(SubProcessEvent.new(self,'pid'=>pid, 'name'=>"debugging :#{_filename}",'abort_action'=>abort_action, 'alive_check'=>alive_check))
           if File.basename(Arcadia.ruby) != 'ruby'
             commandLine="export PATH=#{Arcadia.instance.local_dir}/bin:$PATH && #{commandLine}"
           end
+          #s_event = Arcadia.process_event(RunCmdEvent.new(self, {'cmd'=>commandLine}))
+          #if s_event.flag != Event::FLAG_ERROR
           if Kernel.system(commandLine)
             set_alive(false)
-            #p "alive=#{is_alive?}"
             notify(RDS_QUIET)
             Kernel.system('y')
 
@@ -854,12 +842,7 @@ class RubyDebugServer
           else
             Kernel.exit!
             Arcadia.console(self, 'msg'=>"#{$?.inspect}", 'level'=>'debug')
-            #Arcadia.new_debug_msg(self,"#{$?.inspect}")    
           end
-
-          #p "@alive=#{@alive}"
-          #notify(RDS_QUIET)
-          #Process.wait
         end
       end
     rescue Exception => e
@@ -971,7 +954,11 @@ class RubyDebugClient
     :value,
     :value_class
   )
-  if RUBY_VERSION > '1.9.1'
+  
+  if RUBY_VERSION >= '2'
+    #require "psych"
+    DOMAIN_TYPE_CONSTANT = nil
+  elsif RUBY_VERSION > '1.9.1' && RUBY_VERSION < '2'
     require "syck"
     DOMAIN_TYPE_CONSTANT = Object::Syck::DomainType
   else
@@ -1106,7 +1093,7 @@ class RubyDebugClient
       false
       #raise RubyDebugException.new("Debugged has finished executing")
     rescue Exception => e
-      Arcadia.console(self, 'msg'=>Arcadia.text('ext.ruby_debug.client.e.on_command', [_command, e.class, e.inspect]), 'level'=>'debug')
+      Arcadia.console(self, 'msg'=>Arcadia.text('ext.ruby_debug.client.e.on_command2', [_command, e.class, e.inspect]), 'level'=>'debug')
       false
     end
   end
@@ -1127,7 +1114,6 @@ class RubyDebugClient
     end
     @busy = false
     result
-  
   rescue Errno::ECONNABORTED, Errno::ECONNRESET
     raise RubyDebugException.new(Arcadia.text("ext.ruby_debug.client.e.raise.on_read.1"))
   rescue Exception => e
@@ -1179,8 +1165,12 @@ class RubyDebugClient
 
   def yaml_pseudo_load(_obj)
     just_present =  @valuobjs.include?(_obj)
-    @valuobjs << _obj  
+    @valuobjs << _obj 
+    p  _obj.class
     if _obj.class == DOMAIN_TYPE_CONSTANT
+      
+      p _obj
+      
       return _obj.type_id if just_present
       ret = Hash.new
       ret['__CLASS__']=_obj.type_id
@@ -1242,7 +1232,8 @@ class RubyDebugClient
 
   
   def debug_dump(_exp)
-    var = nil
+    return '' if _exp.nil? || _exp.strip.length == 0 || _exp.strip.length == 'nil'
+     var = nil
     if @valuobjs.nil?
       @valuobjs = Array.new 
     else
@@ -1250,64 +1241,27 @@ class RubyDebugClient
     end
     begin
       _to_eval = read("eval YAML::dump(#{_exp})")
-      if _to_eval.include?('Exception:')
+      if _to_eval.include?('Exception:') || _to_eval.include?('SyntaxError:')
         _to_eval = read("eval require 'pp';eval #{_exp}.pretty_inspect")
         var = eval(_to_eval)
         #var = "?"
       else
-        _str = eval(_to_eval)
+        _str = "#{eval(_to_eval)}"
         _str.gsub!('!ruby/object:', '!')
-        _obj = YAML::load(_str)
+        begin
+          _obj = YAML::load(_str)
+        rescue Exception => e
+          Arcadia.console(self, 'msg'=>"exception on eval in YAML::load #{_str} :#{e.inspect}")
+        end
         var = yaml_pseudo_load(_obj)
       end  
     rescue Exception => e
       Arcadia.console(self, 'msg'=>"exception on eval #{_exp} :#{e.inspect}")
+      Arcadia.console(self, 'msg'=>"exception on eval #{_exp} : #{_to_eval}")
       #Arcadia.new_msg(self,"exception on eval #{_exp} :#{e.inspect}")
       var = nil
     end
     return var
-  end
-
-
-  # returns the instance variables and there values
-  def instance_variables_new(_this='self')
-    command("eval #{_this}.instance_variables")
-    variables = []
-    begin
-      variables = eval(read)
-    rescue Exception
-      variables = []
-    end
-    @consider = Array.new
-    variable_values = Hash.new
-    variables.each do |var|
-       #next if var != '@objs'
-#      command("eval require 'pp';  #{var}.pretty_inspect() + '|||' + #{var}.class.to_s")
-      command("eval YAML::dump(#{var})")
-      _str = eval read
-      #Arcadia.new_msg(self,"value passato 1 ="+_str)
-
-      _str.gsub!('!ruby/object:', '!')
-
-      #Arcadia.new_msg(self,"value passato 2 ="+_str)
-
-      _obj = YAML::load(_str)
-      
-      _xvalue = yaml_pseudo_load(_obj)
-      if _xvalue.class == Hash
-        _xclass = _xvalue['__CLASS__']
-      else
-        _xclass = _xvalue.class.to_s
-      end
-      #_vvv = eval(_value)
-      
-      #Arcadia.new_msg(self,"vvv class="+_vvv.class.to_s)
-      
-      #Arcadia.new_msg(self,"value="+_xvalue.inspect)
-      #Arcadia.new_msg(self,"class="+_xclass)
-      variable_values[var] = Var.new(_xvalue, _xclass)
-    end
-    return variable_values
   end
 
   # returns the local variables and there values
@@ -1317,6 +1271,9 @@ class RubyDebugClient
       to_eval = read("eval #{_type}")
       #Arcadia.console(self,'msg'=>"to_eval=#{to_eval.to_s}")
       variables = eval(to_eval)
+      if variables.class != Array
+        variables = []
+      end
       #Arcadia.console(self,'msg'=>"variables=#{variables.to_s}")
     rescue Exception => e
       variables = []
@@ -1327,10 +1284,6 @@ class RubyDebugClient
     variable_values = Hash.new
     variables.each do |var|
       next if var.to_s=='$;'
-#      command("eval #{var}.to_s + '|||' + #{var}.class.to_s")
-#      _str = eval(read)
-#      _value, _class = _str.split('|||')
-#      variable_values[var] = Var.new(_value, _class)
       variable_values[var.to_s] = debug_eval(var.to_s)
     end
     return variable_values
@@ -1339,7 +1292,7 @@ class RubyDebugClient
   def debug_eval(_exp)
     if command("eval #{res=_exp}.to_s + '|||' + #{res}.class.to_s")
       begin
-        _str = eval(read)
+        _str = eval(read).to_s
         _value, _class = _str.split('|||')
       rescue Exception => e
         _value = "?"
@@ -1350,44 +1303,6 @@ class RubyDebugClient
       return Var.new("?", "?")
     end
   end
-  
-  # returns the local variables and there values
-  def local_variables
-    command("eval local_variables")
-    variables = []
-    begin
-      variables = eval(read)
-    rescue Exception
-      variables = []
-    end
-    variable_values = Hash.new
-    variables.each do |var|
-      command("eval #{var}.to_s + '|||' + #{var}.class.to_s")
-      _str = eval(read)
-      _value, _class = _str.split('|||')
-      variable_values[var] = Var.new(_value, eval(_class))
-    end
-    return variable_values
-  end
-
-
-  # returns the global variables and there values
-  def global_variables
-    command("eval global_variables")
-    variables = []
-    begin
-      variables = eval(read)
-    rescue Exception
-      variables = []
-    end
-    variable_values = Hash.new
-    variables.each do |var|
-      command("eval #{var}.to_s")
-      variable_values[var] = read
-    end
-    return variable_values
-  end
-
 
   def set_breakpoint(_file, _line)
     #_line = _line + 1

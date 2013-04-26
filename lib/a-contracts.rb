@@ -103,7 +103,7 @@ end
 #  +---------------------------------------------+
 
 class BufferEvent < ArcadiaEvent # Abstract
-  attr_accessor :file, :title, :text, :row, :col, :lang 
+  attr_accessor :file, :title, :text, :row, :col, :lang, :last_row, :last_col 
   # if file==nil && title==nil buffer=current buffer
 end
 

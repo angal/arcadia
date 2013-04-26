@@ -1391,8 +1391,6 @@ class AgEditor
               }
               _width = _length*8
               @raised_listbox.select(1)
- #             p "_update_list end-->#{Time.new}"
-
               Tk.event_generate(@raised_listbox, "1") if TkWinfo.mapped?(@raised_listbox)
           }
           
@@ -4596,6 +4594,8 @@ class AgMultiEditor < ArcadiaExtPlus
         if _event.file
           if _event.row
             _index = _event.row.to_s+'.0' 
+          elsif !editor_exist?(_event.file) && _event.last_row
+            _index = _event.last_row.to_s+'.0' 
           end
           if _event.kind_of?(OpenBufferTransientEvent) && conf('close-last-if-not-modified')=="yes"
             if defined?(@last_transient_file) && !@last_transient_file.nil? && @last_transient_file != _event.file
@@ -4610,7 +4610,7 @@ class AgMultiEditor < ArcadiaExtPlus
               @last_transient_file = nil
             end
           end
-          if _event.select_index.nil?
+          if _event.select_index.nil? 
             select_index = true
           else
             select_index = _event.select_index
@@ -5256,7 +5256,7 @@ class AgMultiEditor < ArcadiaExtPlus
     _exist_buffer = @tabs_file[_tab_name] != nil
     if _exist_buffer
       open_buffer(_tab_name)
-      _text_index = nil 
+      # ??? _text_index = nil 
     else
 #      @tabs_file[_tab_name]= _filename
       open_buffer(_tab_name, _basefilename, _filename)

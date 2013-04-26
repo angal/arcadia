@@ -240,11 +240,11 @@ class FilesHistrory < ArcadiaExt
 	end
 		
   def on_before_open_buffer(_event)
-    if _event.file && _event.row.nil? &&File.exist?(_event.file)  
+    if _event.file && _event.row.nil? && File.exist?(_event.file)  
       if @h_stack[_event.file]
         r,c = @h_stack[_event.file].split('.')
-        _event.row=r.to_i
-        _event.col=c.to_i
+        _event.last_row=r.to_i
+        _event.last_col=c.to_i
         if _event.select_index.nil?
           _event.select_index=false
         end
