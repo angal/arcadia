@@ -24,7 +24,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.12.2',
+        '0.12.3',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -178,10 +178,16 @@ class Arcadia < TkApplication
   end
 
   def register(_ext)
+    if @@instance['exts_map'] == nil
+      @@instance['exts_map'] = Hash.new
+    end
     @exts_i << _ext
+    @@instance['exts_map'][_ext.name]=_ext 
   end
 
   def unregister(_ext)
+    @@instance['exts_map'][_ext.name] = nil
+    @@instance['exts_map'].delete(_ext.name)
     @exts_i.delete(_ext)
   end
 
@@ -367,7 +373,7 @@ class Arcadia < TkApplication
   def do_make_clones
     Array.new.concat(@exts_i).each{|ext|
       if ext.kind_of?(ArcadiaExtPlus)
-        a = ext.conf_array("#{ext.name}.clones")
+        a = ext.conf_array("clones")
         a.each{|clone_name|
           ext.clone(clone_name)
         }
@@ -1253,6 +1259,12 @@ class Arcadia < TkApplication
     end
   end
 
+  def Arcadia.extension(_name=nil)
+    if _name && @@instance && @@instance['exts_map']
+      return @@instance['exts_map'][_name]
+    end
+  end
+
   def Arcadia.runtime_error(_e, _title=Arcadia.text("main.e.runtime.title"))
     ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::RUNTIME_ERROR_TYPE,"title"=>"#{_title} : [#{_e.class}] #{_e.message} at :", "detail"=>_e.backtrace).go!
   end
@@ -1480,16 +1492,16 @@ class ArcadiaMainMenu < ArcadiaUserControl
     end
   end
 
-  def get_sub_menu(menu_context, folder=nil)
-    if folder
-      s_i = -1
-      i_end = menu_context.index('end')
+  def ArcadiaMainMenu.sub_menu(_menu, _title=nil)
+    s_i = -1
+    if _title
+      i_end = _menu.index('end')
       if i_end
         0.upto(i_end){|j|
-          type = menu_context.menutype(j)
+          type = _menu.menutype(j)
           if type != 'separator'
-            l = menu_context.entrycget(j,'label')
-            if l == folder && type == 'cascade'
+            l = _menu.entrycget(j,'label')
+            if l == _title && type == 'cascade'
               s_i = j
               break
             end
@@ -1497,9 +1509,17 @@ class ArcadiaMainMenu < ArcadiaUserControl
         }
       end
     end
-    if s_i > -1 #&& menu_context.menutype(s_i) == 'cascade'
-      sub = menu_context.entrycget(s_i, 'menu')
+    if s_i > -1
+      sub = _menu.entrycget(s_i, 'menu')
     else
+      sub = nil
+    end
+    sub  
+  end
+
+  def get_sub_menu(menu_context, folder=nil)
+    sub = ArcadiaMainMenu.sub_menu(menu_context, folder)
+    if sub.nil?
       sub = TkMenu.new(
       :parent=>@pop_up,
       :tearoff=>0
@@ -3272,24 +3292,76 @@ class ArcadiaLayout
     exist
   end
   
+  def menu_item_add(_menu, _dom, _ffw, _is_plus=false)
+    if !menu_item_exist?(_menu, _ffw.title)
+      ind = sorted_menu_index(_menu, _ffw.title)
+      if _is_plus
+        if Arcadia.extension(_ffw.name).main_instance? 
+          submenu_title = _ffw.title
+        else
+          submenu_title = Arcadia.extension(_ffw.name).main_instance.frame_title
+        end
+        submenu = nil
+        newlabel = "New ..."
+        if menu_item_exist?(_menu, submenu_title)
+          submenu = ArcadiaMainMenu.sub_menu(_menu, submenu_title)
+        end
+        if submenu.nil?
+          submenu = TkMenu.new(
+            :parent=>_menu,
+            :tearoff=>0,
+            :title => submenu_title
+          )
+          submenu.extend(TkAutoPostMenu)
+          submenu.configure(Arcadia.style('menu'))
+          _menu.insert(ind,
+            :cascade,
+            :image=>Arcadia.image_res(ARROW_LEFT_GIF),
+            :label=>submenu_title,
+            :compound=>'left',
+            :menu=>submenu,
+            :hidemargin => false
+          )
+          submenu.insert('end',:command,
+            :label=>newlabel,
+            :image=>Arcadia.image_res(STAR_EMPTY_GIF),
+            :compound=>'left',
+            :command=>proc{Arcadia.extension(_ffw.name).main_instance.duplicate(nil, _dom)},
+            :hidemargin => true
+          )
+        end
+        submenu.insert(newlabel,:command,
+          :label=>_ffw.title,
+          :image=>Arcadia.image_res(ARROW_LEFT_GIF),
+          :compound=>'left',
+          :command=>proc{change_domain(_dom, _ffw.name)},
+          :hidemargin => true
+        )
+
+      else
+          _menu.insert(ind,:command,
+          :label=>_ffw.title,
+          :image=>Arcadia.image_res(ARROW_LEFT_GIF),
+          :compound=>'left',
+          :command=>proc{change_domain(_dom, _ffw.name)},
+          :hidemargin => true
+        )
+      end
+    end
+  end
 
   def process_frame(_ffw)
     #p "processo frame #{_ffw.title}"
+    #-------
+    is_plus = Arcadia.extension(_ffw.name).kind_of?(ArcadiaExtPlus)
+    #-------
     @panels.keys.each{|dom|
       if  dom != '_domain_root_' && dom != _ffw.domain && @panels[dom] && @panels[dom]['root']
         titledFrame = @panels[dom]['root']
+
         if titledFrame.instance_of?(TkTitledFrameAdapter)
           menu = @panels[dom]['root'].menu_button('ext').cget('menu')
-          if !menu_item_exist?(menu, _ffw.title)
-            ind = sorted_menu_index(menu, _ffw.title)
-              menu.insert(ind,:command,
-              :label=>_ffw.title,
-              :image=>Arcadia.image_res(ARROW_LEFT_GIF),
-              :compound=>'left',
-              :command=>proc{change_domain(dom, _ffw.name)},
-              :hidemargin => true
-            )
-          end
+          menu_item_add(menu, dom, _ffw, is_plus)
         end
       end
     }
@@ -3318,7 +3390,6 @@ class ArcadiaLayout
             )
           end
         else
-#          if raised_name(_ffw.domain) == _ffw.name
            if !menu_item_exist?(mymenu, clabel)
              mymenu.insert(index,:command,
                :label=> clabel,
@@ -3328,18 +3399,7 @@ class ArcadiaLayout
                :hidemargin => true
              )
            end
-#          else
-            if !menu_item_exist?(mymenu, _ffw.title)
-              ind = sorted_menu_index(mymenu, _ffw.title)
-              mymenu.insert(ind,:command,
-                :label=>_ffw.title,
-                :image=>Arcadia.image_res(ARROW_LEFT_GIF),
-                :compound=>'left',
-                :command=>proc{change_domain(_ffw.domain, _ffw.name)},
-                :hidemargin => true
-              )
-            end
-#          end
+           menu_item_add(mymenu, _ffw.domain, _ffw, is_plus)
         end
       end
     end

@@ -215,15 +215,15 @@ class ArcadiaExt
   attr_reader :name
   def initialize(_arcadia, _name=nil)
     @arcadia = _arcadia
-    @arcadia.register(self)
     @name = _name
+    @arcadia.register(self)
     @frames = Array.new
-    @frames_points = conf_array("#{_name}.frames")
-    @frames_labels = conf_array("#{_name}.frames.labels")
-    @frames_names = conf_array("#{_name}.frames.names")
+    @frames_points = conf_array("frames")
+    @frames_labels = conf_array("frames.labels")
+    @frames_names = conf_array("frames.names")
     @float_frames = Array.new
-    @float_geometries = conf_array("#{_name}.float_frames")
-    @float_labels = conf_array("#{_name}.float_labels")
+    @float_geometries = conf_array("float_frames")
+    @float_labels = conf_array("float_labels")
     Arcadia.attach_listener(self, BuildEvent)
     Arcadia.attach_listener(self, InitializeEvent)
     Arcadia.attach_listener(self, ExitQueryEvent)
@@ -236,23 +236,25 @@ class ArcadiaExt
   end 
   
   def conf_array(_name)
-    res = []
-    value = @arcadia['conf'][_name]
-    res.concat(value.split(',')) if value
-    res
+#    res = []
+#    value = @arcadia['conf'][_name]
+#    res.concat(value.split(',')) if value
+#    res
+    Application.conf_array("#{@name}.#{_name}")
   end
 
   def array_conf(_name, _array)
-    value = ''
-    _array.each{|e|
-      if value.length > 0
-        value = "#{value},#{e}"
-      else
-        value = "#{e}"
-      end
-    }
-    @arcadia['conf'][_name]=value
-    value
+#    value = ''
+#    _array.each{|e|
+#      if value.length > 0
+#        value = "#{value},#{e}"
+#      else
+#        value = "#{e}"
+#      end
+#    }
+#    @arcadia['conf'][_name]=value
+#    value
+    Application.array_conf("#{@name}.#{_name}", _array)
   end
 
   def add_to_conf_property(_name, _value)
@@ -267,6 +269,10 @@ class ArcadiaExt
     a = conf_array(_name)
     a.delete(_value)
     array_conf(_name,a)
+  end
+
+  def frame_title(_n=0)
+    @frames_labels[_n] if @frames[_n] != nil
   end
 
   def frame_def_visible?(_n=0)
@@ -398,26 +404,6 @@ class ArcadiaExtPlus < ArcadiaExt
     Arcadia.attach_listener(self, ActivateInstanceEvent)
     super(_arcadia, _name)
     @@active_instance[self.class] = self if @@active_instance[self.class] == nil
-#    if self.frame != nil
-#      self.frame.hinner_frame.bind_append("Enter", proc{activate})
-#      if @@main_instance[self.class] == self
-#        frame.root.add_state_button(
-#        self.name,
-#        'Duplicate',
-#        proc{duplicate},
-#        PLUS_EX_GIF,
-#        'left')
-#        activate(self, false)
-#      else
-#        frame.root.add_state_button(
-#        self.name,
-#        'Destroy',
-#        proc{deduplicate},
-#        MINUS_EX_GIF,
-#        'left')
-#        activate(self, false)
-#      end
-#    end
   end
 
   def frame(_n=0,create_if_not_exist=true)
@@ -426,13 +412,13 @@ class ArcadiaExtPlus < ArcadiaExt
       @frame_initialize = true
       fr.hinner_frame.bind_append("Enter", proc{activate})
       if main_instance?
-        fr.root.add_state_button(
-        self.name,
-        'Duplicate',
-        proc{duplicate},
-        PLUS_EX_GIF,
-        'left')
-        activate(self, false)
+#        fr.root.add_state_button(
+#        self.name,
+#        'Duplicate',
+#        proc{duplicate},
+#        PLUS_EX_GIF,
+#        'left')
+#        activate(self, false)
       else
         fr.root.add_state_button(
         self.name,
@@ -508,17 +494,24 @@ class ArcadiaExtPlus < ArcadiaExt
     exist
   end
   
-  def duplicate(_name=new_name)
+  def duplicate(_name=nil, _dom=nil)
+    _name = new_name if _name.nil?
     #create conf properties
     Arcadia.conf_group_copy(@@main_instance[self.class].name, _name)
-    instance = clone(_name)
+    if !_dom.nil?
+      doms = Application.conf_array("#{_name}.frames")
+      doms[0] = _dom
+      Application.array_conf("#{_name}.frames", doms)
+    end
+    instance = clone(_name, _dom)
     #initialize
     Arcadia.process_event(InitializeEvent.new(Arcadia.instance), [instance])
-    add_to_conf_property("#{main_instance.name}.clones", _name)
+    #add_to_conf_property("#{main_instance.name}.clones", _name)
+    main_instance.add_to_conf_property("clones", _name)
     instance
   end
   
-  def clone(_name)
+  def clone(_name, _dom=nil)
     #create
     instance = self.class.new(Arcadia.instance, _name)
     #build
@@ -545,7 +538,8 @@ class ArcadiaExtPlus < ArcadiaExt
     @@instances[self.class].delete(self) if @@instances[self.class]
     Arcadia.del_conf_group(Arcadia['conf'],@name)
     Arcadia.del_conf_group(Arcadia['pers'],@name)
-    del_from_conf_property("#{main_instance.name}.clones", @name)
+    #del_from_conf_property("#{main_instance.name}.clones", @name)
+    main_instance.del_from_conf_property("clones", @name)
     Arcadia.process_event(ClearCacheInstanceEvent.new(Arcadia.instance), [self])
     Arcadia.process_event(DestroyInstanceEvent.new(Arcadia.instance), [self])
   end
@@ -1113,6 +1107,27 @@ class Application
   def Application.del_conf(_k)
     @@instance['conf'].delete(_k)
   end
+  
+  def Application.conf_array(_name)
+    res = []
+    value = @@instance['conf'][_name]
+    res.concat(value.split(',')) if value
+    res
+  end
+
+  def Application.array_conf(_name, _array)
+    value = ''
+    _array.each{|e|
+      if value.length > 0
+        value = "#{value},#{e}"
+      else
+        value = "#{e}"
+      end
+    }
+    @@instance['conf'][_name]=value
+    value
+  end
+  
 
   def prepare
   end

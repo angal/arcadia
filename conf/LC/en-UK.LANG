@@ -99,6 +99,7 @@ main.ps.runtime_errors=Runtime errors
 ext.editor.menu.view.show_hide_line_number=Show/Hide editor line numbers
 ext.editor.menu.view.show_hide_tabs=Show/Hide editor tabs
 ext.editor.button.link.hint=Link open editors with content in the Navigator
+ext.editor.button.up.hint=View parent
 ext.editor.outline.rebuild_tree=.... rebuild tree
 ext.editor.outline.menu.rebuild=Rebuild
 ext.editor.text_line.menu.title=line $0

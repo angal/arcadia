@@ -45,7 +45,11 @@ class SourceStructure
   attr_reader :root
   
   def initialize
-    @root = SourceTreeNode.new(nil, 'root'){|_node|
+    @root = SourceStructure.root
+  end
+  
+  def SourceStructure.root
+    SourceTreeNode.new(nil, 'root'){|_node|
       _node.rif= 'root'
       _node.label=''
     }
@@ -797,6 +801,31 @@ class AgEditorOutlineToolbar
     }
     @sync = false
     @cb_sync.command(do_check)
+    
+    #----
+    go_to_parent = proc{
+      e = @controller.active_instance.raised
+      if e
+        no = e.outline.last_opened
+        if no
+          e.outline.tree_exp.see(no)
+        else  
+          _selected = e.outline.tree_exp.selected
+          if _selected && e.outline.tree_exp.exist?(_selected)
+            _parent = e.outline.tree_exp.parent(_selected)
+            if _parent && _parent != 'root'
+              e.outline.tree_exp.see(_parent)
+            else
+              e.outline.tree_exp.see(_selected)
+            end
+          end
+        end
+      end
+       
+    }
+    
+    @b_goto_p = @controller.main_instance.frame(1).root.add_button(@controller.main_instance.frame(1).name, Arcadia.text("ext.editor.button.up.hint"), go_to_parent, ARROW_UP_GIF)
+    #----    
   end
 
   def sync_on
@@ -822,6 +851,7 @@ class AgEditorOutline
   attr_reader :last_row
   attr_reader :tree_exp
   attr_reader :ss
+  attr_reader :last_opened
   def initialize(_editor, _frame, _bar, _lang=nil)
     @editor = _editor
     @frame = _frame
@@ -838,7 +868,7 @@ class AgEditorOutline
   end
   
   # I think this is "if synced expand out the outline for the current selection"
-  def shure_select_node(_node)
+  def shure_select_node(_node, _close_if_opened = true)
     return if @selecting_node
     #return if @tree_exp.exist?(_node.rif)
     @selecting_node = true
@@ -856,13 +886,22 @@ class AgEditorOutline
         @last_open_node=parent.rif
         parent = parent.parent
       end
-      @tree_exp.close_tree(to_open) if to_open && !@opened
+      @tree_exp.close_tree(to_open) if _close_if_opened && to_open && !@opened
       @tree_exp.see(_node.rif)
     ensure
       @tree_exp.selectcommand(_proc)
       @selecting_node = false
     end
     @tree_exp.call_after_next_show_h_scroll(proc{Tk.update;@tree_exp.see(_node.rif)})    
+  end
+
+  def shure_select_line(_line, _close_if_opened = true)
+    if @ss && _line
+      node = @ss.node_by_line(@ss.root, _line)
+    else
+      node = SourceStructure.root
+    end
+    shure_select_node(node, _close_if_opened)
   end
 
   def select_without_event(_line)
@@ -904,11 +943,15 @@ class AgEditorOutline
         @bar.sync = sync_val
       end
     }
+    do_open_command = proc{|no|
+      @last_opened = no
+    }
     @tree_exp = BWidgetTreePatched.new(_frame, Arcadia.style('treepanel')){
       showlines false
       deltay 18
       dragenabled true
       selectcommand proc{ _tree_goto.call(self) } 
+      opencmd do_open_command 
       crosscloseimage  Arcadia.image_res(ARROWRIGHT_GIF)      
       crossopenimage  Arcadia.image_res(ARROWDOWN_GIF)
     }
@@ -4057,8 +4100,8 @@ class AgMultiEditor < ArcadiaExtPlus
     @last_active_instance_name = _event.name if _event.name == @name || exist_name?(_event.name)
   end
 
-  def duplicate(_name=new_name)
-    instance = super(_name)    
+  def duplicate(_name, _dom)
+    instance = super(_name, _dom)    
     i_end = @buffer_menu.index('end')
     if i_end
       0.upto(i_end){|j|
