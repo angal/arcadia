@@ -130,7 +130,7 @@ class Term < ArcadiaExtPlus
   
   def do_run_external_term(_dir)
     if Arcadia.is_windows?
-      system("cd #{_dir} & start cdm")
+      system("cd #{_dir} & start cmd")
     else
       system("cd #{_dir}; xterm &")
     end
