@@ -1,8 +1,8 @@
 = Arcadia Ide
-version 0.12.2
+version 0.13.0
 
 by Antonio Galeone
-on Apr 28, 2013
+on Jul 21, 2013
 
 
 == About
@@ -18,6 +18,11 @@ Some of Arcadia ide project features include:
 
 
 == News
+
+[0.13.0]
+ - improved file-history introducing bookmarks (by new button on main toolbar, or contextual menu on editor lines panel)
+ - refactored layout semplifying panel moving and new instance of editor creation   
+ - fixed bugs 
 
 [0.12.2]
  - this release adds support to debugger gem and fixes minor bugs
@@ -35,26 +40,30 @@ Some of Arcadia ide project features include:
    locale is settable in ~/.arcadia/arcadia.conf overriding default (locale=en-UK)
   ... collaborations in translations are welcome!
  - added possibility to interact with running application typing input in output's console
- - introduced in file-history a new kind of view (list view) activable by  button on toolbar  
+ - introduced in file-history a new kind of view (list view) activable by button on toolbar  
  - bugs fixed and optimizations 
  
 == Dependencies
 
   - rubygems
   - ruby-tk
-  - tcl/tk
+  - tcl/tk (ruby-tk supports fully tcl/tk runtime <= 8.5 )
   - tk-tile (if tcl/tk < 8.5)
-  - ctags
+  - ctags (linux)
   - xterm (linux, optional)
   - xdotool (linux, optional)
   - ack (optional)
   - gem coderay (> 1.0)
-  - gem ruby-debug (debugger on ruby 1.9)
+  - gem debugger (ruby-debug on ruby < 1.9)
   - gem win32-process (only on windows)
   - gem ruby-wmi (only on windows)
   
 == How to install
 * exec on command line "gem install arcadia"
+
+note: on some linux distributions like archlinux the default tcl/tk runtime at this date is on versions >= 8.6
+on the other hand ruby-tk supports fully only versions <= 8.5.x.y so to made arcadia working a choice
+can be install ActiveTcl 8.5 and use ruby via rvm. 
 
 == How to run
 * exec on command line "arcadia"

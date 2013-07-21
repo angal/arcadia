@@ -199,6 +199,7 @@ ext.file_history.button.show_as_list.hint=Show as list
 ext.file_history.menu.search_from_here=Search from here
 ext.file_history.menu.find_in_files=Find in files...
 ext.file_history.menu.act_in_files=Act in files...
+ext.file_history.toggle_bookmark=Toggle boomark
 #output
 ext.output.menu.output=Output
 ext.output.menu.save=Save
@@ -231,7 +232,7 @@ ext.ruby_debug.client.e.socket_session.2=Error on socket session : $0:$1
 ext.ruby_debug.client.e.close_session=Error on close session : $0:$1
 ext.ruby_debug.client.e.start_session=Error on start_session : $0:$1 $2
 ext.ruby_debug.client.e.stop_session=Error on stop_session : $0:$1
-ext.ruby_debug.client.e.abort_session=Debugger has finished executing: $0:$1
+ext.ruby_debug.client.e.abort_session=Debugger has finished executing on command $0: $1:$2
 ext.ruby_debug.client.e.raise.on_read.1=Debugged has finished executing
 ext.ruby_debug.client.e.raise.on_read.2=Error: on command '$0' => $1 : $2
 ext.ruby_debug.e.rdebug=Warning: Extension ae-ruby-debug depend upon rdebug command (install it or update system path!)

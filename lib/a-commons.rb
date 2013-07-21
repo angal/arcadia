@@ -494,8 +494,9 @@ class ArcadiaExtPlus < ArcadiaExt
     exist
   end
   
-  def duplicate(_name=nil, _dom=nil)
+  def duplicate(_name=nil, _dom=nil, _confirm_on_exit=true)
     _name = new_name if _name.nil?
+    @confirm_on_exit = _confirm_on_exit
     #create conf properties
     Arcadia.conf_group_copy(@@main_instance[self.class].name, _name)
     if !_dom.nil?
@@ -545,15 +546,15 @@ class ArcadiaExtPlus < ArcadiaExt
   end
 
   def deduplicate
-    if (Arcadia.dialog(self, 'type'=>'yes_no',
+    can_exit=true
+    if @confirm_on_exit && (Arcadia.dialog(self, 'type'=>'yes_no',
       'msg'=>Arcadia.text('main.d.confirm_delete_ext_instance.msg', [@name]),
       'title' => Arcadia.text('main.d.confirm_delete_ext_instance.title', [@name]),
       'level' => 'question')=='yes')
       exit_query_event = Arcadia.process_event(ExitQueryEvent.new(self, 'can_exit'=>true))
-      if exit_query_event.can_exit
-        clean_instance
-      end
+      can_exit = exit_query_event.can_exit
     end
+    clean_instance if can_exit
   end
 
 end

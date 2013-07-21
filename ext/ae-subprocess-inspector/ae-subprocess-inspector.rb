@@ -54,11 +54,10 @@ end
 class SubProcessWidget < Tk::BWidget::Button
   attr_reader :event
   def initialize(_parent=nil, _event=nil, *args)
-    super(Arcadia['toolbar'].frame, Arcadia.style('button').update("background"=>'black',"activebackground"=>'black', 'relief'=>'groove'))
+    super(Arcadia['toolbar'].frame, Arcadia.style('button').update("compound"=>'left', "background"=>'black',"activebackground"=>'black', 'relief'=>'groove'))
     @parent = _parent
     @event = _event
     b_command = proc{
-      
       message = Arcadia.text('ext.spi.d.kill.msg', [_event.pid, _event.name])
       r=Arcadia.dialog(self,
           'type'=>'yes_no', 
@@ -69,7 +68,12 @@ class SubProcessWidget < Tk::BWidget::Button
         _event.abort_action.call
       end
     }
-    command b_command  
+    command b_command
+    begin
+      text File.basename(_event.name)
+    rescue
+      text _event.name
+    end  
     helptext "#{_event.name} [pid #{_event.pid}]"
     pack('side' =>'left', :padx=>2, :pady=>0)
     Tk::Anigif.image(self, "#{Dir.pwd}/ext/ae-subprocess-inspector/process.res")

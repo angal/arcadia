@@ -969,7 +969,8 @@ class TkTitledFrame < TkBaseTitledFrame
     @state = 'normal'
     @title = title
     @img = img
-    @left_label = create_left_label
+#    @left_label = create_left_label
+    @left_label = create_left_title
     @right_label = create_right_label
     @right_labels_text = Hash.new
     @right_labels_image = Hash.new
@@ -979,29 +980,29 @@ class TkTitledFrame < TkBaseTitledFrame
     @apw = Array.new
     @aph = Array.new
     @top.bind_append("Double-Button-1", proc{resize})
-    @left_label.bind_append("Double-Button-1", proc{resize})
+    #@left_label.bind_append("Double-Button-1", proc{resize})
     @right_label.bind_append("Double-Button-1", proc{resize})
   end
 
-  def create_left_label
-    __create_left_label(@top)
-  end
+#  def create_left_label
+#    __create_left_label(@top)
+#  end
 
   def create_right_label
     __create_right_label(@top)
   end
 
-  def __create_left_label(_frame)
-    @title.nil??_text_title ='':_text_title = @title+' :: '
-    _img=@img
-    TkLabel.new(_frame, Arcadia.style('titlelabel')){
-      text _text_title
-      anchor  'w'
-      compound 'left'
-      image  TkAllPhotoImage.new('file' => _img) if _img
-      pack('side'=> 'left','anchor'=> 'e')
-    }
-  end
+#  def __create_left_label(_frame)
+#    @title.nil??_text_title ='':_text_title = @title+' :: '
+#    _img=@img
+#    TkLabel.new(_frame, Arcadia.style('titlelabel')){
+#      text _text_title
+#      anchor  'w'
+#      compound 'left'
+#      image  TkAllPhotoImage.new('file' => _img) if _img
+#      pack('side'=> 'left','anchor'=> 'e')
+#    }
+#  end
 
   def __create_right_label(_frame)
     TkLabel.new(_frame, Arcadia.style('titlelabel')){
@@ -1013,26 +1014,26 @@ class TkTitledFrame < TkBaseTitledFrame
     }
   end
   
-  def shift_on
-    @left_label.foreground(Arcadia.conf('titlelabel.foreground'))
-  end
+#  def shift_on
+#    @left_label.foreground(Arcadia.conf('titlelabel.foreground'))
+#  end
+#  
+#  def shift_off
+#    @left_label.foreground(Arcadia.conf('titlelabel.disabledforeground'))
+#  end
   
-  def shift_off
-    @left_label.foreground(Arcadia.conf('titlelabel.disabledforeground'))
-  end
-  
-  def title(_text=nil)
-    if _text.nil?
-      return @title
-    else
-      @title=_text
-      if _text.strip.length == 0
-        @left_label.text('')
-      else
-        @left_label.text(_text+'::')
-      end
-    end
-  end
+#  def title(_text=nil)
+#    if _text.nil?
+#      return @title
+#    else
+#      @title=_text
+#      if _text.strip.length == 0
+#        @left_label.text('')
+#      else
+#        @left_label.text(_text+'::')
+#      end
+#    end
+#  end
 
   def top_text_clear
     @right_label.configure('text'=>'', 'image'=>nil)
@@ -1158,6 +1159,96 @@ class TkTitledFrame < TkBaseTitledFrame
 end
 
 
+class TkLabelTitledFrame < TkTitledFrame
+
+  def create_left_title
+    @left_label = __create_left_label(@top)
+    @left_label.bind_append("Double-Button-1", proc{resize})
+  end
+
+  def __create_left_label(_frame)
+    @title.nil??_text_title ='':_text_title = @title+' :: '
+    _img=@img
+    TkLabel.new(_frame, Arcadia.style('titlelabel')){
+      text _text_title
+      anchor  'w'
+      compound 'left'
+      image  TkAllPhotoImage.new('file' => _img) if _img
+      pack('side'=> 'left','anchor'=> 'e')
+    }
+  end
+
+  def shift_on
+    @left_label.foreground(Arcadia.conf('titlelabel.foreground'))
+  end
+  
+  def shift_off
+    @left_label.foreground(Arcadia.conf('titlelabel.disabledforeground'))
+  end
+  
+  def title(_text=nil)
+    if _text.nil?
+      return @title
+    else
+      @title=_text
+      if _text.strip.length == 0
+        @left_label.text('')
+      else
+        @left_label.text(_text+'::')
+      end
+    end
+  end
+end
+
+class TkMenuTitledFrame < TkTitledFrame
+  def create_left_title
+    @left_menu_button = __create_left_menu_button(@top)
+    @left_menu_button.bind_append("Double-Button-1", proc{resize})
+  end
+
+  def title_menu
+    @left_menu_button.cget('menu') if @left_menu_button
+  end
+
+  def __create_left_menu_button(_frame)
+    img=@img
+    @left_menu_button = TkMenuButton.new(_frame, Arcadia.style('titlebutton')){|mb|
+      menu TkMenu.new(mb, Arcadia.style('titlemenu'))
+      if img
+        indicatoron false
+        image Arcadia.image_res(img)
+      else
+        indicatoron true
+      end
+      padx 0
+      textvariable TkVariable.new('')
+      pack('side'=> 'left','anchor'=> 'e')
+    }
+
+  end
+
+  def shift_on
+    @left_menu_button.foreground(Arcadia.conf('titlelabel.foreground'))
+  end
+  
+  def shift_off
+    @left_menu_button.foreground(Arcadia.conf('titlelabel.disabledforeground'))
+  end
+  
+  def title(_text=nil)
+    if _text.nil?
+      return @title
+    else
+      @title=_text
+      if _text.strip.length == 0
+        @left_menu_button.textvariable.value=''
+      else
+        @left_menu_button.textvariable.value=_text+'::'
+      end
+    end
+  end
+end
+
 
 #class TkFrameAdapterOld < TkFrame
 #  include TkMovable
@@ -1266,7 +1357,7 @@ end
 #
 #end
 
-class TkTitledFrameAdapter < TkTitledFrame
+class TkTitledFrameAdapter < TkMenuTitledFrame
   attr_reader :transient_frame_adapter
 
   def initialize(parent=nil, title=nil, img=nil , keys=nil)

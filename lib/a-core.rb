@@ -24,7 +24,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.12.3',
+        '0.13.0',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -2513,6 +2513,7 @@ class ArcadiaLayout
       p['sons'].each{|k,v|
         if k == _extension
           v.hinner_frame.raise
+          #title_titled_frame(_domain, v.title)
           p['root'].title(v.title)
           p['root'].restore_caption(k)
           p['root'].change_adapters_name(k)
@@ -3128,13 +3129,37 @@ class ArcadiaLayout
     end
 
   end
+  
+#  def title_titled_frame(_domain, _text)
+#    mb = @panels[_domain]['root'].menu_button('ext') if @panels[_domain]
+#    if mb
+#      #mb.configure('text'=>_text)
+#      mb.cget('textvariable').value=_text
+#      p "configuro #{_text}"
+#    end 
+#  end
 
   def build_titled_frame(domain)
     if @panels[domain]
       tframe = TkTitledFrameAdapter.new(@panels[domain]['root']).place('x'=>0, 'y'=>0,'relheight'=>1, 'relwidth'=>1)
-      mb = tframe.add_fixed_menu_button('ext')
+#      mb = tframe.add_fixed_menu_button('ext')
+
+#      mb = tframe.add_fixed_menu_button(
+#        'ext',
+#        nil,
+#        'left',
+#      {'relief'=>:flat, 
+#       'borderwidth'=>1, 
+#       'compound'=> 'left',
+#       'anchor'=>'w',
+#       'activebackground'=>Arcadia.conf('titlelabel.background'),
+#       'foreground' => Arcadia.conf('titlecontext.foreground'),
+#       'textvariable'=> TkVariable.new('')
+#       })
+
       # add commons item
-      menu = mb.cget('menu')
+#      menu = mb.cget('menu')
+      menu = tframe.title_menu
       add_commons_menu_items(domain, menu)
       @panels[domain]['root']= tframe
       #-----------------------------------
@@ -3358,9 +3383,9 @@ class ArcadiaLayout
     @panels.keys.each{|dom|
       if  dom != '_domain_root_' && dom != _ffw.domain && @panels[dom] && @panels[dom]['root']
         titledFrame = @panels[dom]['root']
-
         if titledFrame.instance_of?(TkTitledFrameAdapter)
-          menu = @panels[dom]['root'].menu_button('ext').cget('menu')
+          #menu = @panels[dom]['root'].menu_button('ext').cget('menu')
+          menu = titledFrame.title_menu
           menu_item_add(menu, dom, _ffw, is_plus)
         end
       end
@@ -3368,7 +3393,9 @@ class ArcadiaLayout
     if @panels[_ffw.domain]
       titledFrame = @panels[_ffw.domain]['root']
       if titledFrame.instance_of?(TkTitledFrameAdapter)
-        mymenu = titledFrame.menu_button('ext').cget('menu')
+        #titledFrame.menu_button('ext').text("#{_ffw.title}::")
+        #mymenu = titledFrame.menu_button('ext').cget('menu')
+        mymenu = titledFrame.title_menu
         index = mymenu.index('end').to_i
         if @panels.keys.length > 2
           i=index-3
@@ -3413,9 +3440,11 @@ class ArcadiaLayout
       if dom != '_domain_root_' && @panels[dom] && @panels[dom]['root']
         titledFrame = @panels[dom]['root']
         if titledFrame.instance_of?(TkTitledFrameAdapter)
-          menu = titledFrame.menu_button('ext').cget('menu')
+          #menu = titledFrame.menu_button('ext').cget('menu')
+          menu = titledFrame.title_menu
           if refresh_commons_items
-            @panels[dom]['root'].menu_button('ext').cget('menu').delete('0','end')
+            #@panels[dom]['root'].menu_button('ext').cget('menu').delete('0','end')
+            @panels[dom]['root'].title_menu.delete('0','end')
             add_commons_menu_items(dom, menu)
           else
             index = menu.index('end').to_i
@@ -3434,7 +3463,8 @@ class ArcadiaLayout
             end
             if i >= 0
               end_index = i.to_s
-              @panels[dom]['root'].menu_button('ext').cget('menu').delete('0',end_index)
+              #@panels[dom]['root'].menu_button('ext').cget('menu').delete('0',end_index)
+              @panels[dom]['root'].title_menu.delete('0',end_index)
             end
           end
           #          index = menu.index('end').to_i
@@ -3464,6 +3494,7 @@ class ArcadiaLayout
       num = pan['sons'].length
       if @headed
         root_frame = pan['root'].frame
+        #title_titled_frame(_domain_name, _title)
         pan['root'].title(_title)
         pan['root'].restore_caption(_name)
         pan['root'].change_adapters_name(_name)
@@ -3499,6 +3530,7 @@ class ArcadiaLayout
             api.name,
             'text'=>api.title,
             'raisecmd'=>proc{
+              #title_titled_frame(_domain_name, api.title)
               pan['root'].title(api.title)
               pan['root'].restore_caption(api.name)
               pan['root'].change_adapters_name(api.name)
@@ -3519,6 +3551,7 @@ class ArcadiaLayout
           _panel = pan['notebook'].insert('end',_name ,
           'text'=>_title,
           'raisecmd'=>proc{
+            #title_titled_frame(_domain_name, _title)
             pan['root'].title(_title)
             pan['root'].restore_caption(_name)
             pan['root'].change_adapters_name(_name)
@@ -3583,6 +3616,7 @@ class ArcadiaLayout
       n = @panels[_domain_name][:raised_stack][-1]
       w = @panels[_domain_name]['sons'][n].hinner_frame
       t = @panels[_domain_name]['sons'][n].title
+      #title_titled_frame(_domain_name, t)
       @panels[_domain_name]['root'].title(t)
       @panels[_domain_name]['root'].restore_caption(n)
       @panels[_domain_name]['root'].shift_on if !@panels[_domain_name]['sons'][n].kind_of?(ArcadiaExtPlus)
@@ -3602,6 +3636,7 @@ class ArcadiaLayout
         end
       end
     elsif @panels[_domain_name]['sons'].length == 0
+      #title_titled_frame(_domain_name, '')
       @panels[_domain_name]['root'].title('')
       @panels[_domain_name]['root'].top_text_clear
     end

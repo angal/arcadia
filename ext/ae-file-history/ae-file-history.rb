@@ -86,12 +86,16 @@ class FilesHistrory < ArcadiaExt
   end
 
   def on_before_build(_event)
+    @bookmarks =Array.new
     Arcadia.attach_listener(self, BufferRaisedEvent)
+    Arcadia.attach_listener(self, BookmarkEvent)
   end
 
   def on_build(_event)
     @h_stack = Hash.new
     @h_stack_changed = false
+    @bookmarks_frame = TkFrame.new(self.frame.hinner_frame)    
+    @history_frame = TkFrame.new(self.frame.hinner_frame).pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')    
     @panel = self.frame.root.add_panel(self.frame.name, "sync");
     @cb_sync = TkCheckButton.new(@panel, Arcadia.style('checkbox').update('background'=>@panel.background)){
       text  'Sync'
@@ -152,7 +156,7 @@ class FilesHistrory < ArcadiaExt
     @font_b = "#{Arcadia.conf('treeitem.font')} bold"
     @font_italic = "#{Arcadia.conf('treeitem.font')} italic"
     
-	  @htree = BWidgetTreePatched.new(self.frame.hinner_frame, Arcadia.style('treepanel')){
+	  @htree = BWidgetTreePatched.new(@history_frame, Arcadia.style('treepanel')){
       showlines false
       deltay 18
       crosscloseimage  Arcadia.image_res(PLUS_GIF)
@@ -190,7 +194,7 @@ class FilesHistrory < ArcadiaExt
     build_tree
     pop_up_menu_tree
     
-    @hlist = TkText.new(self.frame.hinner_frame, Arcadia.style('text')){|j|
+    @hlist = TkText.new(@history_frame, Arcadia.style('text')){|j|
       wrap 'none'
       font @font_italic
       cursor nil
@@ -206,7 +210,93 @@ class FilesHistrory < ArcadiaExt
 	    @hlist.show
 	  end
 	end
+
+  def on_initialize(_event)
+    load_persistent_bookmarks
+  end  
+
 	
+	def on_bookmark(_event)
+    return if _event.file.nil?
+    case _event
+      when ToggleBookmarkEvent
+        self.frame.show_anyway
+        # set or unset ?
+        to_set = true
+        to_del_detail = nil
+        @bookmarks.each{|detail|
+          if detail[:file] == _event.file && (_event.from_row.to_i >= detail[:from_line].to_i - _event.range) && (_event.to_row.to_i <= detail[:to_line].to_i + _event.range)  
+            to_set = false
+            to_del_detail = detail
+          end
+          break if !to_set 
+        }
+        if to_set
+          SetBookmarkEvent.new(self,
+            'file'=>_event.file, 
+            'from_row'=>_event.from_row, 
+            'to_row'=>_event.to_row,
+            'range'=>_event.range,
+            'persistent'=>_event.persistent,
+            'id'=>_event.id).go!
+        else
+          UnsetBookmarkEvent.new(self,
+            'file'=>_event.file, 
+            'from_row'=>to_del_detail[:from_line], 
+            'to_row'=>to_del_detail[:to_line],
+            'range'=>_event.range,
+            'persistent'=>_event.persistent,
+            'id'=>_event.id).go!
+        end    
+      when SetBookmarkEvent
+        @bookmarks_frame.pack('before'=>@history_frame,'side' =>'top','anchor'=>'nw', 'fill'=>'x', :padx=>0, :pady=>0)     if @bookmarks.empty? 
+        if _event.persistent
+          bookmark = {:file=>_event.file}
+          caption = File.basename(_event.file)
+        else
+          bookmark = {:file=>"__TMP__#{_event.id}"}
+          caption = _event.id
+        end
+        caption = "#{caption} [#{_event.from_row}, #{_event.to_row}]"
+        bookmark[:from_line] = _event.from_row
+        bookmark[:to_line] = _event.to_row
+        bookmark[:persistent] = _event.persistent
+        bookmark[:widget] = Tk::BWidget::Button.new(@bookmarks_frame, Arcadia.style('toolbarbutton')){
+          image Arcadia.image_res(BOOKMARK_GIF)
+          compound 'left'
+          anchor "w"
+          command proc{OpenBufferTransientEvent.new(self,'file'=>_event.file, 'row'=> _event.from_row).go!}
+          #width 20
+          #height 20
+          helptext  _event.content
+          text caption
+        }.pack('side' =>'top','anchor'=>'nw', 'fill'=>'x', :padx=>0, :pady=>0)    
+
+        Tk::BWidget::Button.new(bookmark[:widget], Arcadia.style('toolbarbutton')){
+          image  TkPhotoImage.new('dat' => CLOSE_GIF)
+          command proc{UnsetBookmarkEvent.new(self,
+            'file'=>_event.file, 
+            'from_row'=>_event.from_row,
+            'to_row'=>_event.to_row).go!}
+          #width 20
+          height 16
+        }.pack('side' =>'right','anchor'=>'e', 'fill'=>'y', :padx=>0, :pady=>0)    
+        
+        @bookmarks << bookmark
+      when UnsetBookmarkEvent
+        @bookmarks.delete_if{|b| 
+          if (b[:file]==_event.file && b[:from_line]==_event.from_row)
+            b[:widget].destroy
+            true
+          else
+            false
+          end
+        }
+        @bookmarks_frame.unpack if @bookmarks.empty? 
+	 end
+	
+	end
+  
 	def toggle_list_tree
     Tk::BWidget::DynamicHelp::delete(@btoggle_list_tree)
 	  if @is_tree
@@ -433,6 +523,8 @@ class FilesHistrory < ArcadiaExt
         @hlist.tag_configure(tag_name, 'underline'=>false) 
       }
     )
+    TkTextImage.new(@hlist, 'end', 'image'=> Arcadia.file_icon(_file))
+    @hlist.insert("end", " ")
     @hlist.insert("end", "#{File.basename(_file)}\n", tag_name)
     @hlist.tag_bind(tag_name,"ButtonPress-1", proc{OpenBufferTransientEvent.new(self,'file'=>_file).go!})
   end
@@ -614,6 +706,14 @@ class FilesHistrory < ArcadiaExt
   end
 
   def on_finalize(_event)
+    bookmarks = '';
+    @bookmarks.each{|bm|
+      if bm[:file] != nil && bm[:persistent]
+        bookmarks="#{bookmarks}|" if bookmarks.strip.length > 0
+        bookmarks="#{bookmarks}#{bm[:file]}@@@#{bm[:from_line]}@@@#{bm[:to_line]}"
+      end
+    }
+    Arcadia.persistent('bookmarks', bookmarks)
     if @is_tree
       conf('view','tree') 
     else
@@ -647,6 +747,24 @@ class FilesHistrory < ArcadiaExt
       end
     end
   end
+
+  def load_persistent_bookmarks
+    b = Arcadia.persistent('bookmarks')
+    if b
+      bm_list =b.split("|")
+      bm_list.each do |bm| 
+        file,from_line,to_line = bm.split('@@@')
+        if file && from_line && to_line
+          SetBookmarkEvent.new(self, 
+            'file'=>file, 
+            'from_row'=>from_line.to_i, 
+            'to_row'=>to_line.to_i,
+            'persistent'=>true).go!
+        end
+      end
+    end
+  end
+
 
   def create_history_file(_content=nil)
     dir,fil =File.split(File.expand_path(history_file))

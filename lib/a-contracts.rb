@@ -115,6 +115,8 @@ class OpenBufferEvent < BufferEvent
 end
 
 class OpenBufferTransientEvent < OpenBufferEvent
+  # @transient is a boolean property setted to true during event elaboration if the file is considered transient  
+  attr_accessor :transient 
 end
 
 class CloseBufferEvent < BufferEvent
@@ -174,12 +176,32 @@ end
 
 class BufferClosedEvent < BufferEvent
 end
+
+#  +---------------------------------------------+
+#         Bookmark event
+#  +---------------------------------------------+
+
+class BookmarkEvent < ArcadiaEvent
+   #range  around row where event has effect 
+   attr_accessor :id, :file, :row, :persistent, :range, :from_row, :to_row , :content
+end
+
+class SetBookmarkEvent < BookmarkEvent
+end
+
+class UnsetBookmarkEvent < BookmarkEvent
+end
+
+class ToggleBookmarkEvent < BookmarkEvent
+end
+
+
 #  +---------------------------------------------+
 #         Debug event
 #  +---------------------------------------------+
 
 class DebugEvent < ArcadiaEvent
-   attr_accessor :id, :file, :row, :active, :persistent 
+   attr_accessor :id, :file, :row, :active, :persistent
 end
 
 class SetBreakpointEvent < DebugEvent

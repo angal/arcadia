@@ -833,20 +833,19 @@ class RubyDebugServer
             set_alive(false)
             notify(RDS_QUIET)
             Kernel.system('y')
-
             if _debug_event.persistent == false && File.basename(_debug_event.file)[0..1] == '~~'
                File.delete(_debug_event.file) if File.exist?(_debug_event.file)
             end
-
             Kernel.exit!
           else
+            set_alive(false)
+            notify(RDS_QUIET)
             Kernel.exit!
-            Arcadia.console(self, 'msg'=>"#{$?.inspect}", 'level'=>'debug')
+            Arcadia.console(self, 'msg'=>"#{$!.inspect}", 'level'=>'debug')
           end
         end
       end
     rescue Exception => e
-     
       Arcadia.console(self, 'msg'=>Arcadia.text('ext.ruby_debug.server.e.on_start', [e.class, e.message]), 'level'=>'debug')
       #Arcadia.new_debug_msg(self,"Error on start_server : #{e.class}:#{e.message}")    
     end
@@ -1012,6 +1011,7 @@ class RubyDebugClient
         begin
           #sleep(2)
           @session = TCPSocket.new(@server, @port)
+          #@session = IO.popen("|rdebug -c --cport #{@port}",'r+')
           @pend = false
         rescue Errno::ECONNREFUSED,Errno::EBADF => e
           sleep(1)
@@ -1078,6 +1078,7 @@ class RubyDebugClient
       return false if @busy 
       if is_alive?
         @busy = true
+        #p "sending #{_command}"
         @session.puts(_command) if socket_session
       else
         start_session if !@pend
@@ -1087,7 +1088,7 @@ class RubyDebugClient
     rescue Errno::ECONNABORTED,Errno::ECONNRESET, Errno::EPIPE => e
       notify("quit_yes")
       #DebugContract.instance.debug_end(self)
-      Arcadia.console(self, 'msg'=>Arcadia.text('ext.ruby_debug.client.e.abort_session', [e.class, e.inspect]), 'level'=>'debug')
+      Arcadia.console(self, 'msg'=>Arcadia.text('ext.ruby_debug.client.e.abort_session', [_command, e.class, e.inspect]), 'level'=>'debug')
       @session = nil
       @pend = true
       false

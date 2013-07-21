@@ -1099,7 +1099,7 @@ class AgEditor
     @highlighting = false
     @classbrowsing = false
     @codeinsight = false
-    @find = @controller.get_find
+    #@find = @controller.get_find
     @read_only=false
     @loading=false
     @tabs_show = false
@@ -1720,7 +1720,7 @@ class AgEditor
       when 'F5'
         run_buffer
       when 'F3'
-        @find.do_find_next
+        @controller.get_find.do_find_next
       when 'F1'
         line, col = @text.index('insert').split('.')
         _x, _y = xy_insert
@@ -1854,20 +1854,20 @@ class AgEditor
         end
       end
   end
-
+  
   # show the "find in file" dialog
   def find
     _r = @text.tag_ranges('sel')
     if _r.length>0
       _text=@text.get(_r[0][0],_r[0][1])
       if _text.length > 0
-        @find.e_what.text(_text)
+        @controller.get_find.e_what.text(_text)
       end
     else
     end
-    @find.use(self)
-    @find.e_what.focus
-    @find.show
+    @controller.get_find.use(self)
+    @controller.get_find.e_what.focus
+    @controller.get_find.show
   end
 
   def disactivate_key_binding
@@ -1944,6 +1944,8 @@ class AgEditor
     @text_line_num.tag_configure('normal_case', 'justify'=>'right')
     @text_line_num.tag_configure('bold_case', 'spacing3'=>delta, 'justify'=>'right')
     @text_line_num.tag_configure('breakpoint', 'background'=>'red','foreground'=>'yellow','borderwidth'=>1, 'relief'=>'raised')
+#    @text_line_num.tag_configure('bookmark', 'background'=>'blue','foreground'=>'yellow','borderwidth'=>1, 'relief'=>'raised')
+    @text_line_num.tag_configure('bookmark', 'background'=>'white','foreground'=>'red','borderwidth'=>1, 'relief'=>'raised')
     @text_line_num.tag_configure('current', 
       'background'=>Arcadia.conf("activebackground"),
       'foreground'=>Arcadia.conf("activeforeground"),
@@ -2004,6 +2006,24 @@ class AgEditor
       }
     )
 
+    _pop_up.insert('end',
+      :command,
+      :label=> Arcadia.text('ext.file_history.toggle_bookmark'),
+      :hidemargin => false,
+      :command=> proc{ 
+        if defined?(@text_line_num_current_index)
+          row = @text_line_num.get(@text_line_num_current_index+' linestart',@text_line_num_current_index+' lineend').strip
+          ToggleBookmarkEvent.new(self,
+            'file'=>@file, 
+            'from_row'=>row, 
+            'to_row'=>row,
+            'persistent'=>File.exists?(@file),
+            'id'=>@id).go!
+        end
+      }
+    )
+
+
     @text_line_num.bind("Button-3",
       proc{|*x|
         _x = TkWinfo.pointerx(@text_line_num)
@@ -2061,6 +2081,24 @@ class AgEditor
         @controller.breakpoint_add(@file, _line, @id)
       end
     end
+  end
+
+  def add_tag_bookmark(_line)
+      rel_line = file_line_to_text_line_num_line(_line)
+      if rel_line
+        i1 = "#{rel_line}.2"
+        i2 = i1+' lineend'
+        @text_line_num.tag_add('bookmark',i1,i2)
+      end
+  end
+
+  def remove_tag_bookmark(_line)
+      rel_line = file_line_to_text_line_num_line(_line)
+      if rel_line
+        i1 = "#{rel_line}.0"
+        i2 = i1+' lineend'
+        @text_line_num.tag_remove('bookmark',i1,i2)
+      end
   end
 
   def reset_highlight(_from_row=nil)
@@ -2906,6 +2944,8 @@ class AgEditor
         if @line_numbers_visible
           # breakpoint
           b = @controller.breakpoint_lines_on_file(@file)
+          # bookmark
+          bm = @controller.bookmark_lines_on_file(@file)
           
           @text_line_num.delete('1.0','end')
           _rx, _ry, _width, _heigth = @text.bbox(line_begin_index);
@@ -2943,6 +2983,9 @@ class AgEditor
             @text_line_num.insert(_index, "#{nline}\n",_tags)
             if b.include?(j.to_s)
               add_tag_breakpoint(j)
+            end
+            if bm.include?(j.to_s)
+              add_tag_bookmark(j)
             end
           end
           if _ry && _ry < 0 
@@ -3517,6 +3560,7 @@ class AgMultiEditorView
   end
   
   def page_title(_name, _title=nil, _image=nil)
+    return nil if _name.nil? or _name.strip.length == 0
     @pages[_name]['text'] = _title if _title != nil
     @pages[_name]['image'] = _image if _image != nil
     title = _title
@@ -3862,9 +3906,6 @@ class CoderayHighlightScanner < HighlightScanner
         @i = nil
       end 
       tok = @tok
-      
-      #p tok
-      
       if tok[1]==:space && tok[0].include?("\n")
         row+=tok[0].count("\n")
         begin_gap = tok[0].split("\n")[-1]
@@ -3877,6 +3918,7 @@ class CoderayHighlightScanner < HighlightScanner
         toklength = tok[0].length
         t_begin="#{row}.#{col}"
         if tok[0].include?("\n")
+        #if tok[0].to_s.include?("\n")
           ar = tok[0].split("\n")
           row+=tok[0].count("\n")
           begin_gap = ar[-1]
@@ -3918,6 +3960,7 @@ class AgMultiEditor < ArcadiaExtPlus
       ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>Arcadia.text("ext.editor.e.ctags.title"), "detail"=>msg).go!
     end
     @breakpoints =Array.new
+    @bookmarks =Array.new
     @tabs_file =Hash.new
     @tabs_editor =Hash.new
     @raw_buffer_name = Hash.new 
@@ -3931,6 +3974,7 @@ class AgMultiEditor < ArcadiaExtPlus
     Arcadia.attach_listener(self, RunCmdEvent)
   # Arcadia.attach_listener(self, StartDebugEvent)
     Arcadia.attach_listener(self, FocusEvent)
+    Arcadia.attach_listener(self, BookmarkEvent)
   end
   
 #  def on_before_run_ruby_file(_event)
@@ -4099,9 +4143,16 @@ class AgMultiEditor < ArcadiaExtPlus
     end
     @last_active_instance_name = _event.name if _event.name == @name || exist_name?(_event.name)
   end
+  
+  def deduplicate
+    @main_frame.pages.each{|page|
+      main_instance.move_buffer_here(page)
+    }
+    super
+  end
 
   def duplicate(_name, _dom)
-    instance = super(_name, _dom)    
+    instance = super(_name, _dom, false)    
     i_end = @buffer_menu.index('end')
     if i_end
       0.upto(i_end){|j|
@@ -4540,6 +4591,80 @@ class AgMultiEditor < ArcadiaExtPlus
 #    end
 #  end
 
+  def on_before_bookmark(_event)
+    _filename = _event.file
+    if _filename.nil? || _filename == "*CURR"
+      current_editor = self.raised
+      _event.persistent=true
+      if current_editor
+        if current_editor.file
+          _event.file=current_editor.file
+        else
+          _event.file=current_editor.create_temp_file
+          _event.id=current_editor.id
+          _event.persistent=false
+        end
+      end
+    else
+      current_editor = editor_of(_filename) 
+    end
+
+    if _event.from_row != nil && _event.to_row == nil
+      _event.to_row = _event.from_row 
+    elsif _event.from_row == nil && _event.to_row == nil && _event.row != nil
+      _event.from_row = _event.row
+      _event.to_row = _event.row
+    end
+    
+    if _event.range == nil
+      _event.range=0
+    end
+
+    if _event.from_row == nil && current_editor != nil
+      r_sel = current_editor.text.tag_ranges('sel')
+      if !r_sel.empty?
+        _event.from_row = r_sel[0][0].split('.')[0].to_i
+        _event.to_row = r_sel[r_sel.length - 1][1].split('.')[0].to_i
+      else
+        _event.from_row = current_editor.text.index('insert').split('.')[0].to_i
+        _event.to_row = _event.from_row 
+      end
+    end
+    
+    case _event
+      when SetBookmarkEvent
+        #set
+        if _event.persistent
+          @bookmarks << {:file=>_event.file,:from_line=>_event.from_row, :to_line=>_event.to_row}
+          _e = @tabs_editor[tab_file_name(_event.file)]
+        else
+          @bookmarks << {:file=>"__TMP__#{_event.id}",:from_line=>_event.from_row, :to_line=>_event.to_row}
+          _e = @editors[_event.id]
+        end
+        if _e
+          index_from = "#{_event.from_row}.0"
+          index_to = "#{_event.to_row}.0 lineend"
+          _event.content = _e.text.get(index_from, index_to)
+          _event.from_row.upto(_event.to_row) do |row|
+            _e.add_tag_bookmark(row) 
+          end
+        end
+      when UnsetBookmarkEvent
+        #unset
+        @bookmarks.delete_if{|b| (b[:file]==_event.file && b[:from_line]==_event.from_row)}
+        if _event.file && File.exists?(_event.file) 
+          _e = @tabs_editor[tab_file_name(_event.file)]
+        elsif _event.id
+          _e = @editors[_event.id]
+        end
+        _event.from_row.upto(_event.to_row) do |row|
+          _e.remove_tag_bookmark(row) if _e
+        end
+    end
+  end
+
+
+
   def on_before_step_debug(_event)
     debug_reset
   end
@@ -4640,7 +4765,8 @@ class AgMultiEditor < ArcadiaExtPlus
           elsif !editor_exist?(_event.file) && _event.last_row
             _index = _event.last_row.to_s+'.0' 
           end
-          if _event.kind_of?(OpenBufferTransientEvent) && conf('close-last-if-not-modified')=="yes"
+          if _event.kind_of?(OpenBufferTransientEvent) 
+            if conf('close-last-if-not-modified')=="yes"
             if defined?(@last_transient_file) && !@last_transient_file.nil? && @last_transient_file != _event.file
               _e = @tabs_editor[tab_name(@last_transient_file)]
               if _e && !_e.modified_from_opening?
@@ -4651,6 +4777,10 @@ class AgMultiEditor < ArcadiaExtPlus
               @last_transient_file = _event.file
             else
               @last_transient_file = nil
+              _event.transient = false
+            end
+            else
+              _event.transient = false
             end
           end
           if _event.select_index.nil? 
@@ -4857,6 +4987,18 @@ class AgMultiEditor < ArcadiaExtPlus
     }
     return result
   end
+
+  def bookmark_lines_on_file(_file)
+    result = Array.new
+    @bookmarks.each{|value|
+      if value[:file]==_file
+        value[:from_line].upto(value[:to_line]) do |i|
+          result << i.to_s
+        end
+      end
+    }
+    return result
+  end
   
   def on_layout_raising_frame(_event)
     if _event.extension_name == "editor" && _event.frame_name=="editor_outline"
@@ -4904,46 +5046,46 @@ class AgMultiEditor < ArcadiaExtPlus
     self
   end
   
-  def bookmark_add(_file, _index)
-    if @bookmarks == nil
-      @bookmarks = Array.new
-      @bookmarks_index = - 1 
+  def chrono_bookmark_add(_file, _index)
+    if @chrono_bookmarks == nil
+      @chrono_bookmarks = Array.new
+      @chrono_bookmarks_index = - 1 
     else
-      _cur_file, _cur_index = @bookmarks[@bookmarks_index]
+      _cur_file, _cur_index = @chrono_bookmarks[@chrono_bookmarks_index]
       if _cur_file == _file && _cur_index == _index
         #@arcadia.outln('uguale ----> '+_file+':'+_index)
         return 
       end
-      @bookmarks = @bookmarks[0..@bookmarks_index]
+      @chrono_bookmarks = @chrono_bookmarks[0..@chrono_bookmarks_index]
     end
-    @bookmarks << [_file, _index]
-    @bookmarks_index = @bookmarks.length - 1
+    @chrono_bookmarks << [_file, _index]
+    @chrono_bookmarks_index = @chrono_bookmarks.length - 1
     #@arcadia.outln('add ----> '+_file+':'+_index)
   end
 
-  def bookmark_clear
-    @bookmarks.clear
-    @bookmarks_index = - 1
+  def chrono_bookmark_clear
+    @chrono_bookmarks.clear
+    @chrono_bookmarks_index = - 1
   end
 
-  def bookmark_next
-    return if @bookmarks == nil || @bookmarks_index >= @bookmarks.length - 1
-    bookmark_move(+1)
+  def chrono_bookmark_next
+    return if @chrono_bookmarks == nil || @chrono_bookmarks_index >= @chrono_bookmarks.length - 1
+    chrono_bookmark_move(+1)
   end
 
-  def bookmark_move(_n=0)
-    @bookmarks_index = @bookmarks_index + _n
+  def chrono_bookmark_move(_n=0)
+    @chrono_bookmarks_index = @chrono_bookmarks_index + _n
     #Tk.messageBox('message'=>@bookmarks_index.to_s)
-    _file, _index = @bookmarks[@bookmarks_index]
+    _file, _index = @chrono_bookmarks[@chrono_bookmarks_index]
     _line, _col = _index.split('.') if _index
     open_file(_file, _index)
     #openfile(@bookmarks[@bookmarks_index])
   end
 
 
-  def bookmark_prev
-    return if @bookmarks == nil || @bookmarks_index <= 0
-    bookmark_move(-1)
+  def chrono_bookmark_prev
+    return if @chrono_bookmarks == nil || @chrono_bookmarks_index <= 0
+    chrono_bookmark_move(-1)
   end
 
 
@@ -4964,7 +5106,7 @@ class AgMultiEditor < ArcadiaExtPlus
   end
 
   def unname_modified(_name)
-    return _name.gsub("(...)",'')
+    return (_name && _name.strip.length > 0) ? _name.gsub("(...)",'') : nil 
   end
   
   
@@ -5048,13 +5190,10 @@ class AgMultiEditor < ArcadiaExtPlus
     if @arcadia.layout.headed?
       if frame.root.title == frame.title || @last_frame_caption != _new_caption
         make_buffer_string(@main_frame.page(_name)['text']) if @main_frame.page(_name)
-        #@buffer_menu_button.configure('image'=>@main_frame.page(_name)['image']) if @main_frame.page(_name)
-#        frame.root.top_text(@main_frame.page(_name)['text'], @main_frame.page(_name)['image']) if @main_frame.page(_name)
         frame.root.top_text(top_text_string, @main_frame.page(_name)['image']) if @main_frame.page(_name)
         frame.root.top_text_hint(_new_caption)
         @last_frame_caption = _new_caption
       end  
-#      frame.root.save_caption(frame.name, @main_frame.page(_name)['text'], @main_frame.page(_name)['image'])
     end
   end
 
@@ -5517,12 +5656,21 @@ class AgMultiEditor < ArcadiaExtPlus
 #    @raw_buffer_name.delete_if {|key, value| value == _name }
     _index = @main_frame.index(_name)
     @main_frame.delete_page(_name, !_moved)
-    if !@main_frame.pages.empty? && is_raised
-      @main_frame.raise(@main_frame.pages[_index-1]) if TkWinfo.mapped?(@main_frame.root_frame)
-    else
-      frame.root.top_text_clear if TkWinfo.mapped?(frame.hinner_frame)
-      make_buffer_string("")
-      reset_status
+    if is_raised
+      if !@main_frame.pages.empty? # && is_raised
+        #@main_frame.raise(@main_frame.pages[_index-1]) if TkWinfo.mapped?(@main_frame.root_frame)
+        len = @main_frame.pages.length
+        if _index < len
+          ind = _index
+        else
+          ind = _index-1
+        end
+        @main_frame.raise(@main_frame.pages[ind]) if TkWinfo.mapped?(@main_frame.root_frame)
+      else
+        frame.root.top_text_clear if TkWinfo.mapped?(frame.hinner_frame)
+        make_buffer_string("")
+        reset_status
+      end
     end
   end
 
@@ -5795,7 +5943,7 @@ class Finder < Findview
       self.editor.text.tag_add('selected',_index,_index+' lineend')
       #self.editor.text.tag_add('sel', _index,_index+' lineend')
       self.editor.text.set_insert(_index)
-      @controller.bookmark_add(self.editor.file, _index)
+      @controller.chrono_bookmark_add(self.editor.file, _index)
     @goto_line_dialog.hide
     end
     #self.hide()
@@ -5866,7 +6014,7 @@ class Finder < Findview
         @idx1 =_index
                 @idx2 =_index_sel_end
         _found = true
-        @controller.bookmark_add(self.editor.file, _index)
+        @controller.chrono_bookmark_add(self.editor.file, _index)
       else
         _message = '"'+@e_what.value+'" not found'
         TkDialog2.new('message'=>_message, 'buttons'=>['Ok']).show()
