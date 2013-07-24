@@ -2,27 +2,28 @@
 version 0.13.0
 
 by Antonio Galeone
-on Jul 21, 2013
+on Jul 24, 2013
 
 
 == About
 
-Arcadia is a Light Integrated Development Environment (IDE) for Ruby language 
+Arcadia is a light Integrated Development Environment (IDE) for Ruby language 
 written in Ruby using the classic tcl/tk GUI toolkit.
 
 Some of Arcadia ide project features include:
 * Editor with source browsing, syntax highlighting, code completion
 * Working on any platform where ruby and tcl-tk work.
 * Debugging support
-* Highly extensibility architecture.
+* Highly estensibile architecture.
 
 
 == News
 
 [0.13.0]
- - improved file-history introducing bookmarks (by new button on main toolbar, or contextual menu on editor lines panel)
- - refactored layout semplifying panel moving and new instance of editor creation   
- - fixed bugs 
+    This realease:
+  - improves file-history  introducing bookmarks management
+  - improves layout    
+  - fixes bugs 
 
 [0.12.2]
  - this release adds support to debugger gem and fixes minor bugs
@@ -61,8 +62,8 @@ Some of Arcadia ide project features include:
 == How to install
 * exec on command line "gem install arcadia"
 
-note: on some linux distributions like archlinux the default tcl/tk runtime at this date is on versions >= 8.6
-on the other hand ruby-tk supports fully only versions <= 8.5.x.y so to made arcadia working a choice
+NOTE: on some linux distributions like archlinux the default tcl/tk runtime at this time is on versions >= 8.6
+on the other hand ruby-tk supports fully only versions <= 8.5.x.y so to make arcadia working a choice 
 can be install ActiveTcl 8.5 and use ruby via rvm. 
 
 == How to run
@@ -72,7 +73,7 @@ can be install ActiveTcl 8.5 and use ruby via rvm.
 == Short User guide
 Application layout is splitted in vertical and horizontal resizable frames. 
 On vertical and horizontal  splitter appear two button for left or right 
-one shot frame close. 
+one shot frame closing. 
 Every frame has a title, a button to expand or resizing it and a menu-button 
 for dynamic layout functions (like add row, add column, close or for move a frame).
 
@@ -123,15 +124,17 @@ It is a navigational tree:
 - open terminal from selected dir 
 
 ==== File history
-The last used files are organizing in tree so you can reopen them or there  
+The last used files are organizing in tree so you can reopen them or their 
 directory by clicking on the tree node.
 
 ==== Debug
-Require ruby-debug gem.
+Require debugger gem.
 It is created when a debug session init. 
 The debug button are: Step Next, Step Into, Step Over, Resume and quit.
 The debug frame show the local, instance and global variables for each
 step. 
+
+NOTE: at this moment debugger doesn't seem to work with ruby >= 2.0  
 
 ==== Configuration
 Same Arcadia properties are locally configurabled by editing the file arcadia.conf
@@ -139,17 +142,16 @@ under ~/.arcadia  directory. The format of property definition are:
 <OPERATING SYSTEM IDENTIFY::>PROPERTY_NAME=PROPERTY_VALUE
 
 
-I have tested arcadia with ruby 1.8.4, 1.8.5, 1.8.6, 1.8.7, 1.9.1, 1.9.2 on 
+I have tested arcadia with ruby 1.8, 1.9, 2.0 on 
 
 * Archlinux
-* Ubuntu
+* Ubuntu/Mint
 * Fedora
 * FreeBsd6.x, FreeBsd7.x, 
 * Vector linux 5.*,
 * Windows 2000/XP/7, 
 * Cygwin (note: same page fault error on dll under cygwin may be solved in this way:
   by ash.exe exec "/bin/rebaseall"). 
-If you will test arcadia on other operating system sends me an e-mail.
 
 ==Developers e general information
 Released on arcadia web site (http://arcadia.rubyforge.org) 
