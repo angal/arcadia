@@ -4,7 +4,6 @@ version 0.13.0
 by Antonio Galeone
 on Jul 24, 2013
 
-
 == About
 
 Arcadia is a light Integrated Development Environment (IDE) for Ruby language 
@@ -16,6 +15,18 @@ Some of Arcadia ide project features include:
 * Debugging support
 * Highly estensibile architecture.
 
+== How to install
+* exec on command line "gem install arcadia"
+
+NOTE: on some linux distributions like archlinux the default tcl/tk runtime at this time is on versions >= 8.6
+on the other hand ruby-tk supports fully only versions <= 8.5.x.y so to make arcadia working a choice 
+can be install ActiveTcl 8.5 and use ruby via rvm. 
+
+== How to run
+* exec on command line "arcadia"
+
+== Wiki
+https://github.com/angal/arcadia/wiki
 
 == News
 
@@ -59,16 +70,6 @@ Some of Arcadia ide project features include:
   - gem win32-process (only on windows)
   - gem ruby-wmi (only on windows)
   
-== How to install
-* exec on command line "gem install arcadia"
-
-NOTE: on some linux distributions like archlinux the default tcl/tk runtime at this time is on versions >= 8.6
-on the other hand ruby-tk supports fully only versions <= 8.5.x.y so to make arcadia working a choice 
-can be install ActiveTcl 8.5 and use ruby via rvm. 
-
-== How to run
-* exec on command line "arcadia"
-
 
 == Short User guide
 Application layout is splitted in vertical and horizontal resizable frames. 
@@ -156,8 +157,6 @@ I have tested arcadia with ruby 1.8, 1.9, 2.0 on
 ==Developers e general information
 Released on arcadia web site (http://arcadia.rubyforge.org) 
 
-
- 
 == License
 Arcadia is released under the Ruby License
 
