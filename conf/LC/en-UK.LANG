@@ -199,7 +199,7 @@ ext.file_history.button.show_as_list.hint=Show as list
 ext.file_history.menu.search_from_here=Search from here
 ext.file_history.menu.find_in_files=Find in files...
 ext.file_history.menu.act_in_files=Act in files...
-ext.file_history.toggle_bookmark=Toggle boomark
+ext.file_history.toggle_bookmark=Toggle bookmark
 #output
 ext.output.menu.output=Output
 ext.output.menu.save=Save

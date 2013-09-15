@@ -370,7 +370,7 @@ class SafeCompleteCode
         File.delete(tmp_file)
       end
     else
-      @ss = RubySourceStructure.new(_source)
+      @ss = RubySourceStructure.new(@source)
     end
     @filter=''
     @words = Array.new
@@ -3626,13 +3626,30 @@ class AgMultiEditorView
     end 
   end
 
+  def add_menu_button(_name, _buffer_string)
+    @buffer_menu_button = @frame.root.add_menu_button(
+      _name, 'files', nil, 'right', 
+      {'relief'=>:flat, 
+       'borderwidth'=>1, 
+       'compound'=> 'left',
+       'anchor'=>'w',
+       'font'=> "#{Arcadia.conf('titlelabel.font')} italic",
+       'activebackground'=>Arcadia.conf('titlelabel.background'),
+       'foreground' => Arcadia.conf('titlecontext.foreground'),
+       'textvariable'=> _buffer_string
+      }
+    )
+  end
+
   def page_bind(_event, _proc)
     @page_binds[_event] = _proc
     if @usetabs
       @enb.tabbind_append("Button-3",_proc)
       @frame.root.top_text_bind_remove("Button-3")   
+      @buffer_menu_button.bind_remove("Button-3") if @buffer_menu_button  
     else
-      @frame.root.top_text_bind_append("Button-3", _proc)   
+      @frame.root.top_text_bind_append("Button-3", _proc)
+      @buffer_menu_button.bind_append("Button-3", _proc) if @buffer_menu_button   
     end    
   end
 
@@ -4097,11 +4114,6 @@ class AgMultiEditor < ArcadiaExtPlus
     @main_frame = AgMultiEditorView.new(self, self.frame, @usetabs)
     @@outline_bar = AgEditorOutlineToolbar.new(self) if !defined?(@@outline_bar)
     create_find # this is the "find within current file" one
-    begin
-      pop_up_menu
-    rescue RuntimeError => e
-      Arcadia.runtime_error(e)
-    end
     frame.root.add_button(
       self.name,
       'Close current',
@@ -4113,20 +4125,25 @@ class AgMultiEditor < ArcadiaExtPlus
     @buffer_string.value = ''
 #    @buffer_string = ''
     @buffer_number.value = 0
-    @buffer_menu_button = frame.root.add_menu_button(
-#      self.name, 'files', DOCUMENT_COMBO_GIF, 'right', 
-      self.name, 'files', nil, 'right', 
-#      {'relief'=>:raised, 'borderwidth'=>1, 'compound'=> 'left','anchor'=>'w', 'textvariable'=> @buffer_string, 'width'=>40})
-      {'relief'=>:flat, 
-       'borderwidth'=>1, 
-       'compound'=> 'left',
-       'anchor'=>'w',
-       'font'=> "#{Arcadia.conf('titlelabel.font')} italic",
-       'activebackground'=>Arcadia.conf('titlelabel.background'),
-       'foreground' => Arcadia.conf('titlecontext.foreground'),
-       'textvariable'=> @buffer_string
-       #'text'=> @buffer_string
-       })
+    @buffer_menu_button = @main_frame.add_menu_button(self.name, @buffer_string)
+
+    begin
+      pop_up_menu
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e)
+    end
+
+#    @buffer_menu_button = frame.root.add_menu_button(
+#      self.name, 'files', nil, 'right', 
+#      {'relief'=>:flat, 
+#       'borderwidth'=>1, 
+#       'compound'=> 'left',
+#       'anchor'=>'w',
+#       'font'=> "#{Arcadia.conf('titlelabel.font')} italic",
+#       'activebackground'=>Arcadia.conf('titlelabel.background'),
+#       'foreground' => Arcadia.conf('titlecontext.foreground'),
+#       'textvariable'=> @buffer_string
+#       })
     @buffer_menu = @buffer_menu_button.cget('menu')
     @buffer_menu_button.pack('fill'=>'x', 'expand'=>'true', 'side'=> 'left','anchor'=> 'w')
 #    TkWinfo.parent(TkWinfo.parent(@buffer_menu_button).frame).pack('fill'=>'x', 'expand'=>'true', 'side'=> 'right','anchor'=> 'w')
