@@ -7,9 +7,8 @@
 
 require 'tk'
 require 'tktext'
-require "#{Dir.pwd}/lib/a-tkcommons"
-#require 'lib/a-commons' 
 require "#{Dir.pwd}/lib/a-core"
+require "#{Dir.pwd}/lib/a-tkcommons"
 require "#{Dir.pwd}/ext/ae-editor/lib/rbeautify"
 
 class SourceTreeNode
@@ -352,16 +351,33 @@ class RubySourceStructure < SourceStructure
   end
 end
 
-
-class SafeCompleteCode
-  attr_reader :modified_row, :modified_col
-  attr_reader :filter
+class CompleteCode
   def initialize(_editor, _row, _col)
     @editor = _editor
     @source = _editor.text_value
-    #@file = _file
     @row = _row.to_i
     @col = _col.to_i
+    @filter=''
+    @words = Array.new
+  end
+
+  def process_source
+  end
+  
+  def candidates(_show_error = false)
+    process_source
+  end
+end
+
+class RubyCompleteCode < CompleteCode
+  attr_reader :modified_row, :modified_col
+  attr_reader :filter
+  def initialize(_editor, _row, _col)
+#    @editor = _editor
+#    @source = _editor.text_value
+#    @row = _row.to_i
+#    @col = _col.to_i
+    super
     if _editor && _editor.has_ctags?
       tmp_file = _editor.create_temp_file
       begin
@@ -372,17 +388,19 @@ class SafeCompleteCode
     else
       @ss = RubySourceStructure.new(@source)
     end
-    @filter=''
-    @words = Array.new
-    process_source
+#    @filter=''
+#    @words = Array.new
+#    process_source
   end
 
   def dot_trip(_var_name)
-    ret = "_class=#{_var_name}.class.name\n"
-    ret = ret +"_methods=#{_var_name}.methods\n"
+#    ret = "_class=#{_var_name}.class.name\n"
+    ret = "_class=#{_var_name}.class.to_s\n"
+#    ret = ret +"_methods=#{_var_name}.methods\n"
+    ret = ret +"_methods=#{_var_name}.public_instance_methods(includeSuper=true)\n"
     ret = ret +"owner_on = Method.instance_methods.include?('owner')\n"
     ret = ret +"_methods.each{|m|\n"
-    ret = ret +"meth = #{_var_name}.method(m)\n"
+    ret = ret +"meth = #{_var_name}.instance_method(m)\n"
     ret = ret +"if owner_on\n"
     ret = ret +"  _owner=meth.owner.name\n"
     ret = ret +"else\n"
@@ -450,7 +468,8 @@ class SafeCompleteCode
 
   def refresh_words
     @words.clear
-    _re = /[\s\t\n"'(\[\{=><]#{@filter}[a-zA-Z0-9\-_]*/
+#    _re = /[\s\t\n"'(\[\{=><]#{@filter}[a-zA-Z0-9\-_]*/
+    _re = /[\s\t\n"'(\[\{=><]*#{@filter}[a-zA-Z0-9\-_]*/
     m = _re.match(@source)
     while m && (_txt=m.post_match)
       can = m[0].strip
@@ -496,6 +515,7 @@ class SafeCompleteCode
     focus_line_to_evaluate = focus_line
     @modified_source = "#{@modified_source}Dir.chdir('#{File.dirname(@editor.file)}')\n" if @editor.file
     @modified_row = @modified_row+1
+    require_tk = false
     source_array.each_with_index{|line,j|
       # 0) if a comment I do not consider it
       if line.strip.length > 0 && line.strip[0..0]=='#'
@@ -512,13 +532,12 @@ class SafeCompleteCode
           @modified_source = "#{@modified_source}require \"#{require_omissis}\"\n"
           @modified_row = @modified_row+1
         end   
-        
-             
       # 1) include require
       elsif line.strip.length>7 && (line.strip[0..7]=="require " || line.strip[0..7]=="require(")
         @modified_source = "#{@modified_source}#{line}\n"
-        if line.strip[8..-1].include?("tk")
-          @modified_source = "#{@modified_source}Tk.root.destroy if Tk && Tk.root\n"
+        if !require_tk && line.strip[8..-1].include?("tk")
+          require_tk = true
+          #  @modified_source = "#{@modified_source}Tk.root.destroy if Tk && Tk.root\n"
         end
       # 2) include evalueting row with a $SAFE 3
       elsif j.to_i == @row-1
@@ -530,6 +549,10 @@ class SafeCompleteCode
       end
       break if j.to_i >= @row - 1
     }
+    if require_tk
+      @modified_source = "#{@modified_source}Tk.root.destroy if Tk && Tk.root\n"
+      @modified_row = @modified_row+1
+    end
     if focus_line_to_evaluate
       # search an optional declaration
         if focus_world && focus_world.strip.length > 0
@@ -605,7 +628,7 @@ class SafeCompleteCode
         end
     end
     if @filter.strip.length > 0 && !is_dot?
-        refresh_words
+      refresh_words
     end
 
 #    Arcadia.console(self, 'msg'=>@modified_source)
@@ -634,6 +657,7 @@ class SafeCompleteCode
   end
   
   def candidates(_show_error = false)
+    super
     temp_file = create_modified_temp_file(@editor.file)
     begin
       Arcadia.is_windows??ruby='rubyw':ruby=Arcadia.ruby
@@ -647,7 +671,7 @@ class SafeCompleteCode
       end
       if @filter.strip.length > 0 && !is_dot?
         @words.each{|w| 
-          if !(_ret.include?(w) || _ret.include?("##{w}")) 
+          if !(_ret.include?(w) || _ret.include?("##{w}"))
             _ret << w
           end
         }
@@ -663,8 +687,8 @@ class SafeCompleteCode
 
   def create_modified_temp_file(_base_file=nil)
     if _base_file
-    File.basename(_base_file)
-      _file = File.join(File.dirname(_base_file),'~~'+File.basename(_base_file))
+#      _file = File.join(File.dirname(_base_file),'~~'+File.basename(_base_file))
+      _file = File.join(Arcadia.instance.local_dir,'~~'+File.basename(_base_file))
     else
       _file = File.join(Arcadia.instance.local_dir,'~~buffer')
     end
@@ -1303,7 +1327,12 @@ class AgEditor
     @do_complete = @do_complete && @controller.accept_complete_code
     if @do_complete
       line, col = @text.index('insert').split('.')
-      mss = SafeCompleteCode.new(self, line.to_i, col.to_i)
+      case @lang
+        when 'ruby'
+          mss = RubyCompleteCode.new(self, line.to_i, col.to_i)
+        else
+          mss = CompleteCode.new(self, line.to_i, col.to_i)
+      end
       candidates = mss.candidates
       raise_complete_code(candidates, line.to_s, col.to_s, mss.filter) if candidates && candidates.length > 0 
     end
@@ -1364,20 +1393,21 @@ class AgEditor
         extra_len = 0
       end
       if _filter.length > 0 
-        begin_index_for_delete = "insert - #{_filter.length}chars"
+        begin_index_for_complete = "insert - #{_filter.length}chars"
       else
-        for_delete = @text.get(_begin_index,"insert")
-        if for_delete && ['.','(','[','{','=','<','!','>'].include?(for_delete.strip[-1..-1])
-          begin_index_for_delete = "insert"
-        elsif for_delete && for_delete.include?('.')
-          begin_index_for_delete = "insert - #{for_delete.split('.')[-1].length}chars"
+        processing_string = @text.get(_begin_index,"insert")
+        if processing_string && ['.','(','[','{','=','<','!','>'].include?(processing_string.strip[-1..-1])
+          begin_index_for_complete = "insert"
+        elsif processing_string && processing_string.include?('.')
+          begin_index_for_complete = "insert - #{processing_string.split('.')[-1].length}chars"
         else
-          begin_index_for_delete = _begin_index
+          begin_index_for_complete = _begin_index
         end 
       end
 
       if _candidates.length >= 1 
-          _rx, _ry, _width, heigth = @text.bbox(_begin_index);
+          #_rx, _ry, _width, heigth = @text.bbox(_begin_index);
+          _rx, _ry, _width, heigth = @text.bbox(begin_index_for_complete);
           _x = _rx + TkWinfo.rootx(@text)  
           _y = _ry + TkWinfo.rooty(@text)  + @font_metrics[2][1]
           _xroot = _x - TkWinfo.rootx(Arcadia.instance.layout.root)  
@@ -1446,7 +1476,7 @@ class AgEditor
               @raised_listbox_frame.destroy
               #_menu.destroy
               @text.focus
-              @text.delete(begin_index_for_delete,'insert')
+              @text.delete(begin_index_for_complete,'insert')
 
               # workaround for @ char
               _value = _value.strip
@@ -1585,7 +1615,7 @@ class AgEditor
             end
           }
         elsif _candidates.length == 1 && _candidates[0].length>0
-          @text.delete(begin_index_for_delete,'insert');
+          @text.delete(begin_index_for_complete,'insert');
           @text.insert('insert',_candidates[0].split[0])
           complete_code_end
         end
@@ -1616,30 +1646,31 @@ class AgEditor
         @do_complete = false
       end
     }    
-
-    @text.bind_append("KeyRelease"){|e|
-      case e.keysym
-        when 'period'
-          _focus_line = @text.get('insert linestart','insert')
-          if _focus_line.strip[0..0] != '#'
-            Thread.new do
-              @do_complete = true
-              sleep(1)
-              if @do_complete && @n_complete_task == 0
-                complete_code
+    case @lang 
+      when 'ruby'
+        @text.bind_append("KeyRelease"){|e|
+          case e.keysym
+            when 'period'
+              _focus_line = @text.get('insert linestart','insert')
+              if _focus_line.strip[0..0] != '#'
+                Thread.new do
+                  @do_complete = true
+                  sleep(1)
+                  if @do_complete && @n_complete_task == 0
+                    complete_code
+                  end
+                end
               end
-            end
           end
-      end
-    }
-
+        }
+    end
   end
   
   #
   # setup all key bindings (normal, +control, etc)
   #
   def activate_key_binding
-    activate_complete_code_key_binding if @is_ruby
+    activate_complete_code_key_binding #if @is_ruby
 
     @text.bind_append("Control-KeyPress"){|e|
       case e.keysym
@@ -3725,7 +3756,8 @@ class HighlightScanner
   
   def initialize(_langs_conf)
     @langs_conf = _langs_conf
-    @lang=@langs_conf['language'].to_sym if @langs_conf['language']
+    #@lang=@langs_conf['language'].to_sym if @langs_conf['language']
+    @lang=@langs_conf['language'] if @langs_conf['language']
   end
   
   def highlight_tags(_row_begin,_code)
