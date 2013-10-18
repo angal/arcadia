@@ -352,6 +352,7 @@ class RubySourceStructure < SourceStructure
 end
 
 class CompleteCode
+  attr_reader :filter
   def initialize(_editor, _row, _col)
     @editor = _editor
     @source = _editor.text_value
@@ -359,11 +360,84 @@ class CompleteCode
     @col = _col.to_i
     @filter=''
     @words = Array.new
+    @is_dot = nil
+  end
+  
+  def focus_word(focus_segment)
+    focus_world = ''
+    char = focus_segment[-1..-1]
+    while [")","]","}"].include?(char) 
+      char=focus_segment[-2..-2]
+      focus_segment = focus_segment[0..-2]
+    end
+    j = focus_segment.length - 1
+    while !["\s","\t",";",",","(","[","{",">"].include?(char) && j >= 0
+      focus_world = "#{char}#{focus_world}"
+      j=j-1
+      char = focus_segment[j..j]
+    end
+    focus_world
   end
 
   def process_source
+    @source_array = @source.split("\n")
+    @focus_line = @source_array[@row-1]
+    @focus_line = @focus_line[0..@col] if @focus_line
+    @focus_line = '' if @focus_line.nil?
+    @focus_world = ''
+    if @focus_line && @focus_line.strip.length > 0
+      if @focus_line[@col-1..@col-1] == '.'
+        #@is_dot=true
+        focus_segment = @focus_line[0..@col-2]
+      elsif @focus_line.include?('.')
+        #@is_dot=true
+        focus_segment_array = @focus_line.split('.')
+        focus_segment = ''
+        focus_segment_array[0..-2].each{|seg|
+          if focus_segment.strip.length > 0
+            focus_segment = focus_segment+'.'
+          end
+          focus_segment = focus_segment+seg
+        }
+        @filter = focus_word(focus_segment_array[-1].strip)
+      else
+        focus_segment = ''
+        @filter = focus_word(@focus_line[0..@col-1].strip)
+      end
+      @focus_world = focus_word(focus_segment)
+    end
+    
+    if @filter.strip.length > 0 && !is_dot?
+      refresh_words
+    end
+    @words.sort
   end
-  
+
+  def refresh_words
+    @words.clear
+    _re = /[\s\t\n"'(\[\{=><]#{@filter}[a-zA-Z0-9\-_]*/
+    m = _re.match(@source)
+    while m && (_txt=m.post_match)
+      can = m[0].strip
+      if can.include?(' ')
+        can = can.split[1].strip
+      end
+      if  ['"','(','[','{',"'",'=','>','<'].include?(can[0..0])
+        can = can[1..-1].strip
+      end
+      @words << can if can != @filter && !@words.include?(can)
+      m = _re.match(_txt)
+    end
+  end
+
+  def is_dot?
+    if @is_dot == nil
+      fline = @editor.text.get('insert linestart', 'insert')
+      @is_dot = fline != nil && fline.length > 0 && fline[-2..-1] == '.'
+    end
+    @is_dot
+  end
+
   def candidates(_show_error = false)
     process_source
   end
@@ -371,7 +445,6 @@ end
 
 class RubyCompleteCode < CompleteCode
   attr_reader :modified_row, :modified_col
-  attr_reader :filter
   def initialize(_editor, _row, _col)
 #    @editor = _editor
 #    @source = _editor.text_value
@@ -462,61 +535,24 @@ class RubyCompleteCode < CompleteCode
     dec_line_processed
   end
   
-  def is_dot?
-    @is_dot
-  end
-
-  def refresh_words
-    @words.clear
-#    _re = /[\s\t\n"'(\[\{=><]#{@filter}[a-zA-Z0-9\-_]*/
-    _re = /[\s\t\n"'(\[\{=><]*#{@filter}[a-zA-Z0-9\-_]*/
-    m = _re.match(@source)
-    while m && (_txt=m.post_match)
-      can = m[0].strip
-      if  ['"','(','[','{',"'",'=','>','<'].include?(can[0..0])
-        can = can[1..-1]
-      end
-      @words << can if can != @filter
-      m = _re.match(_txt)
-    end
-  end
+#  def is_dot?
+#    @is_dot
+#  end
 
   def process_source
+    super
     @modified_source = ""
     @modified_row = @row
     @modified_col = @col
-    source_array = @source.split("\n")
-    focus_line = source_array[@row-1]
-    focus_line = focus_line[0..@col] if focus_line
-    focus_line = '' if focus_line.nil?
-    focus_world = ''
-    if focus_line && focus_line.strip.length > 0
-      if focus_line[@col-1..@col-1] == '.'
-        @is_dot=true
-        focus_segment = focus_line[0..@col-2]
-      elsif focus_line.include?('.')
-        @is_dot=true
-        focus_segment_array = focus_line.split('.')
-        focus_segment = ''
-        focus_segment_array[0..-2].each{|seg|
-          if focus_segment.strip.length > 0
-            focus_segment = focus_segment+'.'
-          end
-          focus_segment = focus_segment+seg
-        }
-        @filter = focus_word(focus_segment_array[-1].strip)
-      else
-        focus_segment = ''
-        @filter = focus_word(focus_line[0..@col-1].strip)
-      end
-      focus_world= focus_word(focus_segment)
-    end
+
+    
+    
     @class_node = @ss.class_node_by_line(@row)
-    focus_line_to_evaluate = focus_line
+    focus_line_to_evaluate = @focus_line
     @modified_source = "#{@modified_source}Dir.chdir('#{File.dirname(@editor.file)}')\n" if @editor.file
     @modified_row = @modified_row+1
     require_tk = false
-    source_array.each_with_index{|line,j|
+    @source_array.each_with_index{|line,j|
       # 0) if a comment I do not consider it
       if line.strip.length > 0 && line.strip[0..0]=='#'
         @modified_row = @modified_row-1
@@ -555,10 +591,10 @@ class RubyCompleteCode < CompleteCode
     end
     if focus_line_to_evaluate
       # search an optional declaration
-        if focus_world && focus_world.strip.length > 0
+        if @focus_world && @focus_world.strip.length > 0
           begin
-            re = Regexp::new('[\s\n\t\;]('+focus_world.strip+')[\s\t]*=(.)*')
-            source_array.each_with_index  do |line,j|
+            re = Regexp::new('[\s\n\t\;]('+@focus_world.strip+')[\s\t]*=(.)*')
+            @source_array.each_with_index  do |line,j|
               #m = /[\s\n\t\;](#{focus_world})[\s\t]*=(.)*/.match(line)
               if j >= @row-1
                 break
@@ -582,8 +618,8 @@ class RubyCompleteCode < CompleteCode
           if @class_dec_line_node && @class_dec_line_node.label == @class_node.label
             to_iniect = "#{to_iniect}#{declaration(@dec_line)}\n"
           end
-          if focus_world.length > 0
-            to_iniect = "#{to_iniect}#{dot_trip(focus_world)}\n"
+          if @focus_world.length > 0
+            to_iniect = "#{to_iniect}#{dot_trip(@focus_world)}\n"
           else
             to_iniect = "#{to_iniect}#{scope_trip}\n"
           end
@@ -615,8 +651,8 @@ class RubyCompleteCode < CompleteCode
             @modified_row = @modified_row+1
           end
           #@modified_source = "#{@modified_source}_candidates=@candidates\n"
-          if focus_world.length > 0
-            @modified_source = "#{@modified_source}#{dot_trip(focus_world)}\n"
+          if @focus_world.length > 0
+            @modified_source = "#{@modified_source}#{dot_trip(@focus_world)}\n"
           else
             @modified_source = "#{@modified_source}#{scope_trip}\n"
           end
@@ -627,9 +663,9 @@ class RubyCompleteCode < CompleteCode
           @modified_row = @modified_row+1+ss_len
         end
     end
-    if @filter.strip.length > 0 && !is_dot?
-      refresh_words
-    end
+#    if @filter.strip.length > 0 && !is_dot?
+#      refresh_words
+#    end
 
 #    Arcadia.console(self, 'msg'=>@modified_source)
 #    Arcadia.console(self, 'msg'=>"@modified_row=#{@modified_row}")
@@ -639,35 +675,23 @@ class RubyCompleteCode < CompleteCode
 #    Arcadia.console(self, 'msg'=>"@dec_line=#{@dec_line}") if @dec_line
 #    Arcadia.console(self, 'msg'=>"declaration(@dec_line)=#{declaration(@dec_line)}") if @dec_line
   end
-
-  def focus_word(focus_segment)
-      focus_world = ''
-      char = focus_segment[-1..-1]
-      while [")","]","}"].include?(char) 
-        char=focus_segment[-2..-2]
-        focus_segment = focus_segment[0..-2]
-      end
-      j = focus_segment.length - 1
-      while !["\s","\t",";",",","(","[","{",">"].include?(char) && j >= 0
-        focus_world = "#{char}#{focus_world}"
-        j=j-1
-        char = focus_segment[j..j]
-      end
-      focus_world
-  end
   
   def candidates(_show_error = false)
     super
     temp_file = create_modified_temp_file(@editor.file)
     begin
       Arcadia.is_windows??ruby='rubyw':ruby=Arcadia.ruby
-      _cmp_s = "|#{ruby} '#{temp_file}'"
+      _cmp_s = "|#{ruby} '#{temp_file}' 2>&1"
       _ret = nil
-      open(_cmp_s,"r") do  |f|
-        _ret = f.readlines.collect!{| line | 
-          #line.chomp
-          line.strip
-        } 
+      begin
+        open(_cmp_s,"r") do  |f|
+          _ret = f.readlines.collect!{| line | 
+            #line.chomp
+            line.strip
+          }
+        end
+      rescue
+        _ret = [] 
       end
       if @filter.strip.length > 0 && !is_dot?
         @words.each{|w| 
@@ -1476,7 +1500,7 @@ class AgEditor
               @raised_listbox_frame.destroy
               #_menu.destroy
               @text.focus
-              @text.delete(begin_index_for_complete,'insert')
+              @text.delete("#{begin_index_for_complete} wordstart",'insert')
 
               # workaround for @ char
               _value = _value.strip
@@ -1518,7 +1542,8 @@ class AgEditor
           _height = 15*_char_height
           _height = _max_height if _height > _max_height
           
-          _buffer = @text.get(_begin_index, 'insert')
+          #_buffer = @text.get(_begin_index, 'insert')
+          _buffer = @text.get(begin_index_for_complete, 'insert')
           _buffer_ini_length = _buffer.length
           @raised_listbox_frame.place('x'=>_xroot,'y'=>_yroot, 'width'=>_width, 'height'=>_height)
           @raised_listbox.extend(TkScrollableWidget).show(0,0) 
@@ -1548,11 +1573,13 @@ class AgEditor
                   _insert_selected_value.call
                 end
                 Tk.callback_break
-              when 'A'..'Z','equal','greater'
+              when 'A'..'Z','equal','greater','underscore'
                 if e.keysym == 'equal'
                   ch = '='
                 elsif e.keysym == 'greater'
                   ch = '>'
+                elsif e.keysym == 'underscore'
+                  ch = '_'
                 else
                   ch = e.keysym
                 end
