@@ -541,12 +541,9 @@ class RubyCompleteCode < CompleteCode
 
   def process_source
     super
-    @modified_source = ""
-    @modified_row = @row
+    @modified_source = "begin\n"
+    @modified_row = @row+1
     @modified_col = @col
-
-    
-    
     @class_node = @ss.class_node_by_line(@row)
     focus_line_to_evaluate = @focus_line
     @modified_source = "#{@modified_source}Dir.chdir('#{File.dirname(@editor.file)}')\n" if @editor.file
@@ -663,6 +660,11 @@ class RubyCompleteCode < CompleteCode
           @modified_row = @modified_row+1+ss_len
         end
     end
+    @modified_source = "#{@modified_source}rescue Exception => e\n"
+    @modified_source = "#{@modified_source}  p :ARCADIA_CC_ERROR\n"
+    @modified_source = "#{@modified_source}  p e.message\n"
+    @modified_source = "#{@modified_source}end\n"
+    @modified_row = @modified_row+4
 #    if @filter.strip.length > 0 && !is_dot?
 #      refresh_words
 #    end
@@ -691,6 +693,9 @@ class RubyCompleteCode < CompleteCode
           }
         end
       rescue
+        _ret = [] 
+      end
+      if _ret.include?(':ARCADIA_CC_ERROR')
         _ret = [] 
       end
       if @filter.strip.length > 0 && !is_dot?
