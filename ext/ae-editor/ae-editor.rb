@@ -15,7 +15,7 @@ class SourceTreeNode
   attr_reader :sons
   attr_reader :parent
   attr_reader :kind
-  attr_accessor :rif, :rif_end, :label, :helptext, :sortable
+  attr_accessor :rif, :rif_end, :label, :helptext, :sortable, :args
   def initialize(parent=nil, kind='class', sortable=true)
     @sons = Array.new
     @parent = parent
@@ -98,7 +98,7 @@ end
 
 class CtagsSourceStructure < SourceStructure
   SUPPORTED_LANG = ['Ant','Asm','Asp','Awk','Basic','BETA','C','C++','C#','Cobol','DosBatch','Eiffel','Erlang','Flex','Fortran','HTML','Java','JavaScript','Lisp','Lua','Make','MatLab','OCaml','Pascal','Perl','PHP','Python','REXX','Ruby','Scheme','Sh','SLang','SML','SQL','Tcl','Tex','Vera','Verilog','VHDL','Vim','YACC']
-  def initialize(_file, _ctags_string='ctags', _language=nil)
+  def initialize(_file, _ctags_string='ctags', _row_rif = nil, _language=nil)
     super()
     @file = _file
     @ctags_string = _ctags_string
@@ -106,8 +106,19 @@ class CtagsSourceStructure < SourceStructure
     @classes = Hash.new
     @last_root = @root
     @last_class_node = @root
-    @last_node = @root    
+    @last_node = @root
+    @blank_rows = []    
+    initialize_blank_rows(_row_rif) if !_row_rif.nil?
     build_structure
+  end
+  
+  def initialize_blank_rows(_row = nil)
+    File::open(@file,'rb'){ |file|
+      file.readlines.each_with_index{| line, i | 
+        @blank_rows << i+1 if line.strip == ''
+      }
+    }
+    @blank_rows << _row if _row 
   end
 
   def build_structure
@@ -136,8 +147,13 @@ class CtagsSourceStructure < SourceStructure
       node = SourceTreeNode.new(parent, fields['kind'])
       node.label = name
       node.helptext = definition
+      node.args = definition.split(name)[1]
       node.rif = fields['line']
-      @last_node.rif_end = (node.rif.to_i-1).to_s
+      ln_rif = node.rif.to_i - 1 
+      while @blank_rows.include?(ln_rif) && ln_rif > 0
+        ln_rif = ln_rif - 1
+      end
+      @last_node.rif_end = ln_rif.to_s
       
       if ['class','module','interface','package'].include?(fields['kind'])
         if fields['class'] != nil
@@ -175,8 +191,8 @@ end
 class RubyCtagsSourceStructure < CtagsSourceStructure
   attr_reader :injected_row
   
-  def initialize(_file, _ctags_string='ctags')
-    super(_file, _ctags_string, 'Ruby')
+  def initialize(_file, _ctags_string='ctags', _row_rif = nil)
+    super(_file, _ctags_string, _row_rif, 'Ruby')
   end
   
   def scheletor_from_node(_node, _source='', _injected_source='', _injected_class='')
@@ -189,8 +205,8 @@ class RubyCtagsSourceStructure < CtagsSourceStructure
          _hinner_source = "#{_hinner_source}#{_son.helptext}\n"
       elsif _son.kind == 'module'
          _hinner_source = "#{_hinner_source}#{_son.helptext}\n"
-      elsif _son.kind == 'method' && _son.label != 'initialize'         
-         _hinner_source = "#{_hinner_source}  def #{_son.label}\n"
+      elsif _son.kind == 'method' && ((_son.label != 'initialize') || (_son.label == 'initialize') && _son.args)         
+         _hinner_source = "#{_hinner_source}  def #{_son.label}#{_son.args}\n"
          _hinner_source = "#{_hinner_source}  end\n"
       elsif _son.kind == 'singleton method'
          _hinner_source = "#{_hinner_source}  def #{_son.label}\n"
@@ -202,6 +218,8 @@ class RubyCtagsSourceStructure < CtagsSourceStructure
     if _node.kind == 'class' && _node.label == _injected_class
       _source = "#{_source}  def initialize\n  #{_injected_source}  end\n"
       @injected_row = _source.split("\n").length-2
+    elsif _node.kind == 'class'
+      _source = "#{_source}  def initialize\n  end\n"
     end
     _source = "#{_source}end\n" if _node.kind == 'class' || _node.kind == 'module'
     _source
@@ -454,7 +472,7 @@ class RubyCompleteCode < CompleteCode
     if _editor && _editor.has_ctags?
       tmp_file = _editor.create_temp_file
       begin
-        @ss = RubyCtagsSourceStructure.new(tmp_file, _editor.ctags_string)
+        @ss = RubyCtagsSourceStructure.new(tmp_file, _editor.ctags_string, _row.to_i)
       ensure
         File.delete(tmp_file)
       end
@@ -470,10 +488,10 @@ class RubyCompleteCode < CompleteCode
 #    ret = "_class=#{_var_name}.class.name\n"
     ret = "_class=#{_var_name}.class.to_s\n"
 #    ret = ret +"_methods=#{_var_name}.methods\n"
-    ret = ret +"_methods=#{_var_name}.public_instance_methods(includeSuper=true)\n"
+    ret = ret +"_methods=#{_var_name}.public_methods(includeSuper=true)\n"
     ret = ret +"owner_on = Method.instance_methods.include?('owner')\n"
     ret = ret +"_methods.each{|m|\n"
-    ret = ret +"meth = #{_var_name}.instance_method(m)\n"
+    ret = ret +"meth = #{_var_name}.method(m)\n"
     ret = ret +"if owner_on\n"
     ret = ret +"  _owner=meth.owner.name\n"
     ret = ret +"else\n"
@@ -661,10 +679,12 @@ class RubyCompleteCode < CompleteCode
         end
     end
     @modified_source = "#{@modified_source}rescue Exception => e\n"
-    @modified_source = "#{@modified_source}  p :ARCADIA_CC_ERROR\n"
-    @modified_source = "#{@modified_source}  p e.message\n"
+    @modified_source = "#{@modified_source}  if e.class != SystemExit\n"
+    @modified_source = "#{@modified_source}    p :ARCADIA_CC_ERROR\n"
+    @modified_source = "#{@modified_source}    p e.message\n"
+    @modified_source = "#{@modified_source}  end\n"
     @modified_source = "#{@modified_source}end\n"
-    @modified_row = @modified_row+4
+    @modified_row = @modified_row+6
 #    if @filter.strip.length > 0 && !is_dot?
 #      refresh_words
 #    end
@@ -1076,8 +1096,6 @@ class AgEditorOutline
       # workaround on windows
       @tree_exp.delete(@tree_exp.nodes('root'))
     end
-    
-    
     _txt = @editor.text.get('1.0','end')
     if @editor.has_ctags?
       if @editor.file && !@editor.modified?
@@ -1422,13 +1440,13 @@ class AgEditor
         extra_len = 0
       end
       if _filter.length > 0 
-        begin_index_for_complete = "insert - #{_filter.length}chars"
+        begin_index_for_complete = @text.index("insert - #{_filter.length}chars")
       else
         processing_string = @text.get(_begin_index,"insert")
         if processing_string && ['.','(','[','{','=','<','!','>'].include?(processing_string.strip[-1..-1])
-          begin_index_for_complete = "insert"
+          begin_index_for_complete = @text.index("insert")
         elsif processing_string && processing_string.include?('.')
-          begin_index_for_complete = "insert - #{processing_string.split('.')[-1].length}chars"
+          begin_index_for_complete = @text.index("insert - #{processing_string.split('.')[-1].length}chars")
         else
           begin_index_for_complete = _begin_index
         end 
@@ -1506,7 +1524,6 @@ class AgEditor
               #_menu.destroy
               @text.focus
               @text.delete("#{begin_index_for_complete} wordstart",'insert')
-
               # workaround for @ char
               _value = _value.strip
               if _value[0..0] !=_target[0..0] && _value[1..1] == _target[0..0]
@@ -1629,11 +1646,13 @@ class AgEditor
                 Tk.callback_break
               when 'BackSpace'
                 if _buffer.length > _buffer_ini_length
-                  @text.delete("#{_begin_index} + #{_buffer.length-1} chars" ,'insert')
-                  _buffer = _buffer[0..-2]
-                  Tk.update
-                  _update_list.call(_buffer)
-                  Tk.callback_break
+                    if @text.index('insert').split('.')[0] == _row
+                      @text.delete("insert -1 chars" ,'insert')
+                    end
+                    _buffer = _buffer[0..-2]
+                    Tk.update
+                    _update_list.call(_buffer)
+                    Tk.callback_break
                 end
               when 'Next', 'Prior'
               else

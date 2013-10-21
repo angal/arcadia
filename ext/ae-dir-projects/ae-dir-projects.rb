@@ -3,10 +3,10 @@
 #   by Antonio Galeone <antonio-galeone@rubyforge.org>
 #
 #   &require_dir_ref=../..
-#   &require_omissis=conf/arcadia.init
-#   &require_omissis=lib/a-commons
-#   &require_omissis=lib/a-tkcommons
-#   &require_omissis=lib/a-core
+#   &require_omissis=#{Dir.pwd}/lib/a-core
+#   &require_omissis=#{Dir.pwd}/conf/arcadia.init
+#   &require_omissis=#{Dir.pwd}/lib/a-commons
+#   &require_omissis=#{Dir.pwd}/lib/a-tkcommons
 
 
 
