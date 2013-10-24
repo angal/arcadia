@@ -128,7 +128,7 @@ class CtagsSourceStructure < SourceStructure
       b2,b3 = brest.split('$/;"')
       name,file = b1.strip.split("\t")
       definition = b2.strip
-      fields_raw = b3.strip.split("\t")
+      fields_raw = b3.nil? ? [] : b3.strip.split("\t")
       fields = Hash.new
       fields_raw.each{|item|
         k,v=item.split(":")
@@ -143,11 +143,11 @@ class CtagsSourceStructure < SourceStructure
       else
         parent = @last_root
       end
-      
       node = SourceTreeNode.new(parent, fields['kind'])
       node.label = name
       node.helptext = definition
-      node.args = definition.split(name)[1]
+      node.args = ''
+      definition.split(name)[1..-1].each { |part| node.args += "#{part}" }
       node.rif = fields['line']
       ln_rif = node.rif.to_i - 1 
       while @blank_rows.include?(ln_rif) && ln_rif > 0
@@ -451,7 +451,7 @@ class CompleteCode
   def is_dot?
     if @is_dot == nil
       fline = @editor.text.get('insert linestart', 'insert')
-      @is_dot = fline != nil && fline.length > 0 && fline[-2..-1] == '.'
+      @is_dot = fline != nil && fline.length > 0 && fline[-1..-1] == '.'
     end
     @is_dot
   end
@@ -463,6 +463,11 @@ end
 
 class RubyCompleteCode < CompleteCode
   attr_reader :modified_row, :modified_col
+  RESERVED_WORDS = ["__FILE__","and","def","end","in","or","self","unless",
+                    "__LINE__","begin","defined?","ensure","module","redo","super","until",
+                    "BEGIN","break","do","false","next","rescue","then","when",
+                    "END","case","else","for","nil","retry","true","while",
+                    "alias","class","elsif","if","not","return","undef","yield"]
   def initialize(_editor, _row, _col)
 #    @editor = _editor
 #    @source = _editor.text_value
@@ -511,7 +516,7 @@ class RubyCompleteCode < CompleteCode
   end
   
   def scope_trip
-    ret = "ObjectSpace.each_object(Class){|o|\n"
+    ret = "ObjectSpace.each_object(Module){|o|\n"
     ret = ret + " o_name = o.name\n"
     ret = ret + " print '#'+o_name+'\n' if o_name && o_name.strip.length>0 \n"
     ret = ret + "}\n"
@@ -705,10 +710,13 @@ class RubyCompleteCode < CompleteCode
       Arcadia.is_windows??ruby='rubyw':ruby=Arcadia.ruby
       _cmp_s = "|#{ruby} '#{temp_file}' 2>&1"
       _ret = nil
+      onlyw = []
       begin
         open(_cmp_s,"r") do  |f|
           _ret = f.readlines.collect!{| line | 
             #line.chomp
+            anlyl = line.split('#')[1]
+            onlyw << anlyl.strip if anlyl
             line.strip
           }
         end
@@ -720,7 +728,14 @@ class RubyCompleteCode < CompleteCode
       end
       if @filter.strip.length > 0 && !is_dot?
         @words.each{|w| 
-          if !(_ret.include?(w) || _ret.include?("##{w}"))
+          if !(onlyw.include?(w) || onlyw.include?("##{w}"))
+            _ret << w
+          end
+        }
+      end
+      if !is_dot?
+        RESERVED_WORDS.each{|w| 
+          if !onlyw.include?(w) && !@words.include?(w)
             _ret << w
           end
         }
