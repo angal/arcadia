@@ -82,6 +82,7 @@ class Term < ArcadiaExtPlus
     conf("create",'yes')
     conf("dir",_dir)
     id_int = eval(frame.hinner_frame.winfo_id).to_i
+    
     #Arcadia.runtime_error_msg("CREO XTERM #{xterm_class} con id #{id_int}")
     cmd = "cd #{_dir} ; xterm -into #{id_int} -bg '#{conf('color.bg')}' -fg #{conf('color.fg')} -fa '#{conf('font')}' -class #{xterm_class}  +sb  +hold"
     fi_pid=-1
@@ -112,7 +113,8 @@ class Term < ArcadiaExtPlus
   def do_xterm_exit
     if main_instance?
       conf("create",'no')
-      hide_frame
+#      hide_frame
+      clean_instance
     else
       clean_instance
     end

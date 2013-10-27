@@ -361,11 +361,19 @@ class LowerCaseTextEvent < FocusEvent; end
 # default actions_pattern  = 'OK'
 class DialogEvent < ArcadiaEvent
   TYPE_PATTERNS = ['ok', 'yes_no', 'ok_cancel', 'yes_no_cancel', 'abort_retry_ignore']
+  MSG_MAX_CHARS = 500
   class Result < Result
     attr_accessor :value
   end
   attr_accessor :title, :msg, :type, :level, :exception
 end
+
+class SystemDialogEvent < DialogEvent
+end
+
+class HinnerDialogEvent < DialogEvent
+end
+
 
 #class QuestionDialogEvent < DialogEvent
 #end

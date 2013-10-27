@@ -5963,14 +5963,14 @@ class Finder < Findview
     @controller = _controller
     @forwards = true
     @find_action = proc{
-      do_find_next
       hide
+      do_find_next
     }
     @b_go.bind('1', @find_action)
     
-  	 @b_replace.bind('1', proc{do_replace})  
+  	 @b_replace.bind('1', proc{hide; do_replace})  
     
-  	 @b_replace_all.bind('1', proc{do_replace_all})  
+  	 @b_replace_all.bind('1', proc{hide; do_replace_all})  
 
     @e_what_entry.bind_append('KeyRelease'){|e|
       case e.keysym
@@ -6003,8 +6003,8 @@ class Finder < Findview
 
   def do_replace
     if do_find_next        
-        _message = Arcadia.text('ext.editor.search.d.replace.msg'[@e_what.value, @e_with.value])
-        if TkDialog2.new('message'=>_message, 'buttons'=>['Yes','No']).show() == 0
+        _message = Arcadia.text('ext.editor.search.d.replace.msg', [@e_what.value, @e_with.value])
+        if Arcadia.hinner_dialog(self, 'type'=>'yes_no', 'msg'=> _message, 'title' => "Replace", 'level' => 'question')=='yes'
           self.editor.text.delete(@idx1,@idx2)
           self.editor.text.insert(@idx1,@e_with.value)
           self.editor.check_modify
@@ -6013,14 +6013,21 @@ class Finder < Findview
   end
 
   def do_replace_all
+    show_dialog = true
+    founds = []
     while do_find_next
-        _message = Arcadia.text('ext.editor.search.d.replace.msg'[@e_what.value, @e_with.value])
-        _rc = TkDialog2.new('message'=>_message, 'buttons'=>['Yes','No','Annulla']).show()
-        if _rc == 0
+        break if founds.include?(@idx1)
+        founds << @idx1
+        if show_dialog
+          _message = Arcadia.text('ext.editor.search.d.replace.msg', [@e_what.value, @e_with.value])
+          _rc = Arcadia.hinner_dialog(self, 'type'=>'yes_yesall_no_cancel', 'msg'=> _message, 'title' => "Replace", 'level' => 'question')
+        end
+        if _rc == 'yes' || _rc == 'yesall'
           self.editor.text.delete(@idx1,@idx2)
           self.editor.text.insert(@idx1,@e_with.value)
           self.editor.check_modify
-        elsif _rc == 2
+          show_dialog = _rc != 'yesall'
+        elsif _rc == 'cancel'
           break
         end
     end
@@ -6132,7 +6139,9 @@ class Finder < Findview
         @controller.chrono_bookmark_add(self.editor.file, _index)
       else
         _message = '"'+@e_what.value+'" not found'
-        TkDialog2.new('message'=>_message, 'buttons'=>['Ok']).show()
+        Arcadia.hinner_dialog(self, 'type'=>'ok', 'msg'=> _message)
+        
+#        TkDialog2.new('message'=>_message, 'buttons'=>['Ok']).show()
       end
 
     else

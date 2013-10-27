@@ -22,7 +22,7 @@ class SubProcessInspector < ArcadiaExt
     @processs.each{|pr|
       if !pr.nil? 
         message = Arcadia.text("ext.spi.d.exit_query.msg")
-        r=Arcadia.dialog(self,
+        r=Arcadia.hinner_dialog(self,
             'type'=>'yes_no', 
             'level'=>'warning',
             'title'=> Arcadia.text("ext.spi.d.exit_query.title"), 
@@ -59,7 +59,7 @@ class SubProcessWidget < Tk::BWidget::Button
     @event = _event
     b_command = proc{
       message = Arcadia.text('ext.spi.d.kill.msg', [_event.pid, _event.name])
-      r=Arcadia.dialog(self,
+      r=Arcadia.hinner_dialog(self,
           'type'=>'yes_no', 
           'level'=>'warning',
           'title'=> Arcadia.text('ext.spi.d.kill.title'), 

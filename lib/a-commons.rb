@@ -234,6 +234,10 @@ class ArcadiaExt
   def hide_frame(_n=0)
     Arcadia.layout.unregister_panel(frame(_n), false, true)
   end 
+
+  def destroy_frame(_n=0)
+    Arcadia.layout.unregister_panel(frame(_n), true, true)
+  end 
   
   def conf_array(_name)
 #    res = []
@@ -449,13 +453,18 @@ class ArcadiaExtPlus < ArcadiaExt
   end  
 
   def activate(_obj=self, _raise_event=true)
-    return if @@active_instance[self.class] == _obj
-    @@active_instance[self.class] = _obj
-    @@active_instance[self.class].frame.root.shift_on if @@active_instance[self.class].frame != nil
+    return if @@active_instance[_obj.class] == _obj
+    if _obj.frame_visible?
+      @@active_instance[_obj.class] = nil
+    else
+      @@active_instance[_obj.class] = _obj
+    end
+    #@@active_instance[self.class].frame.root.shift_on if @@active_instance[self.class].frame != nil
+    _obj.frame.root.shift_on if _obj.frame_visible?
     instances.each{|i|
-      i.frame.root.shift_off if i != @@active_instance[self.class] && i.frame != nil && i.frame.root != @@active_instance[self.class].frame.root
+      i.frame.root.shift_off if i != _obj && i.frame_visible? && i.frame != nil && i.frame.root != _obj.frame.root
     }
-    ActivateInstanceEvent.new(Arcadia.instance, 'name'=>self.name).go! if _raise_event
+    ActivateInstanceEvent.new(Arcadia.instance, 'name'=>_obj.name).go! if _raise_event
   end
 
   def activate_main
@@ -525,7 +534,9 @@ class ArcadiaExtPlus < ArcadiaExt
   def on_destroy_instance(_event)
     Arcadia.detach_listener(self)
     @arcadia.unregister(self)
-    @frames.each{|f| f.free }
+#    @frames.each{|f| f.free }
+    @frames.each_index{|i| destroy_frame(i)}
+    @frames.clear
   end
 
 #  def on_before_layout_raising_frame(_event)
@@ -535,14 +546,18 @@ class ArcadiaExtPlus < ArcadiaExt
 #  end
 
   def clean_instance
-    activate_main
-    @@instances[self.class].delete(self) if @@instances[self.class]
-    Arcadia.del_conf_group(Arcadia['conf'],@name)
-    Arcadia.del_conf_group(Arcadia['pers'],@name)
-    #del_from_conf_property("#{main_instance.name}.clones", @name)
-    main_instance.del_from_conf_property("clones", @name)
-    Arcadia.process_event(ClearCacheInstanceEvent.new(Arcadia.instance), [self])
-    Arcadia.process_event(DestroyInstanceEvent.new(Arcadia.instance), [self])
+    if main_instance?
+      @frames.each_index{|i| destroy_frame(i)}
+      @frames.clear
+    else
+      @@instances[self.class].delete(self) if @@instances[self.class]
+      Arcadia.del_conf_group(Arcadia['conf'],@name)
+      Arcadia.del_conf_group(Arcadia['pers'],@name)
+      main_instance.del_from_conf_property("clones", @name)
+      Arcadia.process_event(ClearCacheInstanceEvent.new(Arcadia.instance), [self])
+      Arcadia.process_event(DestroyInstanceEvent.new(Arcadia.instance), [self])
+      activate_main #if main_instance.frame_visible?
+    end
   end
 
   def deduplicate

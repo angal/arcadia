@@ -1024,7 +1024,12 @@ class Arcadia < TkApplication
 
 
   def Arcadia.dialog(_sender, _args=Hash.new)
-    _event = process_event(DialogEvent.new(_sender, _args))
+    _event = process_event(SystemDialogEvent.new(_sender, _args))
+    return _event.results[0].value if _event
+  end
+
+  def Arcadia.hinner_dialog(_sender, _args=Hash.new)
+    _event = process_event(HinnerDialogEvent.new(_sender, _args))
     return _event.results[0].value if _event
   end
 
@@ -1703,7 +1708,7 @@ class RunnerManager < TkFloatTitledFrame
       'compound'=>:left,
       'relief'=>'flat').pack('fill'=>'x','side' =>'left')
       _close_command = proc{
-        if (Arcadia.dialog(self, 'type'=>'yes_no',
+        if (Arcadia.hinner_dialog(self, 'type'=>'yes_no',
           'msg'=> Arcadia.text("main.d.confirm_delete_runner.msg", [_runner_hash[:name]]),
           'title' => Arcadia.text("main.d.confirm_delete_runner.title"),
           'level' => 'question')=='yes')
@@ -2390,38 +2395,59 @@ end
 
 
 class ArcadiaDialogManager
+  DialogParams = Struct.new("DialogParams",
+    :type,
+    :res_array,
+    :level,
+    :msg
+  )
+
   def initialize(_arcadia)
     @arcadia = _arcadia
     Arcadia.attach_listener(self, DialogEvent)
   end
 
+  def dialog_params(_event, check_type = true)
+    ret = DialogParams.new
+    if _event
+      ret.type = _event.type
+      if check_type && !_event.class::TYPE_PATTERNS.include?(_event.type)
+        ret.type = 'ok'
+      end
+      ret.res_array = ret.type.split('_')
+      if _event.level.nil? || _event.level.length == 0
+        ret.level = 'info'
+      else
+        ret.level = _event.level
+      end
+      if _event.msg && _event.msg.length > _event.class::MSG_MAX_CHARS
+        ret.msg = _event.msg[0.._event.class::MSG_MAX_CHARS]+' ...'
+      else
+        ret.msg = _event.msg
+      end
+    end
+    ret
+  end
+
   def on_dialog(_event)
-    type = _event.type
-    if !DialogEvent::TYPE_PATTERNS.include?(_event.type)
-      type = 'ok'
+    case _event
+      when SystemDialogEvent
+        do_system_dialog(_event)
+      when HinnerDialogEvent
+        do_hinner_dialog(_event)
     end
-    res_array = type.split('_')
-    if _event.level.nil? || _event.level.length == 0
-      icon = 'info'
-    else
-      icon = _event.level
-    end
-    tktype = type.gsub('_','').downcase
+  end
 
-    if _event.msg && _event.msg.length > 500
-      msg = _event.msg[0..500]+' ...'
-    else
-      msg = _event.msg
-    end
-
+  def do_system_dialog(_event)
+    par = dialog_params(_event)
+    tktype = par.type.gsub('_','').downcase
     tkdialog =  Tk::BWidget::MessageDlg.new(
-    'icon' => icon,
-    'bg' => Arcadia.conf('background'),
-    'fg' => Arcadia.conf('foreground'),
-    'type' => tktype,
-    'title' => _event.title,
-    'message' => msg)
-
+      'icon' => par.level,
+      'bg' => Arcadia.conf('background'),
+      'fg' => Arcadia.conf('foreground'),
+      'type' => tktype,
+      'title' => _event.title,
+    'message' => par.msg)
     tkdialog.configure('font'=>'courier 6')
     res = tkdialog.create
     if _event.level == 'error'
@@ -2431,9 +2457,44 @@ class ArcadiaDialogManager
         Arcadia.runtime_error_msg(_event.msg, _event.title)
       end
     end
-    _event.add_result(self, 'value'=>res_array[res.to_i])
+    _event.add_result(self, 'value'=>par.res_array[res.to_i])
   end
 
+  def do_hinner_dialog(_event)
+    par = dialog_params(_event, false)
+    dialog_frame = TkFrame.new(Arcadia.layout.base_frame, Arcadia.style('panel'))
+    dialog_frame.pack('side' =>'top','after'=>Arcadia.layout.root, 'anchor'=>'nw','fill'=>'x','padx'=>5, 'pady'=>5)
+    Tk::BWidget::Label.new(dialog_frame,
+      'text'=> par.msg,
+      'helptext'=> _event.msg,
+      'compound'=>:left,
+    'relief'=>'flat').pack('fill'=>'x','side' =>'left')
+    
+    res = nil
+    par.res_array.reverse_each{|value|
+      Tk::BWidget::Button.new(dialog_frame,
+        'command'=> proc{res = value},
+        'text'=> value.capitalize,
+        'helptext'=> value.capitalize,
+        'background'=>'white',
+  #      'image'=> Arcadia.image_res(TRASH_GIF),
+      'relief'=>'flat').pack('side' =>'right','padx'=>0)
+    }
+    
+    Tk.update
+    dialog_frame.grab("set")
+    begin
+      while res == nil do 
+        Tk.update
+        sleep(0.1) 
+      end
+    ensure
+      dialog_frame.grab("release")
+    end
+    dialog_frame.destroy
+    Tk.update
+    _event.add_result(self, 'value'=>res)
+  end
 
   def on_dialog_old(_event)
     type = _event.type
@@ -2461,18 +2522,26 @@ class ArcadiaLayout
   #    :frame,
   #    :ffw
   #  )
+  attr_reader :base_frame
+  
   HIDDEN_DOMAIN = '-1.-1'
   def initialize(_arcadia, _frame, _autotab=true)
     @arcadia = _arcadia
     @frames = Array.new
     @frames[0] = Array.new
-    @frames[0][0] = _frame
+    @base_frame = _frame
+    @content_frame = TkFrame.new(_frame).pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
+#    @dialog_frame = TkFrame.new(_frame)
+
+    @frames[0][0] = @content_frame
     # @domains = Array.new
     # @domains[0] = Array.new
     # @domains[0][0] = '_domain_root_'
+    
+    
     @panels = Hash.new
     @panels['_domain_root_']= Hash.new
-    @panels['_domain_root_']['root']= _frame
+    @panels['_domain_root_']['root']= @content_frame
     @panels['_domain_root_']['sons'] = Hash.new
     @panels['_domain_root_'][:raised_stack] = []
 
@@ -2484,7 +2553,7 @@ class ArcadiaLayout
     @splitters=Array.new
     @tabbed = Arcadia.conf('layout.tabbed')=='true'
   end
-
+  
   def root
     @panels['_domain_root_']['root']
   end
