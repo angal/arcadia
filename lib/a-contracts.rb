@@ -98,6 +98,11 @@ end
 class LayoutChangedFrameEvent < ArcadiaSysEvent
 end
 
+class LayoutChangedDomainEvent < ArcadiaSysEvent
+  attr_accessor :old_domain
+  attr_accessor :new_domain
+end
+
 #  +---------------------------------------------+
 #         Buffer event
 #  +---------------------------------------------+

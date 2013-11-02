@@ -1518,20 +1518,19 @@ class TkFloatTitledFrame < TkBaseTitledFrame
     frame.place('height'=>-32)
     borderwidth  2
     relief  'groove'
-
-    @right_label = TkLabel.new(@top, Arcadia.style('titlelabel')){
+    @left_label = TkLabel.new(@top, Arcadia.style('titlelabel')){
       anchor 'w'
-    }.pack('fill'=>'x', 'side'=>'top')
-    #.place('x'=>0, 'y'=>0,'relheight'=>1, 'relwidth'=>1 ,'width'=>-20)
-
+    }.place('x'=>0, 'y'=>0,'relheight'=>1, 'relwidth'=>1 ,'width'=>-20)
+    #.pack('fill'=>'x', 'side'=>'top')
     @resizing_label=TkLabel.new(self, Arcadia.style('label')){
       text '-'
       image Arcadia.image_res(EXPAND_LIGHT_GIF)
     }.pack('side'=> 'right','anchor'=> 's')
-    start_moving(@right_label, self)
+    start_moving(@left_label, self)
     start_moving(frame, self)
     start_resizing(@resizing_label, self)
     @grabbed = false
+    @event_loop = false
     #    frame.bind_append('KeyPress'){|e|
     #      p e.keysym
     #      case e.keysym
@@ -1544,7 +1543,7 @@ class TkFloatTitledFrame < TkBaseTitledFrame
   end
   
   def title(_text)
-    @right_label.text(_text)
+    @left_label.text(_text)
   end
 
   def on_close=(_proc)
@@ -1556,6 +1555,10 @@ class TkFloatTitledFrame < TkBaseTitledFrame
   end
 
   def hide
+    if @event_loop
+      Arcadia.detach_listener(self, ArcadiaEvent)
+      @event_loop = false
+    end
     @manager = TkWinfo.manager(self)
     if @manager == 'place'
       @x_place = TkPlace.info(self)['x']
@@ -1572,9 +1575,17 @@ class TkFloatTitledFrame < TkBaseTitledFrame
     self
   end
 
+  def on_arcadia(_e)
+    self.raise
+  end
+
   def show
     if @manager == 'place'
       self.place('x'=>@x_place, 'y'=>@y_place, 'width'=>@width_place, 'height'=>@height_place)
+    end
+    if @event_loop == false
+      Arcadia.attach_listener(self, ArcadiaEvent)
+      @event_loop = true
     end
     self.raise
   end

@@ -564,7 +564,7 @@ class Arcadia < TkApplication
     if @first_run
       myloc = nil
       begin
-        myloc = ENV["LANG"].split('.')[0].sub('_','-')
+        myloc = ENV["LANG"].split('.')[0].sub('_','-') if ENV["LANG"]
       rescue Exception => e
       end
       Arcadia.conf('locale', myloc) if myloc != nil
@@ -1980,7 +1980,17 @@ class ArcadiaProblemsShower
     @initialized = true
     if @problems.count > 0
       show_problems
-      @ff.show
+      Thread.new do
+        num_sleep = 0
+        while TkWinfo.viewable(Arcadia.layout.root) == false && num_sleep < 20
+          sleep(1)
+          num_sleep += 1
+        end
+        @ff.show
+      end
+#      p TkWinfo.viewable(Arcadia.layout.root)
+#      Tk.after(1000, proc{@ff.show; p TkWinfo.viewable(Arcadia.layout.root)})
+      
     end
   end
 
@@ -2471,11 +2481,13 @@ class ArcadiaDialogManager
   def do_hinner_dialog(_event)
     par = dialog_params(_event, false)
     dialog_frame = TkFrame.new(Arcadia.layout.base_frame, Arcadia.style('panel')){
-#      relief 'solid'
-#      borderwidth 1
+      #relief 'solid'
+      #borderwidth 3
+      highlightbackground Arcadia.conf('hightlight.link.foreground')
+      #highlightcolor 'red'
+      highlightthickness 1
     }
-    dialog_frame.pack('side' =>'top','after'=>Arcadia.layout.root, 'anchor'=>'nw','fill'=>'x', 'padx'=>5, 'pady'=>5)
-    
+    dialog_frame.pack('side' =>'top','after'=>Arcadia.layout.root, 'anchor'=>'nw','fill'=>'x', 'padx'=>0, 'pady'=>0)
     max_width = 0
     par.res_array.each{|v| 
       l = v.length
@@ -2488,14 +2500,14 @@ class ArcadiaDialogManager
         text value.capitalize
         helptext  value.capitalize
         width max_width*2
-      }.pack('side' =>'right','padx'=>0)
+      }.pack('side' =>'right','padx'=>5, 'pady'=>5)
     }
 
     Tk::BWidget::Label.new(dialog_frame,Arcadia.style('label')){
       text  par.msg
       helptext _event.msg
 #    }.pack('fill'=>'x','side' =>'left')
-    }.pack('side' =>'right','padx'=>10)
+    }.pack('side' =>'right','padx'=>5, 'pady'=>5)
 
 #    Tk::BWidget::Label.new(dialog_frame,Arcadia.style('label')){
 #      compound 'left'
@@ -2537,6 +2549,7 @@ end
 
 
 class ArcadiaLayout
+
   #  include Observable
   #  ArcadiaPanelInfo = Struct.new( "ArcadiaPanelInfo",
   #    :name,
@@ -2545,7 +2558,6 @@ class ArcadiaLayout
   #    :ffw
   #  )
   attr_reader :base_frame
-  
   HIDDEN_DOMAIN = '-1.-1'
   def initialize(_arcadia, _frame, _autotab=true)
     @arcadia = _arcadia
@@ -3045,7 +3057,6 @@ class ArcadiaLayout
     ret
   end
 
-
   def domains_on_frame(_frame)
     ret_doms = Array.new
     frame_found = false
@@ -3081,7 +3092,6 @@ class ArcadiaLayout
     end
     ret_doms
   end
-
 
   def find_splitted_frame(_start_frame)
     splitted_frame = _start_frame
@@ -3343,6 +3353,8 @@ class ArcadiaLayout
     end
     # refresh -----
     build_invert_menu
+    Tk.update
+    LayoutChangedDomainEvent.new(self, 'old_domain'=>source_domain, 'new_domain'=>_target_domain).go!
   end
 
   #  def change_domain_old(_dom1, _dom2, _name2)
@@ -3813,7 +3825,7 @@ class ArcadiaLayout
       dr,dc=d.split('.')
       if dc.to_i >= _c && dr.to_i == _r
         #shift_domain_column(_r,dc.to_i+1,_dom)
-        p "== #{d} --> #{domain_name(_r,dc.to_i+1)}"
+        #p "== #{d} --> #{domain_name(_r,dc.to_i+1)}"
         _dom[k]= domain_name(_r,dc.to_i+1)
       end
     }
@@ -3824,7 +3836,7 @@ class ArcadiaLayout
       dr,dc=d.split('.')
       if dr.to_i >= _r && dc.to_i == _c
         #shift_domain_row(dr.to_i+1,_c,_dom)
-        p "shift_domain_row == #{d} --> #{domain_name(dr.to_i+1,_c)}"
+        #p "shift_domain_row == #{d} --> #{domain_name(dr.to_i+1,_c)}"
         _dom[k]=domain_name(dr.to_i+1,_c)
       end
     }
