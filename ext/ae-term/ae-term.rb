@@ -21,6 +21,7 @@ class Term < ArcadiaExtPlus
         ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>Arcadia.text("ext.term.dependences_missing.xdotool.title"), "detail"=>msg).go!
       end
     end
+    @xterm_class_id = nil
   end
   
   def on_build(_event)
@@ -71,7 +72,10 @@ class Term < ArcadiaExtPlus
   end
   
   def xterm_class
-    "xarc#{instance_index}"
+    if @xterm_class_id.nil? 
+      @xterm_class_id = "xta#{Time.new.to_i}#{instance_index}"
+    end
+    @xterm_class_id
   end
   
   def do_run_xterm(_dir='~')
@@ -111,6 +115,9 @@ class Term < ArcadiaExtPlus
   end
   
   def do_xterm_exit
+    @bind_after_run = false
+    frame.hinner_frame.bind_remove("Configure")
+    frame.hinner_frame.bind_remove("Map")
     if main_instance?
       conf("create",'no')
 #      hide_frame

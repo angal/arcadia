@@ -285,7 +285,7 @@ class ArcadiaExt
   end
 
   def frame_visible?(_n=0)
-    @frames[_n] != nil && @frames[_n].hinner_frame && TkWinfo.mapped?(@frames[_n].hinner_frame)
+    @frames != nil && @frames[_n] != nil && @frames[_n].hinner_frame && TkWinfo.mapped?(@frames[_n].hinner_frame)
   end
 
   def frame(_n=0,create_if_not_exist=true)
@@ -462,7 +462,7 @@ class ArcadiaExtPlus < ArcadiaExt
     #@@active_instance[self.class].frame.root.shift_on if @@active_instance[self.class].frame != nil
     _obj.frame.root.shift_on if _obj.frame_visible?
     instances.each{|i|
-      i.frame.root.shift_off if i != _obj && i.frame_visible? && i.frame != nil && i.frame.root != _obj.frame.root
+      i.frame.root.shift_off if i != _obj  && i.frame != nil && i.frame.root != _obj.frame.root
     }
     ActivateInstanceEvent.new(Arcadia.instance, 'name'=>_obj.name).go! if _raise_event
   end
@@ -549,6 +549,12 @@ class ArcadiaExtPlus < ArcadiaExt
     if main_instance?
       @frames.each_index{|i| destroy_frame(i)}
       @frames.clear
+      instances.each{|i| 
+        if i != self
+          activate(i)
+          break
+        end
+      }
     else
       @@instances[self.class].delete(self) if @@instances[self.class]
       Arcadia.del_conf_group(Arcadia['conf'],@name)
@@ -1073,8 +1079,8 @@ class Application
     @@instance
   end
 
-  def Application.conf(_property)
-    @@instance['conf'][_property] if @@instance
+  def Application.conf(_property, _value=nil)
+    @@instance.conf(_property, _value) if @@instance
   end
 
   def Application.version
@@ -1085,7 +1091,10 @@ class Application
     @@instance.local_dir if @@instance
   end
 
-  def conf(_property)
+  def conf(_property, _value=nil)
+    if !_value.nil?
+      self['conf'][_property] = _value
+    end
     self['conf'][_property]
   end
 
@@ -1217,7 +1226,13 @@ class Application
   def load_theme(_name=nil)
     _theme_file = "conf/theme-#{_name}.conf" if !_name.nil?
     if _theme_file && File.exist?(_theme_file)
-      self['conf_theme'] = self.properties_file2hash(_theme_file)
+      thash = self.properties_file2hash(_theme_file)
+      if thash.has_key?('parent')
+        load_theme(thash['parent'])
+        self['conf_theme'].update(thash)
+      else
+        self['conf_theme'] = thash
+      end
       self['conf'].update(self['conf_theme'])
       self['conf_without_local'].update(self['conf_theme'])
       _theme_res_file = "#{Dir.pwd}/conf/theme-#{_name}.res.rb"

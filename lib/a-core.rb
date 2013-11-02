@@ -561,6 +561,14 @@ class Arcadia < TkApplication
     self.load_local_config(false)
     # local config can contain loading conditions
     self.load_exts_conf
+    if @first_run
+      myloc = nil
+      begin
+        myloc = ENV["LANG"].split('.')[0].sub('_','-')
+      rescue Exception => e
+      end
+      Arcadia.conf('locale', myloc) if myloc != nil
+    end
     self.load_local_config
     self.load_theme(self['conf']['theme'])
     self.resolve_properties_link(self['conf'],self['conf'])
@@ -2462,24 +2470,38 @@ class ArcadiaDialogManager
 
   def do_hinner_dialog(_event)
     par = dialog_params(_event, false)
-    dialog_frame = TkFrame.new(Arcadia.layout.base_frame, Arcadia.style('panel'))
-    dialog_frame.pack('side' =>'top','after'=>Arcadia.layout.root, 'anchor'=>'nw','fill'=>'x','padx'=>5, 'pady'=>5)
-    Tk::BWidget::Label.new(dialog_frame,
-      'text'=> par.msg,
-      'helptext'=> _event.msg,
-      'compound'=>:left,
-    'relief'=>'flat').pack('fill'=>'x','side' =>'left')
+    dialog_frame = TkFrame.new(Arcadia.layout.base_frame, Arcadia.style('panel')){
+#      relief 'solid'
+#      borderwidth 1
+    }
+    dialog_frame.pack('side' =>'top','after'=>Arcadia.layout.root, 'anchor'=>'nw','fill'=>'x', 'padx'=>5, 'pady'=>5)
     
+    max_width = 0
+    par.res_array.each{|v| 
+      l = v.length
+      max_width = l if l > max_width
+    }
     res = nil
     par.res_array.reverse_each{|value|
-      Tk::BWidget::Button.new(dialog_frame,
-        'command'=> proc{res = value},
-        'text'=> value.capitalize,
-        'helptext'=> value.capitalize,
-        'background'=>'white',
-  #      'image'=> Arcadia.image_res(TRASH_GIF),
-      'relief'=>'flat').pack('side' =>'right','padx'=>0)
+      Tk::BWidget::Button.new(dialog_frame, Arcadia.style('button')){
+        command proc{res = value}
+        text value.capitalize
+        helptext  value.capitalize
+        width max_width*2
+      }.pack('side' =>'right','padx'=>0)
     }
+
+    Tk::BWidget::Label.new(dialog_frame,Arcadia.style('label')){
+      text  par.msg
+      helptext _event.msg
+#    }.pack('fill'=>'x','side' =>'left')
+    }.pack('side' =>'right','padx'=>10)
+
+#    Tk::BWidget::Label.new(dialog_frame,Arcadia.style('label')){
+#      compound 'left'
+#      Tk::Anigif.image(self, "#{Dir.pwd}/ext/ae-subprocess-inspector/process.res")
+#    }.pack('side' =>'right','padx'=>10)
+
     
     Tk.update
     dialog_frame.grab("set")

@@ -956,7 +956,11 @@ class TkBaseTitledFrame < TkFrame
   end
 
   def visible?
-    TkWinfo.mapped?(self)
+    ret = false
+    begin
+      ret = TkWinfo.mapped?(self)
+    rescue Exception => e
+    end
   end
 end
 
