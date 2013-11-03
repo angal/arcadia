@@ -1364,8 +1364,8 @@ class ArcadiaMainToolbar < ArcadiaUserControl
       @item_obj = Tk::BWidget::Button.new(_args['frame'], Arcadia.style('toolbarbutton')){
         image  _image if _image
         command _command if _command
-        width 20
-        height 20
+        width 23
+        height 23
         helptext  _hint if _hint
         text _caption if _caption
       }

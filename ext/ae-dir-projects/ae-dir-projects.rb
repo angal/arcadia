@@ -152,7 +152,7 @@ class DirProjects < ArcadiaExtPlus
       crosscloseimage  Arcadia.image_res(PLUS_GIF)
       crossopenimage  Arcadia.image_res(MINUS_GIF)
     }
-    @htree.extend(TkScrollableWidget).show(0,22)
+    @htree.extend(TkScrollableWidget).show(0,24)
     self.pop_up_menu_tree
     @image_kdir = Arcadia.image_res(ICON_FOLDER_OPEN_GIF)
     @image_kdir_closed = Arcadia.image_res(FOLDER_GIF)

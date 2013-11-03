@@ -1,8 +1,8 @@
 = Arcadia Ide
-version 0.13.0
+version 0.13.1
 
 by Antonio Galeone
-on Jul 24, 2013
+on Nov 3, 2013
 
 == About
 
@@ -29,6 +29,11 @@ can be install ActiveTcl 8.5 and use ruby via rvm.
 https://github.com/angal/arcadia/wiki
 
 == News
+
+[0.13.1]
+    This realease:
+  - added Russian translation (Thanks to Michael)
+  - bug fixes and various improvements
 
 [0.13.0]
     This realease:

@@ -4,26 +4,28 @@
 require 'rubygems'
   SPEC = Gem::Specification.new do |s|
   s.name = "arcadia"
-  s.version = "0.13.0"
-  s.date = "2013-07-24"
+  s.version = "0.13.1"
+  s.date = "2013-11-03"
   s.author = "Antonio Galeone"
   s.email = "antonio-galeone@rubyforge.org"
   s.homepage = "http://arcadia.rubyforge.org"
-  s.rubyforge_project = "arcadia"  
+  s.rubyforge_project = "arcadia"
+  s.license = 'Ruby'
   s.platform = Gem::Platform::RUBY
   s.description = "Arcadia Ide"
   s.summary = "Light Editor Ide written in Ruby using the classic tcl/tk GUI toolkit."
-    candidates = Dir.glob("{lib,ext/*,tcl}/**/*")
-    candidates << "README"
-    candidates << "bin/arcadia"
-    candidates << "bin/arcadia.bat"
-    candidates << "bin/arc"
-    candidates << "conf/arcadia.conf"
-    candidates << "conf/arcadia.init.rb"
-    candidates << "conf/arcadia.res.rb"
-    candidates << "conf/theme-dark.conf"
-    candidates << "conf/theme-dark.res.rb"
-    candidates << "conf/LC/en-UK.LANG"
+  candidates = Dir.glob("{lib,ext/*,tcl}/**/*")
+  candidates << "README"
+  candidates << "bin/arcadia"
+  candidates << "bin/arcadia.bat"
+  candidates << "bin/arc"
+  candidates << "conf/arcadia.conf"
+  candidates << "conf/arcadia.init.rb"
+  candidates << "conf/arcadia.res.rb"
+  candidates << "conf/theme-dark.conf"
+  candidates << "conf/theme-dark.res.rb"
+  candidates << "conf/LC/en-UK.LANG"
+  candidates << "conf/LC/ru-RU.LANG"
   s.files =  candidates.delete_if do |item|
       item.include?("CVS") || item.include?("rdoc")|| item.include?("cvs")|| item.include?(".git")
   end
