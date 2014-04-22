@@ -24,7 +24,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '0.13.1',
+        '1.0.0',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -1841,7 +1841,7 @@ class ArcadiaAboutSplash < TkToplevel
       place('x' => 100,'y' => 65,'height' => 19)
     }
     @tkLabel21 = TkLabel.new(self){
-      text  Arcadia.text("main.about.by", ['Antonio Galeone - 2004/2013'])
+      text  Arcadia.text("main.about.by", ['Antonio Galeone - 2004/2014'])
       background  _bgcolor
       foreground  '#ffffff'
       font Arcadia.instance['conf']['splash.credits.font']

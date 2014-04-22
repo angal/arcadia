@@ -257,7 +257,7 @@ class FilesHistrory < ArcadiaExt
           bookmark = {:file=>"__TMP__#{_event.id}"}
           caption = _event.id
         end
-        caption = "#{caption} [#{_event.from_row}, #{_event.to_row}]"
+        caption = (_event.from_row == _event.to_row) ? "#{caption} [#{_event.from_row}] #{_event.content.strip if _event.content}":"#{caption} [#{_event.from_row}, #{_event.to_row}] #{str=_event.content.split("\n")[0] if _event.content;str.strip if str}"
         bookmark[:from_line] = _event.from_row
         bookmark[:to_line] = _event.to_row
         bookmark[:persistent] = _event.persistent

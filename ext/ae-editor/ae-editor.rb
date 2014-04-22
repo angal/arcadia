@@ -370,6 +370,7 @@ class RubySourceStructure < SourceStructure
 end
 
 class CompleteCode
+  LEFT_CHARS=['"','(','[','{',"'",'=','>','<',"\\","/",":","+","-"]
   attr_reader :filter
   def initialize(_editor, _row, _col)
     @editor = _editor
@@ -389,7 +390,8 @@ class CompleteCode
       focus_segment = focus_segment[0..-2]
     end
     j = focus_segment.length - 1
-    while !["\s","\t",";",",","(","[","{",">"].include?(char) && j >= 0
+    
+    while !LEFT_CHARS.include?(char) && j >= 0
       focus_world = "#{char}#{focus_world}"
       j=j-1
       char = focus_segment[j..j]
@@ -433,14 +435,14 @@ class CompleteCode
 
   def refresh_words
     @words.clear
-    _re = /[\s\t\n"'(\[\{=><]#{@filter}[a-zA-Z0-9\-_]*/
+    _re = /[\s\t\n"'(\[\{=><\\\/\:\+\-]#{@filter}[a-zA-Z0-9\-_]*/
     m = _re.match(@source)
     while m && (_txt=m.post_match)
       can = m[0].strip
       if can.include?(' ')
         can = can.split[1].strip
       end
-      if  ['"','(','[','{',"'",'=','>','<'].include?(can[0..0])
+      if  LEFT_CHARS.include?(can[0..0])
         can = can[1..-1].strip
       end
       @words << can if can != @filter && !@words.include?(can)
@@ -1084,13 +1086,15 @@ class AgEditorOutline
       elsif _son.kind == 'singleton method'
           _image = @image_singleton_method
       end
-      @tree_exp.insert('end', _son.parent.rif ,_son.rif, {
-        'text' =>  _son.label ,
-        'helptext' => _son.helptext,
-        #'font'=>$arcadia['conf']['editor.explorer_panel.tree.font'],
-        'image'=> _image
-      }.update(Arcadia.style('treeitem'))
+      if !@tree_exp.exist?(_son.rif)
+        @tree_exp.insert('end', _son.parent.rif ,_son.rif, {
+          'text' =>  _son.label ,
+          'helptext' => _son.helptext,
+          #'font'=>$arcadia['conf']['editor.explorer_panel.tree.font'],
+          'image'=> _image
+        }.update(Arcadia.style('treeitem'))
       )
+      end
       if (_label_match) && (_label_match.strip == _son.label.strip)
         @selected = _son
       end
