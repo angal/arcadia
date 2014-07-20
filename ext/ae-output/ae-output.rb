@@ -144,7 +144,8 @@ class OutputView
   end
 
   def save_as
-    @file = Tk.getSaveFile("filetypes"=>[["Ruby Files", [".rb", ".rbw"]],["All Files", [".*"]]])
+    @file = Arcadia.save_file_dialog
+    #Tk.getSaveFile("filetypes"=>[["Ruby Files", [".rb", ".rbw"]],["All Files", [".*"]]])
     @file = nil if @file == ""  # cancelled
     if @file
       save

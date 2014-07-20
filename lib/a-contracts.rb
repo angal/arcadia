@@ -379,7 +379,6 @@ end
 class HinnerDialogEvent < DialogEvent
 end
 
-
 #class QuestionDialogEvent < DialogEvent
 #end
 #

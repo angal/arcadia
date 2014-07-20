@@ -1115,8 +1115,16 @@ class Arcadia < TkApplication
     end
   end
 
-  def Arcadia.open_file_dialog
+  def Arcadia.open_system_file_dialog
     Tk.getOpenFile 'initialdir' => MonitorLastUsedDir.get_last_dir
+  end
+
+  def Arcadia.open_file_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir)
+    HinnerFileDialog.new.file(_initial_dir)
+  end
+
+  def Arcadia.save_file_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir)
+    HinnerFileDialog.new(HinnerFileDialog::SAVE_FILE_MODE).file(_initial_dir)
   end
 
   def Arcadia.is_windows?
@@ -1863,7 +1871,7 @@ class ArcadiaAboutSplash < TkToplevel
     @tkLabelStep = TkLabel.new(self){
       text  ''
       background  _bgcolor
-      foreground  'yellow'
+      foreground  '#666666'
       font Arcadia.instance['conf']['splash.banner.font']
       justify  'left'
       anchor  'w'
@@ -1947,6 +1955,218 @@ class ArcadiaAboutSplash < TkToplevel
     @progress.numeric = @max
     labelStep(_txt) if _txt
     Arcadia.detach_listener(self, ArcadiaProblemEvent)
+  end
+end
+
+class ArcadiaProblemsShowerNew
+  def initialize(_arcadia)
+    @arcadia = _arcadia
+    @created = false
+    @initialized = false
+    @toolbar_created = false
+    #@visible = false
+    @problems = Array.new
+    @seq = 0
+    @dmc=0
+    @rec=0
+    Arcadia.attach_listener(self, ArcadiaProblemEvent)
+    Arcadia.attach_listener(self, InitializeEvent)
+  end
+
+  def on_arcadia_problem(_event)
+    @problems << _event
+    if @initialized
+      if !@created
+        show_problems
+      else
+        append_problem(_event)
+        @b_err.configure('text'=> button_text)
+      end
+    end
+  end
+
+  def on_after_initialize(_event)
+    @initialized = true
+    if @problems.count > 0
+      Thread.new do
+        num_sleep = 0
+        while TkWinfo.viewable(Arcadia.layout.root) == false && num_sleep < 20
+          sleep(1)
+          num_sleep += 1
+        end
+        show_problems
+      end
+#      p TkWinfo.viewable(Arcadia.layout.root)
+#      Tk.after(1000, proc{@ff.show; p TkWinfo.viewable(Arcadia.layout.root)})
+      
+    end
+  end
+
+  def show_problems
+    begin
+      add_toolbar_button if !@toolbar_created 
+      create_dialog
+      @problems.each{|e|
+        append_problem(e)
+      }
+      if @tree.exist?('dependences_missing_node')
+        @tree.open_tree('dependences_missing_node', true)
+      end
+      if @tree.exist?('runtime_error_node')
+        @tree.open_tree('runtime_error_node', true)
+      end
+      @created=true
+    rescue RuntimeError => e
+      Arcadia.detach_listener(self, ArcadiaProblemEvent)
+      Arcadia.detach_listener(self, InitializeEvent)
+    end
+  end
+
+  def button_text
+    @problems.count > 1 ? Arcadia.text("main.ps.problems", [@problems.count]) : Arcadia.text("main.ps.problem", [@problems.count])
+  end
+
+  def error_frame (_parent)
+    @tree = BWidgetTreePatched.new(_parent, Arcadia.style('treepanel')){
+      showlines false
+      deltay 22
+      # opencmd do_open_folder_cmd
+      # closecmd do_close_folder_cmd
+      # selectcommand do_select_item
+      # crosscloseimage  TkPhotoImage.new('dat' => PLUS_GIF)
+      # crossopenimage  TkPhotoImage.new('dat' => MINUS_GIF)
+    }
+    @tree.extend(TkScrollableWidget).show(0,0)
+
+    do_double_click = proc{
+      _selected = @tree.selected
+      _selected_text = @tree.itemcget(_selected, 'text')
+      if _selected_text
+        _file, _row, _other = _selected_text.split(':')
+        if File.exist?(_file)
+          begin
+            r = _row.strip.to_i
+            integer = true
+          rescue Exception => e
+            integer = false
+          end
+          if integer
+            OpenBufferTransientEvent.new(self,'file'=>_file, 'row'=>r).go!
+          end
+        end
+      end
+    }
+    @tree.textbind_append('Double-1',do_double_click)
+  end
+  
+  def create_dialog
+    param =  HinnerDialogWithButtons::DialogParams.new
+    param.type = 'ok'
+    param.res_array = ['Pippo']
+    param.level = 'error'
+    dialog =  HinnerDialogWithButtons.new(param)
+    frame = dialog.new_frame('top')
+    error_frame(frame)
+    dialog.show_modal
+    dialog.destroy
+  end
+
+  def add_toolbar_button
+    b_style = Arcadia.style('toolbarbutton')
+    b_style["relief"]='groove'
+    #    b_style["borderwidth"]=2
+    b_style["highlightbackground"]='red'
+
+    b_text = button_text
+    
+    b_proc = proc{ create_dialog }
+  
+    @b_err = Tk::BWidget::Button.new(@arcadia['toolbar'].frame, b_style){
+      image  Arcadia.image_res(ALERT_GIF)
+      compound 'left'
+      padx  2
+      command b_proc
+      text b_text
+    }.pack('side' =>'left','before'=>@arcadia['toolbar'].items.values[0].item_obj, :padx=>2, :pady=>0)
+    @toolbar_created = true
+
+  end
+
+
+  def new_sequence_value
+    @seq+=1
+  end
+
+  def append_problem(e)
+    parent_node='root'
+    case e.type
+    when ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE
+      parent_node='dependences_missing_node'
+      text = Arcadia.text("main.ps.dependences_missing")
+      if !@tree.exist?(parent_node)
+        @tree.insert('end', 'root' ,parent_node, {
+          'text' =>  text ,
+          'helptext' => text,
+          'drawcross'=>'auto',
+          'deltax'=>-1,
+          'image'=> Arcadia.image_res(BROKEN_GIF)
+        }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
+        )
+
+      end
+      @dmc+=1
+      @tree.itemconfigure('dependences_missing_node','text'=>"#{text} (#{@dmc})" )
+    when ArcadiaProblemEvent::RUNTIME_ERROR_TYPE
+      parent_node='runtime_error_node'
+      text = Arcadia.text("main.ps.runtime_errors")
+      if !@tree.exist?(parent_node)
+        @tree.insert('end', 'root' ,parent_node, {
+          'text' =>  text ,
+          'helptext' => text,
+          'drawcross'=>'auto',
+          'deltax'=>-1,
+          'image'=> Arcadia.image_res(ERROR_GIF)
+        }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
+        )
+      end
+      @rec+=1
+      @tree.itemconfigure('runtime_error_node','text'=>"#{text} (#{@rec})" )
+    end
+    title_node="node_#{new_sequence_value}"
+    detail_node="detail_of_#{title_node}"
+
+    @tree.insert('end', parent_node ,title_node, {
+      'text' =>  e.title ,
+      'helptext' => e.title,
+      'drawcross'=>'auto',
+      'deltax'=>-1,
+      'image'=> Arcadia.image_res(ITEM_GIF)
+    }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
+    )
+    if e.detail.kind_of?(Array)
+      e.detail.each_with_index{|line,i|
+        @tree.insert('end', title_node , "#{detail_node}_#{i}" , {
+          'text' =>  line ,
+          'helptext' => i.to_s,
+          'drawcross'=>'auto',
+          'deltax'=>-1,
+          'image'=> Arcadia.image_res(ITEM_DETAIL_GIF)
+        }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
+        )
+
+      }
+    else
+      @tree.insert('end', title_node , detail_node , {
+        'text' =>  e.detail ,
+        'helptext' => e.title,
+        'drawcross'=>'auto',
+        'deltax'=>-1,
+        'image'=> Arcadia.image_res(ITEM_DETAIL_GIF)
+      }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
+      )
+    end
+
+
   end
 end
 
@@ -2165,6 +2385,7 @@ class ArcadiaProblemsShower
 
   end
 end
+
 
 class ArcadiaActionDispatcher
 
@@ -2411,7 +2632,6 @@ class ArcadiaGemsWizard
 
 end
 
-
 class ArcadiaDialogManager
   DialogParams = Struct.new("DialogParams",
     :type,
@@ -2480,14 +2700,7 @@ class ArcadiaDialogManager
 
   def do_hinner_dialog(_event)
     par = dialog_params(_event, false)
-    dialog_frame = TkFrame.new(Arcadia.layout.base_frame, Arcadia.style('panel')){
-      #relief 'solid'
-      #borderwidth 3
-      highlightbackground Arcadia.conf('hightlight.link.foreground')
-      #highlightcolor 'red'
-      highlightthickness 1
-    }
-    dialog_frame.pack('side' =>'top','after'=>Arcadia.layout.root, 'anchor'=>'nw','fill'=>'x', 'padx'=>0, 'pady'=>0)
+    dialog_frame = HinnerDialog.new
     max_width = 0
     par.res_array.each{|v| 
       l = v.length
@@ -2496,7 +2709,7 @@ class ArcadiaDialogManager
     res = nil
     par.res_array.reverse_each{|value|
       Tk::BWidget::Button.new(dialog_frame, Arcadia.style('button')){
-        command proc{res = value}
+        command proc{res = value;dialog_frame.release}
         text value.capitalize
         helptext  value.capitalize
         width max_width*2
@@ -2506,27 +2719,14 @@ class ArcadiaDialogManager
     Tk::BWidget::Label.new(dialog_frame,Arcadia.style('label')){
       text  par.msg
       helptext _event.msg
-#    }.pack('fill'=>'x','side' =>'left')
     }.pack('side' =>'right','padx'=>5, 'pady'=>5)
 
-#    Tk::BWidget::Label.new(dialog_frame,Arcadia.style('label')){
-#      compound 'left'
-#      Tk::Anigif.image(self, "#{Dir.pwd}/ext/ae-subprocess-inspector/process.res")
-#    }.pack('side' =>'right','padx'=>10)
+    Tk::BWidget::Label.new(dialog_frame,Arcadia.style('label')){
+      compound 'left'
+      Tk::Anigif.image(self, "#{Dir.pwd}/ext/ae-subprocess-inspector/process.res")
+    }.pack('side' =>'right','padx'=>10)
 
-    
-    Tk.update
-    dialog_frame.grab("set")
-    begin
-      while res == nil do 
-        Tk.update
-        sleep(0.1) 
-      end
-    ensure
-      dialog_frame.grab("release")
-    end
-    dialog_frame.destroy
-    Tk.update
+    dialog_frame.show_modal
     _event.add_result(self, 'value'=>res)
   end
 

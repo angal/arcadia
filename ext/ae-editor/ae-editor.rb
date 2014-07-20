@@ -783,6 +783,7 @@ end
 
 
 class TkTextListBox < TkText
+  SEP = '@@@'
   def initialize(parent=nil, keys={})
     super(parent, keys)
     wrap  'none'
@@ -795,13 +796,16 @@ class TkTextListBox < TkText
     self.bind_append("ButtonPress-1", proc{|x,y| button_press(x,y)}, "%x %y")
   end  
   
+  def length
+    @count
+  end
 
   def insert(index, chars, *tags)
     super(index, chars, *tags)
   end  
   
   def add(chars)
-    meth_str, class_str = chars.split('-')
+    meth_str, class_str = chars.split(TkTextListBox::SEP)
     if meth_str && meth_str.strip.length>0 && class_str
       insert('end', "#{meth_str}")
       insert('end', "-#{class_str}\n", 'class')
@@ -1510,7 +1514,7 @@ class AgEditor
                 end
                 
                 if _key && _class && _key.strip.length > 0 && _class.strip.length > 0 
-                  _item = "#{_key.strip} - #{_class.strip}"
+                  _item = "#{_key.strip} #{TkTextListBox::SEP} #{_class.strip}"
                 elsif _key && _key.strip.length > 0
                   _item = "#{_key.strip}"
                 else
@@ -1542,7 +1546,12 @@ class AgEditor
               @raised_listbox_frame.destroy
               #_menu.destroy
               @text.focus
-              @text.delete("#{begin_index_for_complete} wordstart",'insert')
+              if @text.get("#{begin_index_for_complete} linestart", "#{begin_index_for_complete} wordstart").strip == "" ||
+                 @text.get("#{begin_index_for_complete} wordstart", "#{begin_index_for_complete} wordstart + 1 chars") != " "
+                @text.delete("#{begin_index_for_complete} wordstart",'insert')
+              else 
+                @text.delete("#{begin_index_for_complete} wordstart + 1 chars",'insert')
+              end
               # workaround for @ char
               _value = _value.strip
               if _value[0..0] !=_target[0..0] && _value[1..1] == _target[0..0]
@@ -1750,7 +1759,7 @@ class AgEditor
         else
           _dir = MonitorLastUsedDir.get_last_dir
         end
-        Arcadia.process_event(OpenBufferEvent.new(self,'file'=>Tk.getOpenFile('initialdir'=>_dir)))
+        Arcadia.process_event(OpenBufferEvent.new(self,'file'=>Arcadia.open_file_dialog(_dir)))
         break
       when 's'
         save
@@ -2531,7 +2540,8 @@ class AgEditor
         if _r.length>0
           _data=@text.get(_r[0][0],_r[0][1])
           if _data.length > 0
-            file = Tk.getSaveFile("filetypes"=>[["Image", [".gif"]],["All Files", [".*"]]])
+            file = Arcadia.save_file_dialog
+            #Tk.getSaveFile("filetypes"=>[["Image", [".gif"]],["All Files", [".*"]]])
             if file
               require 'base64'
               decoded = Base64.decode64(_data)
@@ -3306,7 +3316,8 @@ class AgEditor
   end
 
   def save_as
-    file = Tk.getSaveFile("filetypes"=>[["Ruby Files", [".rb", ".rbw"]],["All Files", [".*"]]])
+    file = Arcadia.save_file_dialog
+    #Tk.getSaveFile("filetypes"=>[["Ruby Files", [".rb", ".rbw"]],["All Files", [".*"]]])
     file = nil if file == ""  # cancelled
     if file
       new_file_name(file)
@@ -3374,9 +3385,8 @@ class AgEditor
         ftime = File.mtime(@file)
         if @file_info['mtime'] != ftime
           msg = Arcadia.text('ext.editor.text.d.file_changed.msg', [@file])
-          ans = Tk.messageBox('icon' => 'error', 'type' => 'yesno',
-            'title' => Arcadia.text('ext.editor.text.d.file_changed.title'), 'parent' => @text,
-            'message' => msg)
+          title = Arcadia.text('ext.editor.text.d.file_changed.title')
+          ans = Arcadia.hinner_dialog(self, 'type'=>'yes_no', 'msg'=> msg, 'title' => title, 'level' => 'error')
           if ans == 'yes'
             reload
           else
@@ -3385,9 +3395,8 @@ class AgEditor
         end
       elsif !file_exist
         msg = Arcadia.text('ext.editor.text.d.file_deleted.msg', [@file])
-        if Tk.messageBox('icon' => 'error', 'type' => 'yesno',
-          'title' => Arcadia.text('ext.editor.text.d.file_deleted.title'), 'parent' => @text,
-          'message' => msg) == 'yes'
+        title = Arcadia.text('ext.editor.text.d.file_deleted.title')
+        if Arcadia.hinner_dialog(self, 'type'=>'yes_no', 'msg'=> msg, 'title' => title, 'level' => 'error')  == 'yes'
           save
         else
           @file = nil

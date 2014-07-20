@@ -2175,3 +2175,415 @@ class KeyTest < TkFloatTitledFrame
     place('x'=>100,'y'=>100,'height'=> 220,'width'=> 500)
   end
 end
+
+class HinnerDialog < TkFrame
+  def initialize(side='top',args=nil)
+    newargs =  Arcadia.style('panel').update({
+      "highlightbackground" => Arcadia.conf('hightlight.link.foreground'),
+      "highlightthickness" => 1
+    })
+    if !args.nil?
+      newargs.update(args) 
+    end
+    super(Arcadia.layout.base_frame, newargs)
+    case side
+      when 'top'
+        self.pack('side' =>side,'before'=>Arcadia.layout.root, 'anchor'=>'nw','fill'=>'x', 'padx'=>0, 'pady'=>0)
+      when 'bottom'
+        self.pack('side' =>side,'after'=>Arcadia.layout.root, 'anchor'=>'nw','fill'=>'x', 'padx'=>0, 'pady'=>0)
+    end
+    @modal = false
+  end
+  
+  def is_modal?
+    @modal
+  end
+  
+  def release
+    @modal=false
+  end
+  
+  def show_modal(_destroy=true)
+    @modal=true
+    Tk.update
+    self.grab("set")
+    begin
+      while is_modal? do 
+        Tk.update
+        sleep(0.1) 
+      end
+    ensure
+      self.grab("release")
+    end
+    Tk.update
+    self.destroy if _destroy
+  end
+end
+
+class HinnerFileDialog < HinnerDialog
+  SELECT_FILE_MODE=0
+  SAVE_FILE_MODE=1
+  SELECT_DIR_MODE=2
+  def initialize(mode=SELECT_FILE_MODE ,side='top',args=nil)
+    super(side, args)
+    @mode = mode
+    build_gui
+    @closed = false
+  end
+  
+  def build_gui
+    @font = Arcadia.conf('edit.font')
+    @font_bold = "#{Arcadia.conf('edit.font')} bold"
+    @font_metrics = TkFont.new(@font).metrics
+    @font_metrics_bold = TkFont.new(@font_bold).metrics
+    @dir_text = TkText.new(self, Arcadia.style('text').update({"height"=>'1',"highlightcolor"=>Arcadia.conf('panel.background'), "bg"=>Arcadia.conf('panel.background')})).pack('side' =>'left','padx'=>5, 'pady'=>5, 'fill'=>'x', 'expand'=>'1')
+    #{"bg"=>'white', "height"=>'1', "borderwidth"=>0, 'font'=>@font}
+    @dir_text.bind_append("Enter", proc{ @dir_text.set_insert("end")})
+    #@dir_text.tag_configure("entry",'foreground'=> "red",'borderwidth'=>0, 'relief'=>'flat',  'underline'=>true)
+
+    @tag_file_exist = "file_exist"
+    @dir_text.tag_configure(@tag_file_exist,'background'=> Arcadia.conf("hightlight.selected.background"), 'borderwidth'=>0, 'relief'=>'flat', 'underline'=>true)
+    
+    @tag_selected = "link_selected"
+    @dir_text.tag_configure(@tag_selected,'borderwidth'=>0, 'relief'=>'flat', 'underline'=>true)
+    @dir_text.tag_bind(@tag_selected,"ButtonRelease-1",  proc{ 
+       self.release
+    } )
+    @dir_text.tag_bind(@tag_selected,"Enter", proc{@dir_text.configure('cursor'=> 'hand2')})
+    @dir_text.tag_bind(@tag_selected,"Leave", proc{@dir_text.configure('cursor'=> @cursor)})
+    _self=self
+    @dir_text.bind_append('KeyPress'){|e|
+      case e.keysym
+      when 'Escape','Tab'
+        i1 = @dir_text.index("insert")
+        raise_candidates(i1, @dir_text.get("#{i1} linestart", i1))
+      when "Return"
+        _self.release
+      end
+    }   
+    #if @mode == SAVE_FILE_MODE
+      @dir_text.bind_append('KeyRelease'){|e|
+        case e.keysym
+        when 'Escape','Tab', "Return"
+        else
+          @dir_text.tag_remove(@tag_selected,'1.0','end')
+          i1 = @dir_text.index("insert - 1 chars wordstart")
+          while @dir_text.get("#{i1} -1 chars",i1) != File::SEPARATOR && @dir_text.get("#{i1} - 1 chars",i1) != ""
+            i1 = @dir_text.index("#{i1} - 1 chars")
+          end
+          i2 = @dir_text.index("insert")
+          
+          @dir_text.tag_add(@tag_selected ,i1,i2) if @mode == SAVE_FILE_MODE
+          
+          if File.exists?(@dir_text.get('1.0',i2))
+            @dir_text.tag_add(@tag_file_exist ,i1,i2)
+            @dir_text.tag_add(@tag_selected ,i1,i2) if @mode == SELECT_FILE_MODE && File.ftype(@dir_text.get('1.0',i2)) == 'file'
+          else
+            @dir_text.tag_remove(@tag_file_exist,'1.0','end')
+          end
+        end
+      }   
+    #end
+
+    @select_button = Tk::BWidget::Button.new(self, Arcadia.style('toolbarbutton')){
+      command proc{_self.close}
+      image Arcadia.image_res(CLOSE_FRAME_GIF)
+    }.pack('side' =>'right','padx'=>5, 'pady'=>0)
+
+    
+  end
+  
+  def file(_dir)
+    set_dir(_dir)
+    show_modal(false)
+    if @closed == false
+      file_selected = @dir_text.get("0.1","end").strip
+      destroy  
+      file_selected
+    end
+  end
+  
+  def close
+    @closed=true
+    self.release
+    destroy  
+  end
+  
+  def set_dir(_dir)
+    _dir=Dir.pwd if !File.exists?(_dir)
+    #load_from_dir(_dir)
+    @dir_text.state("normal")
+    @dir_text.delete("0.1","end")
+    @cursor =  @dir_text.cget('cursor')
+    dir_seg = _dir.split(File::SEPARATOR)
+    incr_dir = ""
+    get_dir = proc{|i| 
+      res = ""
+      0.upto(i){|j|
+         if res == File::SEPARATOR
+          res=res+dir_seg[j]
+         elsif res.length == 0 && dir_seg[j].length == 0
+          res=File::SEPARATOR+dir_seg[j]
+         elsif res.length == 0 && dir_seg[j].length > 0
+          res=dir_seg[j]
+         else
+          res=res+File::SEPARATOR+dir_seg[j]
+         end
+      }
+      is_dir = File.ftype(res) == "directory"
+      res=res+File::SEPARATOR if is_dir && res[-1..-1]!=File::SEPARATOR
+      res
+    }
+    
+    dir_seg.each_with_index{|seg,i|
+      tag_name = "link#{i}"
+      @dir_text.tag_configure(tag_name,'foreground'=> Arcadia.conf('hightlight.link.foreground'),'borderwidth'=>0, 'relief'=>'flat', 'underline'=>true)
+
+      dir = get_dir.call(i)
+      if File.ftype(dir) == "directory"
+        @dir_text.insert("end", seg, tag_name)
+        @dir_text.insert("end", "#{File::SEPARATOR}")
+        @dir_text.tag_bind(tag_name,"ButtonRelease-1",  proc{ 
+          inx = @dir_text.index("insert wordend +1 chars")
+          @dir_text.set_insert("end")
+          raise_candidates(inx, dir)
+        } )
+        @dir_text.tag_bind(tag_name,"Enter", proc{@dir_text.configure('cursor'=> 'hand2')})
+        @dir_text.tag_bind(tag_name,"Leave", proc{@dir_text.configure('cursor'=> @cursor)})
+      else
+#        tag_selected = "link_file"
+#        @dir_text.tag_configure(tag_selected,'borderwidth'=>0, 'relief'=>'flat', 'underline'=>true)
+        @dir_text.insert("end", seg, @tag_selected)
+#        @dir_text.tag_bind(tag_selected,"ButtonRelease-1",  proc{ 
+#          self.release
+#        } )
+#        @dir_text.tag_bind(tag_selected,"Enter", proc{@dir_text.configure('cursor'=> 'hand2')})
+#        @dir_text.tag_bind(tag_selected,"Leave", proc{@dir_text.configure('cursor'=> @cursor)})
+      end
+    }
+    
+    @dir_text.focus
+    @dir_text.set_insert("end")
+    @dir_text.see("end")
+    #@dir_text.insert("end", "???", "entry")
+    #@dir_text.state("disabled")
+  end
+
+  def raise_candidates(_inx, _dir)
+    if _dir[-1..-1] != File::SEPARATOR && _dir !=nil && _dir.length > 0
+      len = _dir.split(File::SEPARATOR)[-1].length+1
+      _dir = _dir[0..-len]
+      _inx = "#{_inx} - #{len-1} chars"
+    end 
+    _dir=Dir.pwd if !File.exists?(_dir)  
+    @dir_text.set_insert("end")
+    dirs_and_files=load_from_dir(_dir)
+    if dirs_and_files[0].length + dirs_and_files[1].length == 1
+      if dirs_and_files[0].length == 1
+        one = "#{_dir}#{dirs_and_files[0][0]}"
+      else
+        one = "#{_dir}#{dirs_and_files[1][0]}"
+      end
+      set_dir(one)
+    elsif dirs_and_files[0].length + dirs_and_files[1].length == 0
+      # do not raise
+    else 
+      raise_dir(_inx, _dir, dirs_and_files[0], dirs_and_files[1])
+    end
+    Tk.callback_break
+  end
+  
+  def raise_dir(_index, _dir, _candidates_dir, _candidates_file=nil)    
+    @raised_listbox_frame.destroy if @raised_listbox_frame != nil
+    _index_now = @dir_text.index('insert')
+    _index_for_raise =  @dir_text.index("#{_index} wordstart")
+    _candidates = [] 
+    _candidates.concat(_candidates_dir) if _candidates_dir 
+    _candidates.concat(_candidates_file) if _candidates_file 
+        
+    if _candidates.length >= 1 
+        _rx, _ry, _width, heigth = @dir_text.bbox(_index_for_raise);
+        _x = _rx + TkWinfo.rootx(@dir_text)  
+        _y = _ry + TkWinfo.rooty(@dir_text)  + @font_metrics[2][1]
+        _xroot = _x
+        _yroot = _y
+
+        @raised_listbox_frame = TkFrame.new(Arcadia.layout.root, {
+          :padx=>"1",
+          :pady=>"1",
+          :background=> "yellow"
+        })
+        
+        @raised_listbox = TkTextListBox.new(@raised_listbox_frame, {
+          :takefocus=>true}.update(Arcadia.style('listbox')))
+        _char_height = @font_metrics[2][1]
+        _width = 0
+        _docs_entries = Hash.new
+        _item_num = 0
+        _update_list = proc{|_in|
+            _in.strip!
+            @raised_listbox.clear
+            _length = 0
+            _candidates.each{|value|
+              _doc = value.strip
+              _class, _key, _arity = _doc.split('#')
+              if _key && _arity
+                args = arity_to_str(_arity.to_i)
+                if args.length > 0
+                  _key = "#{_key}(#{args})"
+                end
+              end
+              
+              if _key && _class && _key.strip.length > 0 && _class.strip.length > 0 
+                _item = "#{_key.strip} #{TkTextListBox::SEP} #{_class.strip}"
+              elsif _key && _key.strip.length > 0
+                _item = "#{_key.strip}"
+              else
+                _key = "#{_doc.strip}"
+                _item = "#{_doc.strip}"
+              end
+              if _in.nil? || _in.strip.length == 0 || _item[0.._in.length-1] == _in 
+              #|| _item[0.._in.length-1].downcase == _in
+                _docs_entries[_item]= _doc
+       #         @raised_listbox.insert('end', _item)
+                @raised_listbox.add(_item)
+                _temp_length = _item.length
+                _length = _temp_length if _temp_length > _length 
+                _item_num = _item_num+1 
+                _last_valid_key = _key
+              end
+            }
+            _width = _length*8
+            if @raised_listbox.length == 0
+              @raised_listbox.grab("release")
+              @raised_listbox_frame.destroy
+              @dir_text.focus
+              Tk.callback_break
+              #Tk.event_generate(@raised_listbox, "KeyPress" , :keysym=>"Escape") if TkWinfo.mapped?(@raised_listbox)
+            else
+              @raised_listbox.select(1)
+              Tk.event_generate(@raised_listbox, "1") if TkWinfo.mapped?(@raised_listbox)
+            end
+        }
+
+        get_filter = proc{
+          filter = ""
+          if @dir_text.get("insert -1 chars", "insert") != File::SEPARATOR  
+            parts = @dir_text.get("insert linestart", "insert").split(File::SEPARATOR)
+            original_parts = _dir.split(File::SEPARATOR)
+            if parts && parts.length == original_parts.length + 1
+              filter = @dir_text.get("insert linestart", "insert").split(File::SEPARATOR)[-1]
+            end
+          end
+          filter = "" if filter.nil?
+          filter
+        }
+        #filter = @dir_text.get("insert -1 chars wordstart", "insert")
+
+        @raised_listbox.bind_append('KeyPress'){|e|
+          case e.keysym
+            when 'a'..'z','A'..'Z'
+              @dir_text.insert('end', e.keysym)
+              @dir_text.see("end")
+            when 'period'
+              @dir_text.insert('end', '.')
+              @dir_text.see("end")
+            when 'BackSpace'
+              if @dir_text.get("insert -1 chars", "insert") != File::SEPARATOR 
+                @dir_text.delete('end -2 chars','end')
+              end
+            when 'Escape'
+              @raised_listbox.grab("release")
+              @raised_listbox_frame.destroy
+              @dir_text.focus
+              Tk.callback_break
+            else
+              Tk.callback_break
+          end
+          _update_list.call(get_filter.call)
+        }
+
+        
+        _update_list.call(get_filter.call)
+
+
+        _width = _width + 30
+        _height = 15*_char_height
+        
+        @raised_listbox_frame.place('x'=>_x,'y'=>_ry, 'width'=>_width, 'height'=>_height)
+        #@raised_listbox.extend(TkScrollableWidget).show(0,0) 
+        @raised_listbox.place('x'=>0,'y'=>0, 'relwidth'=>1, 'relheight'=>1) 
+        @raised_listbox.focus
+        @raised_listbox.select(1)
+        Tk.update
+        @raised_listbox_frame.grab("set")
+
+        _select_value = proc{
+          if @raised_listbox.selected_line && @raised_listbox.selected_line.strip.length>0
+            #_value = @raised_listbox.selected_line.split('-')[0].strip
+            seldir = File.join(_dir,@raised_listbox.selected_line)
+
+            set_dir(seldir)
+            @raised_listbox_frame.grab("release")
+            @raised_listbox_frame.destroy
+          end
+        }    
+     
+     
+        @raised_listbox.bind_append("Double-ButtonPress-1", 
+          proc{|x,y| 
+            #_index = @raised_listbox.index("@#{x},#{y}")
+            #_line = _index.split('.')[0].to_i
+            #@raised_listbox.select(_line)
+            _select_value.call
+              }, "%x %y")
+        @raised_listbox.bind_append('KeyPress'){|e|
+          case e.keysym
+            when 'Escape'
+              @raised_listbox.grab("release")
+              @raised_listbox_frame.destroy
+              @dir_text.focus
+              Tk.callback_break
+            when 'F1'
+              _key = @raised_listbox.selected_line.split('-')[0].strip
+              _x, _y = xy_insert
+              Arcadia.process_event(DocCodeEvent.new(self, 'doc_entry'=>_docs_entries[_key], 'xdoc'=>_x, 'ydoc'=>_y))
+            when 'Next', 'Prior'
+            else
+              Tk.callback_break
+          end
+        }
+        @raised_listbox.bind_append('KeyRelease'){|e|
+          case e.keysym
+            when 'Return'
+              _select_value.call
+          end
+        }
+          
+      elsif _candidates.length == 1 && _candidates[0].length>0
+        @dir_text.set_dir(_candidates[0])
+      end
+  end
+  
+  
+  def load_from_dir(_dir)
+    childrens = Dir.entries(_dir)
+    childrens_dir = Array.new
+    childrens_file = Array.new
+    childrens.sort.each{|c|
+      if c != '.' && c != '..'
+        child = File.join(_dir,c)
+        fty = File.ftype(child)
+        if fty == "file"
+          childrens_file << c
+          #childrens_file << child
+        elsif fty == "directory"
+          #childrens_dir << child
+          childrens_dir << c
+        end
+      end
+    }
+    return childrens_dir,childrens_file
+  end 
+
+end
