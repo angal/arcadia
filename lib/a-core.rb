@@ -21,6 +21,7 @@ class Arcadia < TkApplication
   attr_reader :mf_root
   attr_reader :localization
   def initialize
+    @initialized=false
     super(
       ApplicationParams.new(
         'arcadia',
@@ -171,6 +172,11 @@ class Arcadia < TkApplication
     Arcadia.attach_listener(self, QuitEvent)
     Arcadia.persistent("version", self['applicationParams'].version)
     @@last_input_keyboard_query_event=nil
+    @initialized=true
+  end
+
+  def initialized?
+    @initialized
   end
 
   def on_quit(_event)
@@ -1032,8 +1038,12 @@ class Arcadia < TkApplication
 
 
   def Arcadia.dialog(_sender, _args=Hash.new)
-    _event = process_event(SystemDialogEvent.new(_sender, _args))
-    return _event.results[0].value if _event
+    if @@instance && @@instance.initialized?
+      Arcadia.hinner_dialog(_sender, _args)
+    else
+      _event = process_event(SystemDialogEvent.new(_sender, _args))
+      return _event.results[0].value if _event
+    end
   end
 
   def Arcadia.hinner_dialog(_sender, _args=Hash.new)
@@ -1124,7 +1134,19 @@ class Arcadia < TkApplication
   end
 
   def Arcadia.save_file_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir)
-    HinnerFileDialog.new(HinnerFileDialog::SAVE_FILE_MODE).file(_initial_dir)
+    file = HinnerFileDialog.new(HinnerFileDialog::SAVE_FILE_MODE).file(_initial_dir)
+    if File.exists?(file) 
+      if (Arcadia.dialog(self, 'type'=>'yes_no',
+      'msg'=>Arcadia.text('main.d.confirm_override_file.msg', [file]),
+      'title' => Arcadia.text('main.d.confirm_override_file.title'),
+      'level' => 'question')=='yes')
+          return file
+      else
+        return nil
+      end
+    else
+      return file
+    end
   end
 
   def Arcadia.is_windows?
@@ -2637,7 +2659,8 @@ class ArcadiaDialogManager
     :type,
     :res_array,
     :level,
-    :msg
+    :msg,
+    :title
   )
 
   def initialize(_arcadia)
@@ -2662,6 +2685,11 @@ class ArcadiaDialogManager
         ret.msg = _event.msg[0.._event.class::MSG_MAX_CHARS]+' ...'
       else
         ret.msg = _event.msg
+      end
+      if _event.title && _event.title.length > _event.class::TITLE_MAX_CHARS
+        ret.title = _event.title[0.._event.class::TITLE_MAX_CHARS]+' ...'
+      else
+        ret.title = _event.title
       end
     end
     ret
@@ -2718,7 +2746,7 @@ class ArcadiaDialogManager
 
     Tk::BWidget::Label.new(dialog_frame,Arcadia.style('label')){
       text  par.msg
-      helptext _event.msg
+      helptext _event.title
     }.pack('side' =>'right','padx'=>5, 'pady'=>5)
 
     Tk::BWidget::Label.new(dialog_frame,Arcadia.style('label')){

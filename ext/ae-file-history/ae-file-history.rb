@@ -75,7 +75,6 @@ end
 
 class FilesHistrory < ArcadiaExt
   attr_reader :htree
-
   def sync_on
     @sync = true
     select_file_without_event(@last_file) if @last_file
