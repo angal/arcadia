@@ -2224,9 +2224,13 @@ class HinnerFileDialog < HinnerDialog
   SELECT_FILE_MODE=0
   SAVE_FILE_MODE=1
   SELECT_DIR_MODE=2
-  def initialize(mode=SELECT_FILE_MODE ,side='top',args=nil)
+  def initialize(mode=SELECT_FILE_MODE , must_exist = nil, side='top',args=nil)
     super(side, args)
     @mode = mode
+    if must_exist.nil?
+      must_exist = mode != SAVE_FILE_MODE
+    end
+    @must_exist = must_exist
     build_gui
     @closed = false
   end
@@ -2258,39 +2262,50 @@ class HinnerFileDialog < HinnerDialog
         i1 = @dir_text.index("insert")
         raise_candidates(i1, @dir_text.get("#{i1} linestart", i1))
       when "Return"
-        _self.release
+        if (@mode == SELECT_FILE_MODE || @mode == SAVE_FILE_MODE) && @must_exist
+          str_file = @dir_text.get('1.0','end')
+          if str_file && str_file.length > 0 && File.exists?(str_file.strip) && File.ftype(str_file.strip) == 'file'
+            _self.release
+          end
+          Tk.callback_break
+        elsif @mode == SELECT_DIR_MODE && @must_exist
+          str_file = @dir_text.get('1.0','end')
+          if str_file && str_file.length > 0 && File.exists?(str_file.strip) && File.ftype(str_file.strip) == 'directory'
+            _self.release
+          end
+          Tk.callback_break
+        else
+          _self.release
+        end
       end
     }   
-    #if @mode == SAVE_FILE_MODE
-      @dir_text.bind_append('KeyRelease'){|e|
-        case e.keysym
-        when 'Escape','Tab', "Return"
-        else
-          @dir_text.tag_remove(@tag_selected,'1.0','end')
-          i1 = @dir_text.index("insert - 1 chars wordstart")
-          while @dir_text.get("#{i1} -1 chars",i1) != File::SEPARATOR && @dir_text.get("#{i1} - 1 chars",i1) != ""
-            i1 = @dir_text.index("#{i1} - 1 chars")
-          end
-          i2 = @dir_text.index("insert")
-          
-          @dir_text.tag_add(@tag_selected ,i1,i2) if @mode == SAVE_FILE_MODE
-          
-          if File.exists?(@dir_text.get('1.0',i2))
-            @dir_text.tag_add(@tag_file_exist ,i1,i2)
-            @dir_text.tag_add(@tag_selected ,i1,i2) if @mode == SELECT_FILE_MODE && File.ftype(@dir_text.get('1.0',i2)) == 'file'
-          else
-            @dir_text.tag_remove(@tag_file_exist,'1.0','end')
-          end
+    @dir_text.bind_append('KeyRelease'){|e|
+      case e.keysym
+      when 'Escape','Tab', "Return"
+      else
+        @dir_text.tag_remove(@tag_selected,'1.0','end')
+        i1 = @dir_text.index("insert - 1 chars wordstart")
+        while @dir_text.get("#{i1} -1 chars",i1) != File::SEPARATOR && @dir_text.get("#{i1} - 1 chars",i1) != ""
+          i1 = @dir_text.index("#{i1} - 1 chars")
         end
-      }   
-    #end
+        i2 = @dir_text.index("insert")
+        
+        @dir_text.tag_add(@tag_selected ,i1,i2) if @mode == SAVE_FILE_MODE
+        
+        if File.exists?(@dir_text.get('1.0',i2))
+          @dir_text.tag_add(@tag_file_exist ,i1,i2)
+          @dir_text.tag_add(@tag_selected ,i1,i2) if @mode == SELECT_FILE_MODE && File.ftype(@dir_text.get('1.0',i2)) == 'file'
+          @dir_text.tag_add(@tag_selected ,i1,i2) if @mode == SELECT_DIR_MODE && File.ftype(@dir_text.get('1.0',i2)) == 'directory'
+        else
+          @dir_text.tag_remove(@tag_file_exist,'1.0','end')
+        end
+      end
+    }   
 
     @select_button = Tk::BWidget::Button.new(self, Arcadia.style('toolbarbutton')){
       command proc{_self.close}
       image Arcadia.image_res(CLOSE_FRAME_GIF)
     }.pack('side' =>'right','padx'=>5, 'pady'=>0)
-
-    
   end
   
   def file(_dir)
@@ -2301,6 +2316,10 @@ class HinnerFileDialog < HinnerDialog
       destroy  
       file_selected
     end
+  end
+
+  def dir(_dir)
+    file(_dir)
   end
   
   def close
@@ -2351,22 +2370,13 @@ class HinnerFileDialog < HinnerDialog
         @dir_text.tag_bind(tag_name,"Enter", proc{@dir_text.configure('cursor'=> 'hand2')})
         @dir_text.tag_bind(tag_name,"Leave", proc{@dir_text.configure('cursor'=> @cursor)})
       else
-#        tag_selected = "link_file"
-#        @dir_text.tag_configure(tag_selected,'borderwidth'=>0, 'relief'=>'flat', 'underline'=>true)
         @dir_text.insert("end", seg, @tag_selected)
-#        @dir_text.tag_bind(tag_selected,"ButtonRelease-1",  proc{ 
-#          self.release
-#        } )
-#        @dir_text.tag_bind(tag_selected,"Enter", proc{@dir_text.configure('cursor'=> 'hand2')})
-#        @dir_text.tag_bind(tag_selected,"Leave", proc{@dir_text.configure('cursor'=> @cursor)})
       end
     }
     
     @dir_text.focus
     @dir_text.set_insert("end")
     @dir_text.see("end")
-    #@dir_text.insert("end", "???", "entry")
-    #@dir_text.state("disabled")
   end
 
   def raise_candidates(_inx, _dir)
@@ -2388,13 +2398,27 @@ class HinnerFileDialog < HinnerDialog
     elsif dirs_and_files[0].length + dirs_and_files[1].length == 0
       # do not raise
     else 
-      raise_dir(_inx, _dir, dirs_and_files[0], dirs_and_files[1])
+      if @mode == SELECT_DIR_MODE
+        raise_dir(_inx, _dir, dirs_and_files[0], [])
+      else
+        raise_dir(_inx, _dir, dirs_and_files[0], dirs_and_files[1])
+      end
     end
     Tk.callback_break
   end
   
-  def raise_dir(_index, _dir, _candidates_dir, _candidates_file=nil)    
+  def last_candidate_is_file?(_name)
+    @last_candidates_file && @last_candidates_file.include?(_name)
+  end
+
+  def last_candidate_is_dir?(_name)
+    @last_candidates_dir && @last_candidates_dir.include?(_name)
+  end
+  
+  def raise_dir(_index, _dir, _candidates_dir, _candidates_file=nil) 
     @raised_listbox_frame.destroy if @raised_listbox_frame != nil
+    @last_candidates_dir = _candidates_dir
+    @last_candidates_file = _candidates_file
     _index_now = @dir_text.index('insert')
     _index_for_raise =  @dir_text.index("#{_index} wordstart")
     _candidates = [] 
@@ -2408,6 +2432,8 @@ class HinnerFileDialog < HinnerDialog
         _xroot = _x
         _yroot = _y
 
+        max_width = TkWinfo.screenwidth(Arcadia.layout.root) - _x
+        
         @raised_listbox_frame = TkFrame.new(Arcadia.layout.root, {
           :padx=>"1",
           :pady=>"1",
@@ -2416,10 +2442,25 @@ class HinnerFileDialog < HinnerDialog
         
         @raised_listbox = TkTextListBox.new(@raised_listbox_frame, {
           :takefocus=>true}.update(Arcadia.style('listbox')))
+        @raised_listbox.tag_configure('file','foreground'=> Arcadia.conf('hightlight.link.foreground'),'borderwidth'=>0, 'relief'=>'flat')
+
+        
         _char_height = @font_metrics[2][1]
         _width = 0
         _docs_entries = Hash.new
         _item_num = 0
+
+        _select_value = proc{
+          if @raised_listbox.selected_line && @raised_listbox.selected_line.strip.length>0
+            #_value = @raised_listbox.selected_line.split('-')[0].strip
+            seldir = File.join(_dir,@raised_listbox.selected_line)
+
+            set_dir(seldir)
+            @raised_listbox_frame.grab("release")
+            @raised_listbox_frame.destroy
+          end
+        }    
+
         _update_list = proc{|_in|
             _in.strip!
             @raised_listbox.clear
@@ -2446,7 +2487,11 @@ class HinnerFileDialog < HinnerDialog
               #|| _item[0.._in.length-1].downcase == _in
                 _docs_entries[_item]= _doc
        #         @raised_listbox.insert('end', _item)
-                @raised_listbox.add(_item)
+                if last_candidate_is_dir?(_item)
+                  @raised_listbox.add(_item, 'file')
+                else
+                  @raised_listbox.add(_item)
+                end
                 _temp_length = _item.length
                 _length = _temp_length if _temp_length > _length 
                 _item_num = _item_num+1 
@@ -2469,10 +2514,15 @@ class HinnerFileDialog < HinnerDialog
         get_filter = proc{
           filter = ""
           if @dir_text.get("insert -1 chars", "insert") != File::SEPARATOR  
-            parts = @dir_text.get("insert linestart", "insert").split(File::SEPARATOR)
-            original_parts = _dir.split(File::SEPARATOR)
+            file_str = @dir_text.get("insert linestart", "insert")
+            parts = file_str.split(File::SEPARATOR)
+            if _dir == File::SEPARATOR
+              original_parts = [""] 
+            else
+              original_parts = _dir.split(File::SEPARATOR)
+            end
             if parts && parts.length == original_parts.length + 1
-              filter = @dir_text.get("insert linestart", "insert").split(File::SEPARATOR)[-1]
+              filter = parts[-1]
             end
           end
           filter = "" if filter.nil?
@@ -2480,86 +2530,72 @@ class HinnerFileDialog < HinnerDialog
         }
         #filter = @dir_text.get("insert -1 chars wordstart", "insert")
 
+
         @raised_listbox.bind_append('KeyPress'){|e|
+          is_list_for_update = false
           case e.keysym
             when 'a'..'z','A'..'Z'
               @dir_text.insert('end', e.keysym)
               @dir_text.see("end")
+              is_list_for_update = true
             when 'period'
               @dir_text.insert('end', '.')
               @dir_text.see("end")
+              is_list_for_update = true
             when 'BackSpace'
               if @dir_text.get("insert -1 chars", "insert") != File::SEPARATOR 
                 @dir_text.delete('end -2 chars','end')
               end
+              is_list_for_update = true
             when 'Escape'
               @raised_listbox.grab("release")
               @raised_listbox_frame.destroy
               @dir_text.focus
               Tk.callback_break
+            when "Next","Prior"
+            when "Down","Up"
+              Tk.callback_break
             else
               Tk.callback_break
           end
-          _update_list.call(get_filter.call)
+          _update_list.call(get_filter.call) if is_list_for_update
+          @raised_listbox.focus 
+          Tk.callback_break if  !["Next","Prior"].include?(e.keysym)
         }
 
-        
-        _update_list.call(get_filter.call)
-
-
-        _width = _width + 30
-        _height = 15*_char_height
-        
-        @raised_listbox_frame.place('x'=>_x,'y'=>_ry, 'width'=>_width, 'height'=>_height)
-        #@raised_listbox.extend(TkScrollableWidget).show(0,0) 
-        @raised_listbox.place('x'=>0,'y'=>0, 'relwidth'=>1, 'relheight'=>1) 
-        @raised_listbox.focus
-        @raised_listbox.select(1)
-        Tk.update
-        @raised_listbox_frame.grab("set")
-
-        _select_value = proc{
-          if @raised_listbox.selected_line && @raised_listbox.selected_line.strip.length>0
-            #_value = @raised_listbox.selected_line.split('-')[0].strip
-            seldir = File.join(_dir,@raised_listbox.selected_line)
-
-            set_dir(seldir)
-            @raised_listbox_frame.grab("release")
-            @raised_listbox_frame.destroy
-          end
-        }    
-     
-     
-        @raised_listbox.bind_append("Double-ButtonPress-1", 
-          proc{|x,y| 
-            #_index = @raised_listbox.index("@#{x},#{y}")
-            #_line = _index.split('.')[0].to_i
-            #@raised_listbox.select(_line)
-            _select_value.call
-              }, "%x %y")
-        @raised_listbox.bind_append('KeyPress'){|e|
-          case e.keysym
-            when 'Escape'
-              @raised_listbox.grab("release")
-              @raised_listbox_frame.destroy
-              @dir_text.focus
-              Tk.callback_break
-            when 'F1'
-              _key = @raised_listbox.selected_line.split('-')[0].strip
-              _x, _y = xy_insert
-              Arcadia.process_event(DocCodeEvent.new(self, 'doc_entry'=>_docs_entries[_key], 'xdoc'=>_x, 'ydoc'=>_y))
-            when 'Next', 'Prior'
-            else
-              Tk.callback_break
-          end
-        }
         @raised_listbox.bind_append('KeyRelease'){|e|
           case e.keysym
             when 'Return'
               _select_value.call
           end
         }
+        
+        _update_list.call(get_filter.call)
+
+        if @raised_listbox.length == 1
+          _select_value.call
+        else
+          _width = _width + 30
+          _width = max_width if _width > max_width
+          _height = 15*_char_height
           
+          @raised_listbox_frame.place('x'=>_x,'y'=>_ry, 'width'=>_width, 'height'=>_height)
+          @raised_listbox.extend(TkScrollableWidget).show(0,0) 
+          @raised_listbox.place('x'=>0,'y'=>0, 'relwidth'=>1, 'relheight'=>1) 
+          @raised_listbox.focus
+          @raised_listbox.select(1)
+
+          Tk.update
+          @raised_listbox_frame.grab("set")
+  
+       
+       
+          @raised_listbox.bind_append("Double-ButtonPress-1", 
+            proc{|x,y| 
+              _select_value.call
+                }, "%x %y")
+  
+        end  
       elsif _candidates.length == 1 && _candidates[0].length>0
         @dir_text.set_dir(_candidates[0])
       end

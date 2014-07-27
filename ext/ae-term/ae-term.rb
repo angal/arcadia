@@ -88,7 +88,7 @@ class Term < ArcadiaExtPlus
     id_int = eval(frame.hinner_frame.winfo_id).to_i
     
     #Arcadia.runtime_error_msg("CREO XTERM #{xterm_class} con id #{id_int}")
-    cmd = "cd #{_dir} ; xterm -into #{id_int} -bg '#{conf('color.bg')}' -fg #{conf('color.fg')} -fa '#{conf('font')}' -class #{xterm_class}  +sb  +hold"
+    cmd = "cd #{_dir} ; xterm -into #{id_int} -bg '#{conf('color.bg')}' -fg '#{conf('color.fg')}' -fa '#{conf('font')}' -class #{xterm_class}  +sb  +hold"
     fi_pid=-1
     Thread.new do
       #open("|#{cmd}"){|f|  @xterm_pid = f.read.strip if f }

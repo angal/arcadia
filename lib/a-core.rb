@@ -1133,6 +1133,10 @@ class Arcadia < TkApplication
     HinnerFileDialog.new.file(_initial_dir)
   end
 
+  def Arcadia.select_dir_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir, must_exist = nil)
+    HinnerFileDialog.new(HinnerFileDialog::SELECT_DIR_MODE, must_exist).dir(_initial_dir)
+  end
+
   def Arcadia.save_file_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir)
     file = HinnerFileDialog.new(HinnerFileDialog::SAVE_FILE_MODE).file(_initial_dir)
     if File.exists?(file) 
@@ -1397,6 +1401,7 @@ class ArcadiaMainToolbar < ArcadiaUserControl
         width 23
         height 23
         helptext  _hint if _hint
+        #compound 'left'
         text _caption if _caption
       }
       if _args['context_path'] && _args['last_item_for_context']
@@ -1624,7 +1629,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
   def build
     menu_spec_file = [
       [Arcadia.text('main.menu.file'), 0],
-      [Arcadia.text('main.menu.file.open'), proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>Arcadia.open_file_dialog))}, 0],
+      [Arcadia.text('main.menu.file.open'), proc{OpenBufferEvent.new(self).go!}, 0],
       [Arcadia.text('main.menu.file.new'), proc{Arcadia.process_event(NewBufferEvent.new(self))}, 0],
       #['Save', proc{EditorContract.instance.save_file_raised(self)},0],
       [Arcadia.text('main.menu.file.save'), proc{Arcadia.process_event(SaveBufferEvent.new(self))},0],

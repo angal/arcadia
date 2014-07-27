@@ -54,7 +54,7 @@ end
 class SubProcessWidget < Tk::BWidget::Button
   attr_reader :event
   def initialize(_parent=nil, _event=nil, *args)
-    super(Arcadia['toolbar'].frame, Arcadia.style('button').update("compound"=>'left', "background"=>'black',"activebackground"=>'black', 'relief'=>'groove'))
+    super(Arcadia['toolbar'].frame, Arcadia.style('button').update("compound"=>'left', "background"=>Arcadia.conf("background"),"activebackground"=>'black', 'relief'=>'groove'))
     @parent = _parent
     @event = _event
     b_command = proc{

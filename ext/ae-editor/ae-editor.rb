@@ -383,6 +383,8 @@ class CompleteCode
   end
   
   def focus_word(focus_segment)
+    focus_segment_parts = focus_segment.split
+    focus_segment = focus_segment_parts[-1] if focus_segment_parts && focus_segment_parts.length > 1  
     focus_world = ''
     char = focus_segment[-1..-1]
     while [")","]","}"].include?(char) 
@@ -788,7 +790,7 @@ class TkTextListBox < TkText
     super(parent, keys)
     wrap  'none'
     tag_configure('selected','background' =>Arcadia.conf('hightlight.sel.background'),'borderwidth'=>1, 'relief'=>'raised')
-    tag_configure('class', 'foreground' => Arcadia.conf('hightlight.sel.foreground'))
+    tag_configure('class', 'foreground' => Arcadia.conf('hightlight.class_variable.foreground'))
     @count = 0
     @selected = -1
     self.bind_append('KeyPress'){|e| key_press(e)}
@@ -804,7 +806,7 @@ class TkTextListBox < TkText
     super(index, chars, *tags)
   end  
   
-  def add(chars)
+  def add(chars, *tags)
     meth_str, class_str = chars.split(TkTextListBox::SEP)
     if meth_str && meth_str.strip.length>0 && class_str
       insert('end', "#{meth_str}")
@@ -812,7 +814,7 @@ class TkTextListBox < TkText
     elsif meth_str && meth_str.strip.length==0 && class_str
       insert('end', "-#{class_str}\n")
     else
-      insert('end', "#{chars}\n")
+      insert('end', "#{chars}\n", *tags)
     end
     @count = @count+1
   end  
@@ -3295,6 +3297,7 @@ class AgEditor
         save true
       end
     else
+      mkdir_recursive(File.dirname(@file)) if !File.exists?(File.dirname(@file))
       f = File.new(@file, "wb")
       begin
         if f
@@ -3313,6 +3316,24 @@ class AgEditor
       end
       #EditorContract.instance.file_saved(self,'file' =>@file)
     end
+  end
+
+  def mkdir_recursive(_dir)
+    dir_seg = _dir.split(File::SEPARATOR)
+    incr_dir = ""
+    res = ""
+    0.upto(dir_seg.length-1){|j|
+      if res == File::SEPARATOR
+        res=res+dir_seg[j]
+      elsif res.length == 0 && dir_seg[j].length == 0
+        res=File::SEPARATOR+dir_seg[j]
+      elsif res.length == 0 && dir_seg[j].length > 0
+        res=dir_seg[j]
+      else
+        res=res+File::SEPARATOR+dir_seg[j]
+      end
+      Dir.mkdir(res) if !File.exists?(res)
+    }
   end
 
   def save_as

@@ -369,7 +369,8 @@ class DirProjects < ArcadiaExtPlus
         _selected = @htree.selected
         if _selected
           _idir = File.split(_selected)[0]
-          _dir=Tk.chooseDirectory('initialdir'=>_idir,'mustexist'=>true) 
+          #_dir=Tk.chooseDirectory('initialdir'=>_idir,'mustexist'=>true) 
+          _dir=Arcadia.select_dir_dialog(_idir, true)
           do_move(_selected, _dir) if _dir && File.exists?(_dir)
         end
       }
@@ -558,7 +559,8 @@ class DirProjects < ArcadiaExtPlus
 
   def do_new_project(_parent_folder_node=nil)
     if _parent_folder_node.nil?
-      _parent_folder_node=Tk.chooseDirectory 'initialdir' =>  MonitorLastUsedDir.get_last_dir
+      #_parent_folder_node=Tk.chooseDirectory 'initialdir' =>  MonitorLastUsedDir.get_last_dir
+      _parent_folder_node=Arcadia.select_dir_dialog(MonitorLastUsedDir.get_last_dir)
     end
     if _parent_folder_node && File.exists?(node2file(_parent_folder_node)) && File.ftype(node2file(_parent_folder_node)) == 'directory'
       tmp_node_name = "#{node2file(_parent_folder_node)}#{File::SEPARATOR}_new_project_"
@@ -585,7 +587,8 @@ class DirProjects < ArcadiaExtPlus
   
   def do_open_project(_proj_name=nil)
     if _proj_name.nil?
-      _proj_name=Tk.chooseDirectory 'initialdir' =>  MonitorLastUsedDir.get_last_dir
+      #_proj_name=Tk.chooseDirectory 'initialdir' =>  MonitorLastUsedDir.get_last_dir
+      _proj_name=Arcadia.select_dir_dialog(MonitorLastUsedDir.get_last_dir)
       add_project(_proj_name) if _proj_name && File.exists?(_proj_name)
     end
   end
@@ -983,7 +986,6 @@ class DirProjects < ArcadiaExtPlus
     begin
       _lines.each{|_line|
         if _line != _project
-        p _line
           f.syswrite(_line+"\n")
         end
       }

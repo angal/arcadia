@@ -320,7 +320,8 @@ class FindFrame < TkFloatTitledFrame
   end
 
   def change_dir
-    _d = Tk.chooseDirectory('initialdir'=>@e_dir.text,'mustexist'=>true)
+    #_d = Tk.chooseDirectory('initialdir'=>@e_dir.text,'mustexist'=>true)
+    _d = Arcadia.select_dir_dialog(@e_dir.text, true)
     if _d && _d.strip.length > 0
       @e_dir.text(_d)
     end
