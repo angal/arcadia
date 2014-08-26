@@ -1662,8 +1662,10 @@ class ArcadiaMainMenu < ArcadiaUserControl
 
 
   def build
+    top_item_spec_file = [Arcadia.text('main.menu.file'), 0]
+    top_item_spec_file << {'menu_name'=>'apple'} if OS.mac?
     menu_spec_file = [
-      [Arcadia.text('main.menu.file'), 0],
+      top_item_spec_file,
       [Arcadia.text('main.menu.file.open'), proc{OpenBufferEvent.new(self).go!}, 0],
       [Arcadia.text('main.menu.file.new'), proc{Arcadia.process_event(NewBufferEvent.new(self))}, 0],
       #['Save', proc{EditorContract.instance.save_file_raised(self)},0],
@@ -1672,7 +1674,9 @@ class ArcadiaMainMenu < ArcadiaUserControl
       '---',
     [Arcadia.text('main.menu.file.quit'), proc{Arcadia.process_event(QuitEvent.new(self))}, 0]]
 
-    menu_spec_edit = [[Arcadia.text('main.menu.edit'), 0],
+    top_item_spec_edit = [Arcadia.text('main.menu.edit'), 0]
+    top_item_spec_edit << {'menu_name'=>'apple'} if OS.mac?
+    menu_spec_edit = [top_item_spec_edit,
       [Arcadia.text('main.menu.edit.cut'), proc{Arcadia.process_event(CutTextEvent.new(self))}, 2],
       [Arcadia.text('main.menu.edit.copy'), proc{Arcadia.process_event(CopyTextEvent.new(self))}, 0],
       [Arcadia.text('main.menu.edit.paste'), proc{Arcadia.process_event(PasteTextEvent.new(self))}, 0],
@@ -1686,23 +1690,32 @@ class ArcadiaMainMenu < ArcadiaUserControl
       '---',
     [Arcadia.text('main.menu.edit.preferences'), proc{}, 0]]
 
-    menu_spec_search = [[Arcadia.text('main.menu.search'), 0],
+    top_item_spec_search = [Arcadia.text('main.menu.search'), 0] 
+    top_item_spec_search << {'menu_name'=>'apple'} if OS.mac?
+    menu_spec_search = [top_item_spec_search,
       [Arcadia.text('main.menu.search.find_replace'), proc{Arcadia.process_event(SearchBufferEvent.new(self))}, 2],
       [Arcadia.text('main.menu.search.find_in_files'), proc{Arcadia.process_event(SearchInFilesEvent.new(self))}, 2],
       [Arcadia.text('main.menu.search.ack_im_file'), proc{Arcadia.process_event(AckInFilesEvent.new(self))}, 2],
     [Arcadia.text('main.menu.search.go_to_line'), proc{Arcadia.process_event(GoToLineBufferEvent.new(self))}, 2]]
 
-    menu_spec_view = [[Arcadia.text('main.menu.view'), 0],
+    top_item_spec_view = [Arcadia.text('main.menu.view'), 0]
+    top_item_spec_view << {'menu_name'=>'apple'} if OS.mac?
+    menu_spec_view = [top_item_spec_view,
       [Arcadia.text('main.menu.view.show_hide_toolbar'), proc{$arcadia.show_hide_toolbar}, 2],
       [Arcadia.text('main.menu.view.close_current_tab'), proc{Arcadia.process_event(CloseCurrentTabEvent.new(self))}, 0],
     ]
 
-    menu_spec_tools = [[Arcadia.text('main.menu.tools'), 0],
+    top_item_spec_tools = [Arcadia.text('main.menu.tools'), 0]
+    top_item_spec_tools << {'menu_name'=>'apple'} if OS.mac?
+    menu_spec_tools = [top_item_spec_tools,
       [Arcadia.text('main.menu.tools.keys_test'), $arcadia['action.test.keys'], 2],
       [Arcadia.text('main.menu.tools.edit_prefs'), proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>$arcadia.local_file_config))}, 0],
       [Arcadia.text('main.menu.tools.load_from_edited_prefs'), proc{$arcadia.load_local_config}, 0]
     ]
-    menu_spec_help = [[Arcadia.text('main.menu.help'), 0],
+
+    top_item_spec_help = [Arcadia.text('main.menu.help'), 0]
+    top_item_spec_help << {'menu_name'=>'apple'} if OS.mac?
+    menu_spec_help = [top_item_spec_help,
     [Arcadia.text('main.menu.help.about'), $arcadia['action.show_about'], 2],]
     begin
       @menu.add_menu(menu_spec_file)
