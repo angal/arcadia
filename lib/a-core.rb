@@ -16,6 +16,7 @@ require "observer"
 
 class Arcadia < TkApplication
   include Observable
+  include OS
   attr_reader :layout
   attr_reader :wf
   attr_reader :mf_root
@@ -668,6 +669,11 @@ class Arcadia < TkApplication
         run = Hash.new.update(self['runners'][run[:runner]]).update(run)
         #self['runners'][name]=run
       end
+      if run[:image]
+        image = Arcadia.image_res(run[:image])
+      else
+        image = Arcadia.file_icon(run[:file_exts])
+      end
       _run_title = run[:title]
       run[:title] = nil
       run[:runner_name] = name
@@ -676,9 +682,14 @@ class Arcadia < TkApplication
         RunCmdEvent.new(self, run)
         )
       }
-      mr.insert('0',
+      if run[:pos]
+        pos = run[:pos]
+      else
+        pos = '0'
+      end
+      mr.insert(pos,
       :command ,{
-        :image => Arcadia.file_icon(run[:file_exts]),
+        :image => image,
         :label => _run_title,
         :font => Arcadia.conf('menu.font'),
         :compound => 'left',
@@ -695,6 +706,12 @@ class Arcadia < TkApplication
       _run_title = run[:title]
       run[:title] = nil
       run[:runner_name] = name
+      if run[:image]
+        image = Arcadia.image_res(run[:image])
+      else
+        image = Arcadia.file_icon(run[:file_exts])
+      end
+
       _command = proc{
         _event = Arcadia.process_event(
         RunCmdEvent.new(self, run)
@@ -702,7 +719,7 @@ class Arcadia < TkApplication
       }
       mr.insert('0',
       :command ,{
-        :image => Arcadia.file_icon(run[:file_exts]),
+        :image => image,
         :label => _run_title,
         :font => Arcadia.conf('menu.font'),
         :compound => 'left',
@@ -711,7 +728,7 @@ class Arcadia < TkApplication
       )
     }
 
-    # conf runner
+    #conf runner
     runs=Arcadia.conf_group('runners')
     mr.insert('0', :separator) if runs && !runs.empty?
 
@@ -723,6 +740,22 @@ class Arcadia < TkApplication
       insert_runner_item.call(name, run)
     }
 
+
+    #conf exts runner
+    @exts.each{|ext|
+      if ext_active?(ext)
+        ext_runs=Arcadia.conf_group("#{ext}.runners")
+        mr.insert(self['runners'].count, :separator) if ext_runs && !ext_runs.empty?
+        ext_runs.each{|name, hash_string|
+          self['runners'][name]=eval hash_string
+          self['runners'][name][:pos]=self['runners'].count
+          insert_runner_item.call(name, self['runners'][name])
+        }
+      end
+    }
+
+
+
     # pers runner instance
     runs=Arcadia.pers_group('runners')
     mr.insert('0', :separator) if runs && !runs.empty?
@@ -731,8 +764,6 @@ class Arcadia < TkApplication
       begin
         pers_runner[name]=eval hash_string
       rescue Exception => e
-        p Arcadia("main.e.loading_runner.title", [name])
-        p Arcadia("main.e.loading_runner.msg", [hash_string, e.message])
         Arcadia.unpersistent("runners.#{name}")
       end
     }
@@ -1139,7 +1170,7 @@ class Arcadia < TkApplication
 
   def Arcadia.save_file_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir)
     file = HinnerFileDialog.new(HinnerFileDialog::SAVE_FILE_MODE).file(_initial_dir)
-    if File.exists?(file) 
+    if !file.nil? && File.exists?(file) 
       if (Arcadia.dialog(self, 'type'=>'yes_no',
       'msg'=>Arcadia.text('main.d.confirm_override_file.msg', [file]),
       'title' => Arcadia.text('main.d.confirm_override_file.title'),
@@ -1154,7 +1185,8 @@ class Arcadia < TkApplication
   end
 
   def Arcadia.is_windows?
-    RUBY_PLATFORM =~ /mingw|mswin/
+    OS.windows?
+    #RUBY_PLATFORM =~ /mingw|mswin/
   end
 
   def Arcadia.ruby
@@ -1510,9 +1542,12 @@ class ArcadiaMainMenu < ArcadiaUserControl
     end
   end
 
-  def initialize(menu)
+  def initialize(menubar)
     # create main menu
-    @menu = menu
+    @menu = menubar
+    #help = TkSysMenu_Help.new(menubar)
+    #menubar.add_menu :cascade, :menu => help
+
     build
     begin
       @menu.configure(Arcadia.style('menu'))

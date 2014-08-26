@@ -49,6 +49,8 @@ main.button.run.submenu.manage_runner.caption=Manage runner ...
 main.button.sys.exit.hint=Exit from Arcadia
 #main.runner
 main.runner.run_selected.title=Run selected as $0 file
+main.runner.rdebug_selected.title=Debug selected as $0 file in console
+main.runner.rdebug_last.title=Debug last as $0 file in console
 main.runner.compile_and_run_selected.title=Compile and Run selected as $0 file
 #main.splash
 main.splash.creating_extension=... creating $0
@@ -208,6 +210,7 @@ ext.output.menu.save=Save
 ext.output.menu.wrap=Set wrap
 ext.output.menu.nowrap=Set no wrap
 ext.output.button.clear.hint=Clear
+ext.output.checkbutton.auto_open_file.hint=Auto open file in editor
 #breakpoints
 ext.breakpoints.menu.clear_selected=Clear selected breakpoint
 ext.breakpoints.menu.delete_selected=Delete selected breakpoint

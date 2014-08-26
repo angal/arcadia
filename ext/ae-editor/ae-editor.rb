@@ -4916,18 +4916,18 @@ class AgMultiEditor < ArcadiaExtPlus
           end
           if _event.kind_of?(OpenBufferTransientEvent) 
             if conf('close-last-if-not-modified')=="yes"
-            if defined?(@last_transient_file) && !@last_transient_file.nil? && @last_transient_file != _event.file
-              _e = @tabs_editor[tab_name(@last_transient_file)]
-              if _e && !_e.modified_from_opening?
-                close_editor(_e)
+              if defined?(@last_transient_file) && !@last_transient_file.nil? && @last_transient_file != _event.file
+                _e = @tabs_editor[tab_name(@last_transient_file)]
+                if _e && !_e.modified_from_opening?
+                  close_editor(_e)
+                end
               end
-            end
-            if !editor_exist?(_event.file)
-              @last_transient_file = _event.file
-            else
-              @last_transient_file = nil
-              _event.transient = false
-            end
+              if !editor_exist?(_event.file)
+                @last_transient_file = _event.file
+              else
+                @last_transient_file = nil
+                _event.transient = false
+              end
             else
               _event.transient = false
             end
