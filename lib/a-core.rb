@@ -62,14 +62,15 @@ class Arcadia < TkApplication
     }
     @on_event = Hash.new
 
-    @main_menu_bar = TkMenubar.new(
-    'background'=> self['conf']['background']
-    ).pack('fill'=>'x')
+#    @main_menu_bar = TkMenubar.new(
+#      'background'=> self['conf']['background']
+#    ).pack('fill'=>'x')
+    
     @mf_root = Tk::BWidget::MainFrame.new(@root,
     'background'=> self['conf']['background'],
     'height'=> 0
     ){
-      menu @main_menu_bar
+      #menu @main_menu_bar
     }.pack(
     'anchor'=> 'center',
     'fill'=> 'both',
@@ -618,7 +619,8 @@ class Arcadia < TkApplication
     publish('action.test.keys', proc{@keytest.show})
     publish('action.get.font', proc{Tk::BWidget::SelectFont::Dialog.new.create})
     publish('action.show_about', proc{ArcadiaAboutSplash.new.deiconify})
-    self['menubar'] = ArcadiaMainMenu.new(@main_menu_bar)
+#    self['menubar'] = ArcadiaMainMenu.new(@main_menu_bar)
+    self['menubar'] = ArcadiaMainMenu.new(@root)
     @splash.next_step(Arcadia.text('main.splash.building_extensions'))  if @splash
     self.do_build
     publish('objic.action.raise_active_obj',
@@ -641,6 +643,15 @@ class Arcadia < TkApplication
     }
     load_user_control(self['toolbar'],"","e")
     load_user_control(self['menubar'],"","e")
+    # Platform menus
+    if OS.mac?
+      apple = TkSysMenu_Apple.new(self['menubar'].menubar)
+      self['menubar'].menubar.add :cascade, :menu => apple
+    elsif OS.windows?
+      sysmenu = TkSysMenu_System.new(self['menubar'].menubar)
+      self['menubar'].menubar.add :cascade, :menu => sysmenu
+    end
+
     @splash.next_step(Arcadia.text('main.splash.loading_runners'))  if @splash
     load_runners
     do_make_clones
@@ -1510,6 +1521,7 @@ end
 
 class ArcadiaMainMenu < ArcadiaUserControl
   SUF='user_menu'
+  attr_reader :menubar
   class UserItem < UserItem
     attr_accessor :menu
     attr_accessor :underline
@@ -1541,8 +1553,16 @@ class ArcadiaMainMenu < ArcadiaUserControl
       end
     end
   end
-
-  def initialize(menubar)
+  
+  def initialize(root)
+    # Creating Menubar
+    @menubar = TkMenu.new(root)
+    @menubar.configure(Arcadia.style('menu').delete_if {|key, value| key=='tearoff'})
+    @menubar.extend(TkAutoPostMenu)
+    root['menu'] = @menubar
+  end
+  
+  def initialize_old(menubar)
     # create main menu
     @menu = menubar
     #help = TkSysMenu_Help.new(menubar)
@@ -1558,6 +1578,34 @@ class ArcadiaMainMenu < ArcadiaUserControl
   end
 
   def get_menu_context(_menubar, _context, _underline=nil)
+    count =  _menubar.index('end')
+    # cerchiamo il context
+    m_i = -1
+    if count > 0
+      1.upto(count.to_i){|i|
+        _t = _menubar.entrycget(i, 'label')
+        if _t==_context
+          m_i = i
+          break
+        end
+      }
+    end
+    if m_i > -1
+      _menubar.entrycget(m_i, 'menu')
+      #_menubar[m_i][1]
+    else
+      topmenu = TkMenu.new(_menubar)
+      topmenu.configure(Arcadia.style('menu'))
+      topmenu.extend(TkAutoPostMenu)
+      opt = {:menu => topmenu, :label => _context}
+      opt[:underline]=_underline if _underline
+      _menubar.add(:cascade, opt)
+      topmenu
+    end
+  end
+
+
+  def get_menu_context_old(_menubar, _context, _underline=nil)
     menubuttons =  _menubar[0..-1]
     # cerchiamo il context
     m_i = -1
@@ -1604,7 +1652,6 @@ class ArcadiaMainMenu < ArcadiaUserControl
     sub = ArcadiaMainMenu.sub_menu(menu_context, folder)
     if sub.nil?
       sub = TkMenu.new(
-      :parent=>@pop_up,
       :tearoff=>0
       )
       sub.configure(Arcadia.style('menu'))
@@ -1642,7 +1689,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
       conte = _args['context']
     end
     if _args['rif'] == 'main'
-      _args['menu']=make_menu_in_menubar(@menu, conte, _args['context_path'], _args['context_underline'])
+      _args['menu']=make_menu_in_menubar(@menubar, conte, _args['context_path'], _args['context_underline'])
     else
       if Arcadia.menu_root(_args['rif'])
         _args['menu']=make_menu(Arcadia.menu_root(_args['rif']), _args['context_path'], _args['context_underline'])
@@ -1654,7 +1701,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
         'msg'=>msg,
         'level'=>'error')
 
-        _args['menu']=make_menu_in_menubar(@menu, conte, _args['context_path'], _args['context_underline'])
+        _args['menu']=make_menu_in_menubar(@menubar, conte, _args['context_path'], _args['context_underline'])
       end
     end
     super(_sender, _args)
@@ -1724,6 +1771,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
       @menu.add_menu(menu_spec_view)
       @menu.add_menu(menu_spec_tools)
       @menu.add_menu(menu_spec_help)
+      p @menu
     rescue RuntimeError => e
       #p "RuntimeError : #{e.message}"
       Arcadia.runtime_error(e)

@@ -137,7 +137,7 @@ class RubyDebugView
       if @tree_process.parent(_selected)=='client'
         _text = @tree_process.itemcget(_selected, 'text')
         pos = match_position_from_stack(_text)
-        if pos && pos.length >0 
+        if pos && pos.length >0 && File.exists?(pos[0])
     	     Arcadia.process_event(OpenBufferEvent.new(self,'file'=>pos[0], 'row'=>pos[1]))
           #EditorContract.instance.open_file(self, 'file'=>pos[0], 'line'=>pos[1])
         end
@@ -522,13 +522,17 @@ class RubyDebugView
     #matchline = _line.match(/#*([0-9]*)[\s\w\W]*\s([\w\:]*[\.\/]*[\/A-Za-z_\-\.]*[\.\/\w\d]*):(\d*)/)
     matchline = _line.match(/#*([0-9]*)[\s\w\W]*line\s(.*):([0-9]*)(.*)/)
     if !matchline.nil? && matchline.length==5
-      #Arcadia.new_error_msg(self, "matchline[2]=#{matchline[2]}")
-      #Arcadia.new_error_msg(self, "matchline[3]=#{matchline[3]}")
       filename = matchline[2].to_s.strip
       line_no = matchline[3].to_i 
-      if filename && line_no
-        ret << filename << line_no
+    else
+      matchline = _line.match(/[lL]ine\s(.*)[:]*([0-9]*)\sof\s\"(.*)\"/)
+      if !matchline.nil? && matchline.length==4
+        filename = matchline[3].to_s.strip
+        line_no = matchline[1].to_i 
       end
+    end  
+    if filename && line_no
+      ret << filename << line_no
     end
     ret
   end
@@ -1141,7 +1145,8 @@ class RubyDebugClient
   end
 
   def where
-    notify("where", read("where"))
+#    notify("where", read("where"))
+    notify("where", read("info line"))
   end
 
   def quit
