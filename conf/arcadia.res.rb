@@ -2073,3 +2073,14 @@ TREE_VIEW_GIF=<<EOS
 R0lGODlhDgAOAIABAP///////yH5BAEAAAEALAAAAAAOAA4AQAIbjI9poO0P
 gWRxhkkPvlbnt0WI1HyhNn7OCR0FADs=
 EOS
+
+GO_UP_GIF=<<EOS
+R0lGODlhEAAQAKUnAABlmgBmmQBnmABnmgBnmwBomQBomgBomwBpmwBpnABq
+nQBrngBsngBsnwBsoABtnwBtoQBvowBxpABypQB1qAB3qAB4qwB8rgB9rwB+
+rwB+sAB+sQB/rQB/rwB/sQB/sgCArwCAsACAsQCAswCAtACBswCCs///////
+////////////////////////////////////////////////////////////
+/////////////////////////////////yH+EUNyZWF0ZWQgd2l0aCBHSU1Q
+ACH5BAEKAD8ALAAAAAAQABAAAAZswJ9wGBgaj0IDqYBEBkikDKM5FECvA6oV
+CroekILD50o2GAWBgwJC6mhIjgOiiGxARSQCVfggifB0VAokHyEWAns/ARoj
+JCMAiT8RjiYJkQMXJSUVgYIbmhKdTQMUHiUYEwsKewEBCgsLCZBBADs=
+EOS

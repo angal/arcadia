@@ -884,6 +884,30 @@ class TkBaseTitledFrame < TkFrame
   end
   private :__add_menu_button
 
+  def __add_check_button(_label,_proc=nil,_image=nil, _side= 'right', _frame=nil)
+    return if _frame.nil?
+    begin
+      last = @last_for_frame[_frame]
+      @last_for_frame[_frame] = TkCheckButton.new(_frame, Arcadia.style('checkbox').update('background'=>_frame.background)){
+        text  _label if _label
+        image  Arcadia.image_res(_image) if _image
+        padx 0
+        pady 0
+        if last
+          pack('side'=> _side,'anchor'=> 'e', 'after'=>last)
+        else
+          pack('side'=> _side,'anchor'=> 'e')
+        end
+        command(_proc) if _proc
+      }
+      Tk::BWidget::DynamicHelp::add(@last_for_frame[_frame], 'text'=>_label) if _label
+      @last_for_frame[_frame]
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e)
+    end
+  end
+  private :__add_check_button
+
   def __add_panel(_name='default', _side= 'right', _args=nil, _frame=nil)
     return if _frame.nil?
     args = Arcadia.style('panel').update('background'=>_frame.background, 'highlightbackground'=>_frame.background)
@@ -1467,6 +1491,11 @@ class TkTitledFrameAdapter < TkMenuTitledFrame
   def add_menu_button(_sender_name, _name='default',_image=nil, _side= 'right', _args=nil)
     forge_transient_adapter(_sender_name)
     __add_menu_button(_name, _image, _side, _args, @transient_frame_adapter[_sender_name][:action])
+  end
+
+  def add_check_button(_sender_name, _label,_proc=nil,_image=nil, _side= 'right')
+    forge_transient_adapter(_sender_name)
+    __add_check_button(_label,_proc,_image, _side, @transient_frame_adapter[_sender_name][:action])
   end
 
   def add_panel(_sender_name, _name='default',_side= 'right', _args=nil)

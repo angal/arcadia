@@ -15,21 +15,21 @@ class OutputView
   def initialize(parent=nil)
     #left_frame = TkFrame.new(parent.frame.hinner_frame, Arcadia.style('panel')).place('x' => '0','y' => '0','relheight' => '1','width' => '25')
     #right_frame = TkFrame.new(parent.frame.hinner_frame, Arcadia.style('panel')).place('x' => '25','y' => '0','relheight' => '1','relwidth' => '1','width' => '-25')
+    @auto_open_file = false
+    
     parent.frame.root.add_button(
       parent.name,
       Arcadia.text('ext.output.button.clear.hint'),
       proc{parent.main_frame.text.delete('1.0','end')}, 
       CLEAR_GIF)
 
-#    @button_u = Tk::BWidget::Button.new(left_frame, Arcadia.style('toolbarbutton')){
-#      image  TkPhotoImage.new('dat' => CLEAR_GIF)
-#      helptext 'Clear'
-#      #foreground 'blue'
-#      command proc{parent.main_frame.text.delete('1.0','end')}
-#      #relief 'groove'
-#      pack('side' =>'top', 'anchor'=>'n',:padx=>0, :pady=>0)
-#    }
-
+#----
+    @ck = parent.frame.root.add_check_button(
+      parent.name,
+      Arcadia.text('ext.output.checkbutton.auto_open_file.hint'),
+      proc{ @auto_open_file = @ck.cget('onvalue')==@ck.cget('variable').value.to_i},
+      GO_UP_GIF)
+#---
     @text = TkArcadiaText.new(parent.frame.hinner_frame,
     {'wrap'=>  'none'}.update(Arcadia.style('edit'))
     )
@@ -63,6 +63,10 @@ class OutputView
     @text.bind_append("KeyPress"){|e| input(e.keysym)}
     @input_buffer = nil
     pop_up_menu        
+  end
+  
+  def auto_open_file?
+    @auto_open_file
   end
 
   def input(_char)
@@ -296,7 +300,7 @@ class Output < ArcadiaExt
         #if _row >= _from_row
         _end = 0
         #m = /([\.\/]*[\/A-Za-z_\-\.]*[\.\/\w\d]*\.rb):(\d*)/.match(l)
-        re = Regexp.new('([\w\:]*[\.\/]*[\/A-Za-z_\-\.]*[\.\/\w\d]*[(<<current buffer>>)]*):(\d*)')
+        re = Regexp.new('([\w\:]*[\.\/]*[\/A-Za-z0-9_\-\.]*[\.\/\w\d]*[(<<current buffer>>)]*):(\d*)')
         m = re.match(l)
         #m = /([\.\/]*[\/A-Za-z_\-\.]*[\.\/\w\d]*):(\d*)/.match(l)
         while m
@@ -350,6 +354,12 @@ class Output < ArcadiaExt
     proc{@main_frame.text.configure('cursor'=> @cursor)}
     )
 
+    if @main_frame.auto_open_file?
+      Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>_file, 'row'=>_line))
+      self.frame.show
+      @main_frame.text.set_focus
+      @main_frame.text.see("end")
+    end
   end
 
   def out(_txt=nil, _tag=nil)

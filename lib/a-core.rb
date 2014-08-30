@@ -16,6 +16,7 @@ require "observer"
 
 class Arcadia < TkApplication
   include Observable
+  include OS
   attr_reader :layout
   attr_reader :wf
   attr_reader :mf_root
@@ -61,14 +62,15 @@ class Arcadia < TkApplication
     }
     @on_event = Hash.new
 
-    @main_menu_bar = TkMenubar.new(
-    'background'=> self['conf']['background']
-    ).pack('fill'=>'x')
+#    @main_menu_bar = TkMenubar.new(
+#      'background'=> self['conf']['background']
+#    ).pack('fill'=>'x')
+    
     @mf_root = Tk::BWidget::MainFrame.new(@root,
     'background'=> self['conf']['background'],
     'height'=> 0
     ){
-      menu @main_menu_bar
+      #menu @main_menu_bar
     }.pack(
     'anchor'=> 'center',
     'fill'=> 'both',
@@ -617,7 +619,8 @@ class Arcadia < TkApplication
     publish('action.test.keys', proc{@keytest.show})
     publish('action.get.font', proc{Tk::BWidget::SelectFont::Dialog.new.create})
     publish('action.show_about', proc{ArcadiaAboutSplash.new.deiconify})
-    self['menubar'] = ArcadiaMainMenu.new(@main_menu_bar)
+#    self['menubar'] = ArcadiaMainMenu.new(@main_menu_bar)
+    self['menubar'] = ArcadiaMainMenu.new(@root)
     @splash.next_step(Arcadia.text('main.splash.building_extensions'))  if @splash
     self.do_build
     publish('objic.action.raise_active_obj',
@@ -640,6 +643,15 @@ class Arcadia < TkApplication
     }
     load_user_control(self['toolbar'],"","e")
     load_user_control(self['menubar'],"","e")
+    # Platform menus
+    if OS.mac?
+      apple = TkSysMenu_Apple.new(self['menubar'].menubar)
+      self['menubar'].menubar.add :cascade, :menu => apple
+    elsif OS.windows?
+      sysmenu = TkSysMenu_System.new(self['menubar'].menubar)
+      self['menubar'].menubar.add :cascade, :menu => sysmenu
+    end
+
     @splash.next_step(Arcadia.text('main.splash.loading_runners'))  if @splash
     load_runners
     do_make_clones
@@ -668,6 +680,11 @@ class Arcadia < TkApplication
         run = Hash.new.update(self['runners'][run[:runner]]).update(run)
         #self['runners'][name]=run
       end
+      if run[:image]
+        image = Arcadia.image_res(run[:image])
+      else
+        image = Arcadia.file_icon(run[:file_exts])
+      end
       _run_title = run[:title]
       run[:title] = nil
       run[:runner_name] = name
@@ -676,9 +693,14 @@ class Arcadia < TkApplication
         RunCmdEvent.new(self, run)
         )
       }
-      mr.insert('0',
+      if run[:pos]
+        pos = run[:pos]
+      else
+        pos = '0'
+      end
+      mr.insert(pos,
       :command ,{
-        :image => Arcadia.file_icon(run[:file_exts]),
+        :image => image,
         :label => _run_title,
         :font => Arcadia.conf('menu.font'),
         :compound => 'left',
@@ -695,6 +717,12 @@ class Arcadia < TkApplication
       _run_title = run[:title]
       run[:title] = nil
       run[:runner_name] = name
+      if run[:image]
+        image = Arcadia.image_res(run[:image])
+      else
+        image = Arcadia.file_icon(run[:file_exts])
+      end
+
       _command = proc{
         _event = Arcadia.process_event(
         RunCmdEvent.new(self, run)
@@ -702,7 +730,7 @@ class Arcadia < TkApplication
       }
       mr.insert('0',
       :command ,{
-        :image => Arcadia.file_icon(run[:file_exts]),
+        :image => image,
         :label => _run_title,
         :font => Arcadia.conf('menu.font'),
         :compound => 'left',
@@ -711,7 +739,7 @@ class Arcadia < TkApplication
       )
     }
 
-    # conf runner
+    #conf runner
     runs=Arcadia.conf_group('runners')
     mr.insert('0', :separator) if runs && !runs.empty?
 
@@ -723,6 +751,22 @@ class Arcadia < TkApplication
       insert_runner_item.call(name, run)
     }
 
+
+    #conf exts runner
+    @exts.each{|ext|
+      if ext_active?(ext)
+        ext_runs=Arcadia.conf_group("#{ext}.runners")
+        mr.insert(self['runners'].count, :separator) if ext_runs && !ext_runs.empty?
+        ext_runs.each{|name, hash_string|
+          self['runners'][name]=eval hash_string
+          self['runners'][name][:pos]=self['runners'].count
+          insert_runner_item.call(name, self['runners'][name])
+        }
+      end
+    }
+
+
+
     # pers runner instance
     runs=Arcadia.pers_group('runners')
     mr.insert('0', :separator) if runs && !runs.empty?
@@ -731,8 +775,6 @@ class Arcadia < TkApplication
       begin
         pers_runner[name]=eval hash_string
       rescue Exception => e
-        p Arcadia("main.e.loading_runner.title", [name])
-        p Arcadia("main.e.loading_runner.msg", [hash_string, e.message])
         Arcadia.unpersistent("runners.#{name}")
       end
     }
@@ -1139,7 +1181,7 @@ class Arcadia < TkApplication
 
   def Arcadia.save_file_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir)
     file = HinnerFileDialog.new(HinnerFileDialog::SAVE_FILE_MODE).file(_initial_dir)
-    if File.exists?(file) 
+    if !file.nil? && File.exists?(file) 
       if (Arcadia.dialog(self, 'type'=>'yes_no',
       'msg'=>Arcadia.text('main.d.confirm_override_file.msg', [file]),
       'title' => Arcadia.text('main.d.confirm_override_file.title'),
@@ -1154,7 +1196,8 @@ class Arcadia < TkApplication
   end
 
   def Arcadia.is_windows?
-    RUBY_PLATFORM =~ /mingw|mswin/
+    OS.windows?
+    #RUBY_PLATFORM =~ /mingw|mswin/
   end
 
   def Arcadia.ruby
@@ -1478,6 +1521,7 @@ end
 
 class ArcadiaMainMenu < ArcadiaUserControl
   SUF='user_menu'
+  attr_reader :menubar
   class UserItem < UserItem
     attr_accessor :menu
     attr_accessor :underline
@@ -1509,10 +1553,21 @@ class ArcadiaMainMenu < ArcadiaUserControl
       end
     end
   end
-
-  def initialize(menu)
+  
+  def initialize(root)
+    # Creating Menubar
+    @menubar = TkMenu.new(root)
+    @menubar.configure(Arcadia.style('menu').delete_if {|key, value| key=='tearoff'})
+    @menubar.extend(TkAutoPostMenu)
+    root['menu'] = @menubar
+  end
+  
+  def initialize_old(menubar)
     # create main menu
-    @menu = menu
+    @menu = menubar
+    #help = TkSysMenu_Help.new(menubar)
+    #menubar.add_menu :cascade, :menu => help
+
     build
     begin
       @menu.configure(Arcadia.style('menu'))
@@ -1523,6 +1578,34 @@ class ArcadiaMainMenu < ArcadiaUserControl
   end
 
   def get_menu_context(_menubar, _context, _underline=nil)
+    count =  _menubar.index('end')
+    # cerchiamo il context
+    m_i = -1
+    if count && count > 0
+      1.upto(count.to_i){|i|
+        _t = _menubar.entrycget(i, 'label')
+        if _t==_context
+          m_i = i
+          break
+        end
+      }
+    end
+    if m_i > -1
+      _menubar.entrycget(m_i, 'menu')
+      #_menubar[m_i][1]
+    else
+      topmenu = TkMenu.new(_menubar)
+      topmenu.configure(Arcadia.style('menu'))
+      topmenu.extend(TkAutoPostMenu)
+      opt = {:menu => topmenu, :label => _context}
+      opt[:underline]=_underline if _underline
+      _menubar.add(:cascade, opt)
+      topmenu
+    end
+  end
+
+
+  def get_menu_context_old(_menubar, _context, _underline=nil)
     menubuttons =  _menubar[0..-1]
     # cerchiamo il context
     m_i = -1
@@ -1569,7 +1652,6 @@ class ArcadiaMainMenu < ArcadiaUserControl
     sub = ArcadiaMainMenu.sub_menu(menu_context, folder)
     if sub.nil?
       sub = TkMenu.new(
-      :parent=>@pop_up,
       :tearoff=>0
       )
       sub.configure(Arcadia.style('menu'))
@@ -1607,7 +1689,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
       conte = _args['context']
     end
     if _args['rif'] == 'main'
-      _args['menu']=make_menu_in_menubar(@menu, conte, _args['context_path'], _args['context_underline'])
+      _args['menu']=make_menu_in_menubar(@menubar, conte, _args['context_path'], _args['context_underline'])
     else
       if Arcadia.menu_root(_args['rif'])
         _args['menu']=make_menu(Arcadia.menu_root(_args['rif']), _args['context_path'], _args['context_underline'])
@@ -1619,7 +1701,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
         'msg'=>msg,
         'level'=>'error')
 
-        _args['menu']=make_menu_in_menubar(@menu, conte, _args['context_path'], _args['context_underline'])
+        _args['menu']=make_menu_in_menubar(@menubar, conte, _args['context_path'], _args['context_underline'])
       end
     end
     super(_sender, _args)
@@ -1627,8 +1709,10 @@ class ArcadiaMainMenu < ArcadiaUserControl
 
 
   def build
+    top_item_spec_file = [Arcadia.text('main.menu.file'), 0]
+    top_item_spec_file << {'menu_name'=>'apple'} if OS.mac?
     menu_spec_file = [
-      [Arcadia.text('main.menu.file'), 0],
+      top_item_spec_file,
       [Arcadia.text('main.menu.file.open'), proc{OpenBufferEvent.new(self).go!}, 0],
       [Arcadia.text('main.menu.file.new'), proc{Arcadia.process_event(NewBufferEvent.new(self))}, 0],
       #['Save', proc{EditorContract.instance.save_file_raised(self)},0],
@@ -1637,7 +1721,9 @@ class ArcadiaMainMenu < ArcadiaUserControl
       '---',
     [Arcadia.text('main.menu.file.quit'), proc{Arcadia.process_event(QuitEvent.new(self))}, 0]]
 
-    menu_spec_edit = [[Arcadia.text('main.menu.edit'), 0],
+    top_item_spec_edit = [Arcadia.text('main.menu.edit'), 0]
+    top_item_spec_edit << {'menu_name'=>'apple'} if OS.mac?
+    menu_spec_edit = [top_item_spec_edit,
       [Arcadia.text('main.menu.edit.cut'), proc{Arcadia.process_event(CutTextEvent.new(self))}, 2],
       [Arcadia.text('main.menu.edit.copy'), proc{Arcadia.process_event(CopyTextEvent.new(self))}, 0],
       [Arcadia.text('main.menu.edit.paste'), proc{Arcadia.process_event(PasteTextEvent.new(self))}, 0],
@@ -1651,23 +1737,32 @@ class ArcadiaMainMenu < ArcadiaUserControl
       '---',
     [Arcadia.text('main.menu.edit.preferences'), proc{}, 0]]
 
-    menu_spec_search = [[Arcadia.text('main.menu.search'), 0],
+    top_item_spec_search = [Arcadia.text('main.menu.search'), 0] 
+    top_item_spec_search << {'menu_name'=>'apple'} if OS.mac?
+    menu_spec_search = [top_item_spec_search,
       [Arcadia.text('main.menu.search.find_replace'), proc{Arcadia.process_event(SearchBufferEvent.new(self))}, 2],
       [Arcadia.text('main.menu.search.find_in_files'), proc{Arcadia.process_event(SearchInFilesEvent.new(self))}, 2],
       [Arcadia.text('main.menu.search.ack_im_file'), proc{Arcadia.process_event(AckInFilesEvent.new(self))}, 2],
     [Arcadia.text('main.menu.search.go_to_line'), proc{Arcadia.process_event(GoToLineBufferEvent.new(self))}, 2]]
 
-    menu_spec_view = [[Arcadia.text('main.menu.view'), 0],
+    top_item_spec_view = [Arcadia.text('main.menu.view'), 0]
+    top_item_spec_view << {'menu_name'=>'apple'} if OS.mac?
+    menu_spec_view = [top_item_spec_view,
       [Arcadia.text('main.menu.view.show_hide_toolbar'), proc{$arcadia.show_hide_toolbar}, 2],
       [Arcadia.text('main.menu.view.close_current_tab'), proc{Arcadia.process_event(CloseCurrentTabEvent.new(self))}, 0],
     ]
 
-    menu_spec_tools = [[Arcadia.text('main.menu.tools'), 0],
+    top_item_spec_tools = [Arcadia.text('main.menu.tools'), 0]
+    top_item_spec_tools << {'menu_name'=>'apple'} if OS.mac?
+    menu_spec_tools = [top_item_spec_tools,
       [Arcadia.text('main.menu.tools.keys_test'), $arcadia['action.test.keys'], 2],
       [Arcadia.text('main.menu.tools.edit_prefs'), proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>$arcadia.local_file_config))}, 0],
       [Arcadia.text('main.menu.tools.load_from_edited_prefs'), proc{$arcadia.load_local_config}, 0]
     ]
-    menu_spec_help = [[Arcadia.text('main.menu.help'), 0],
+
+    top_item_spec_help = [Arcadia.text('main.menu.help'), 0]
+    top_item_spec_help << {'menu_name'=>'apple'} if OS.mac?
+    menu_spec_help = [top_item_spec_help,
     [Arcadia.text('main.menu.help.about'), $arcadia['action.show_about'], 2],]
     begin
       @menu.add_menu(menu_spec_file)
@@ -1676,6 +1771,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
       @menu.add_menu(menu_spec_view)
       @menu.add_menu(menu_spec_tools)
       @menu.add_menu(menu_spec_help)
+      p @menu
     rescue RuntimeError => e
       #p "RuntimeError : #{e.message}"
       Arcadia.runtime_error(e)
