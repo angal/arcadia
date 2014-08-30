@@ -1581,7 +1581,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
     count =  _menubar.index('end')
     # cerchiamo il context
     m_i = -1
-    if count > 0
+    if count && count > 0
       1.upto(count.to_i){|i|
         _t = _menubar.entrycget(i, 'label')
         if _t==_context
