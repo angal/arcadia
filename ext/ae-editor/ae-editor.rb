@@ -4545,9 +4545,8 @@ class AgMultiEditor < ArcadiaExtPlus
       if [CutTextEvent, PasteTextEvent, UndoTextEvent, RedoTextEvent].include?(_event.class)
         if raised.highlighting
           raised.refresh_visible_highlighting
-        else
-          raised.check_modify
         end      
+        raised.check_modify
       end
     end
   end

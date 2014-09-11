@@ -720,6 +720,7 @@ class FilesHistrory < ArcadiaExt
       conf('view','list') 
     end
     return if !@h_stack_changed 
+    
     if File.exist?(history_file)
       f = File::open(history_file,'r')
       begin
@@ -729,16 +730,17 @@ class FilesHistrory < ArcadiaExt
       end
       f = File.new(history_file, "w")
       begin
-        if f
-          _lines[0..-1].each{|_line|
+        if f && _lines
+          _lines.each{|_line|
             _lfile = _line.split(';')
-            if _lfile
+            if _lfile && File.exists?(_lfile[0])
+              rif = nil
               if @h_stack[_lfile[0]]
                 rif = "#{_lfile[0]};#{@h_stack[_lfile[0]]}"
               else
                 rif = _line
               end
-              f.syswrite(rif+"\n")
+              f.syswrite(rif+"\n") if !rif.nil?
             end
           }
         end
@@ -786,26 +788,30 @@ class FilesHistrory < ArcadiaExt
       _filename = File.expand_path(_filename)
       _filename_index = _filename+";"+_text_index
       if File.exist?(history_file)
+        to_add = []
+        max= conf('length').to_i
+        i = 1
+        to_add << _filename_index
+        @history_lines.each{|_line|
+          _lfile = _line.split(';')
+          if _lfile
+            if (_lfile[0] != _filename) && (_line.length > 0) && File.exists?(_lfile[0])
+              to_add << _line
+              i+=1 
+            end
+          end
+          break if i >= max
+        }
+        
         f = File.new(history_file, "w")
         begin
-          if f
-            max= conf('length').to_i
-            i = 1
-            f.syswrite(_filename_index+"\n")
-            @history_lines.each{|_line|
-              _lfile = _line.split(';')
-              if _lfile
-                if (_lfile[0] != _filename) && (_line.length > 0) 
-                  f.syswrite(_line+"\n")
-                  i+=1 
-                end
-              end
-              break if i >= max
-            }
-          end
+          to_add.each{|x|
+            f.syswrite(x+"\n")
+          }
         ensure
           f.close unless f.nil?
         end
+          
       else
         create_history_file(_filename+"\n")
       end
