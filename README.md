@@ -7,18 +7,18 @@ on Nov 3, 2013
 ## About
 
 Arcadia is a light Integrated Development Environment (IDE) for Ruby language 
-written in Ruby using the classic tcl/tk GUI toolkit.
+written in Ruby using the classic Tcl/Tk GUI toolkit.
 
 Some of Arcadia ide project features include:
  * Editor with source browsing, syntax highlighting, code completion
- * Working on any platform where ruby and tcl-tk work.
+ * Working on any platform where Ruby and Tcl-Tk work.
  * Debugging support
  * Highly estensibile architecture.
 
 ## How to install
  * `exec on command line "gem install arcadia"`
 
-NOTE: on some linux distributions like archlinux the default tcl/tk runtime at this time is on versions >= 8.6
+NOTE: on some linux distributions like archlinux the default Tcl/Tk runtime at this time is on versions >= 8.6
 on the other hand ruby-tk supports fully only versions <= 8.5.x.y so to make arcadia working a choice 
 can be install ActiveTcl 8.5 and use ruby via rvm. 
 
@@ -64,16 +64,16 @@ can be install ActiveTcl 8.5 and use ruby via rvm.
 
   - rubygems
   - ruby-tk
-  - tcl/tk (ruby-tk supports fully tcl/tk runtime <= 8.5 )
-  - tk-tile (if tcl/tk < 8.5)
-  - ctags (linux)
-  - xterm (linux, optional)
-  - xdotool (linux, optional)
+  - tcl/tk (ruby-tk supports fully Tcl/Tk runtime <= 8.5 )
+  - tk-tile (if Tcl/Tk < 8.5)
+  - ctags (Linux)
+  - xterm (Linux, optional)
+  - xdotool (Linux, optional)
   - ack (optional)
   - gem coderay (> 1.0)
-  - gem debugger (ruby-debug on ruby < 1.9)
-  - gem win32-process (only on windows)
-  - gem ruby-wmi (only on windows)
+  - gem debugger (ruby-debug on Ruby < 1.9)
+  - gem win32-process (only on Windows)
+  - gem ruby-wmi (only on Windows)
   
 
 ## Short User guide
