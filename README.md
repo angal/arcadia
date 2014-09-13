@@ -1,4 +1,4 @@
-# Arcadia Ide
+# Arcadia IDE
 version 0.13.1
 
 by Antonio Galeone
