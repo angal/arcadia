@@ -1,42 +1,42 @@
-= Arcadia Ide
+# Arcadia IDE
 version 0.13.1
 
 by Antonio Galeone
 on Nov 3, 2013
 
-== About
+## About
 
 Arcadia is a light Integrated Development Environment (IDE) for Ruby language 
-written in Ruby using the classic tcl/tk GUI toolkit.
+written in Ruby using the classic Tcl/Tk GUI toolkit.
 
 Some of Arcadia ide project features include:
-* Editor with source browsing, syntax highlighting, code completion
-* Working on any platform where ruby and tcl-tk work.
-* Debugging support
-* Highly estensibile architecture.
+ * Editor with source browsing, syntax highlighting, code completion
+ * Working on any platform where Ruby and Tcl-Tk work.
+ * Debugging support
+ * Highly estensibile architecture.
 
-== How to install
-* exec on command line "gem install arcadia"
+## How to install
+ * `exec on command line "gem install arcadia"`
 
-NOTE: on some linux distributions like archlinux the default tcl/tk runtime at this time is on versions >= 8.6
+NOTE: on some linux distributions like archlinux the default Tcl/Tk runtime at this time is on versions >= 8.6
 on the other hand ruby-tk supports fully only versions <= 8.5.x.y so to make arcadia working a choice 
 can be install ActiveTcl 8.5 and use ruby via rvm. 
 
-== How to run
-* exec on command line "arcadia"
+## How to run
+ * `exec on command line "arcadia"`
 
-== Wiki
-https://github.com/angal/arcadia/wiki
+## Wiki
+[https://github.com/angal/arcadia/wiki]
 
-== News
+## News
 
 [0.13.1]
-    This realease:
+    This release:
   - added Russian translation (Thanks to Michael)
   - bug fixes and various improvements
 
 [0.13.0]
-    This realease:
+    This release:
   - improves file-history  introducing bookmarks management
   - improves layout    
   - fixes bugs 
@@ -60,30 +60,30 @@ https://github.com/angal/arcadia/wiki
  - introduced in file-history a new kind of view (list view) activable by button on toolbar  
  - bugs fixed and optimizations 
  
-== Dependencies
+## Dependencies
 
   - rubygems
   - ruby-tk
-  - tcl/tk (ruby-tk supports fully tcl/tk runtime <= 8.5 )
-  - tk-tile (if tcl/tk < 8.5)
-  - ctags (linux)
-  - xterm (linux, optional)
-  - xdotool (linux, optional)
+  - tcl/tk (ruby-tk supports fully Tcl/Tk runtime <= 8.5 )
+  - tk-tile (if Tcl/Tk < 8.5)
+  - ctags (Linux)
+  - xterm (Linux, optional)
+  - xdotool (Linux, optional)
   - ack (optional)
   - gem coderay (> 1.0)
-  - gem debugger (ruby-debug on ruby < 1.9)
-  - gem win32-process (only on windows)
-  - gem ruby-wmi (only on windows)
+  - gem debugger (ruby-debug on Ruby < 1.9)
+  - gem win32-process (only on Windows)
+  - gem ruby-wmi (only on Windows)
   
 
-== Short User guide
+## Short User guide
 Application layout is splitted in vertical and horizontal resizable frames. 
 On vertical and horizontal  splitter appear two button for left or right 
 one shot frame closing. 
 Every frame has a title, a button to expand or resizing it and a menu-button 
 for dynamic layout functions (like add row, add column, close or for move a frame).
 
-==== Main Toolbar
+#### Main Toolbar
 The toolbar button are in order:
 - new, open, save, find
   (relatively to edit/find operation)
@@ -95,7 +95,7 @@ The toolbar button are in order:
   (for debug need)
 - quit (to exit from arcadia)
 
-==== Editor
+#### Editor
 Editor can use the notebook metaphor. Same command are on the popup menu 
 that is raised on "Button-3" click event fundamentally for closing the tab 
 under the mouse pointer.
@@ -123,17 +123,17 @@ These are same editor short-cut:
 
 - Double-Click on line number set or unset a debug breakpoint
 
-==== Project drawer
+#### Project drawer
 It is a navigational tree: 
 - open or create dir as project
 - make commons file system activity (by contextual menu)
 - open terminal from selected dir 
 
-==== File history
+#### File history
 The last used files are organizing in tree so you can reopen them or their 
 directory by clicking on the tree node.
 
-==== Debug
+#### Debug
 Require debugger gem.
 It is created when a debug session init. 
 The debug button are: Step Next, Step Into, Step Over, Resume and quit.
@@ -142,7 +142,7 @@ step.
 
 NOTE: at this moment debugger doesn't seem to work with ruby >= 2.0  
 
-==== Configuration
+#### Configuration
 Same Arcadia properties are locally configurabled by editing the file arcadia.conf
 under ~/.arcadia  directory. The format of property definition are:
 <OPERATING SYSTEM IDENTIFY::>PROPERTY_NAME=PROPERTY_VALUE
@@ -150,22 +150,21 @@ under ~/.arcadia  directory. The format of property definition are:
 
 I have tested arcadia with ruby 1.8, 1.9, 2.0 on 
 
-* Archlinux
-* Ubuntu/Mint
-* Fedora
-* FreeBsd6.x, FreeBsd7.x, 
-* Vector linux 5.*,
-* Windows 2000/XP/7, 
-* Cygwin (note: same page fault error on dll under cygwin may be solved in this way:
-  by ash.exe exec "/bin/rebaseall"). 
+ * Archlinux
+ * Ubuntu/Mint
+ * Fedora
+ * FreeBsd6.x, FreeBsd7.x, 
+ * Vector linux 5.*,
+ * Windows 2000/XP/7, 
+ * Cygwin (note: same page fault error on dll under cygwin may be solved in this way: `by ash.exe exec "/bin/rebaseall"`) 
 
-==Developers e general information
+## Developers e general information
 Released on arcadia web site (http://arcadia.rubyforge.org) 
 
-== License
+## License
 Arcadia is released under the Ruby License
 
-== Contacts
+## Contacts
 For all questions:
 antonio-galeone@rubyforge.org
 
