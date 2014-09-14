@@ -162,7 +162,7 @@ class Arcadia < TkApplication
     #sleep(1)
     @splash.destroy  if @splash
     if @first_run # first ARCADIA ever
-      Arcadia.process_event(OpenBufferEvent.new(self,'file'=>'README'))
+      Arcadia.process_event(OpenBufferEvent.new(self,'file'=>'README.md'))
     elsif ARGV.length > 0
       ARGV.each{|_f|
         if  $pwd != File.dirname(__FILE__) && !File.exist?(_f)
@@ -1956,7 +1956,7 @@ class ArcadiaAboutSplash < TkToplevel
     }
 
     @tkLabel2 = TkLabel.new(self){
-      text  'Arcadia Ide'
+      text  'Arcadia IDE'
       background  _bgcolor
       foreground  '#ffffff'
       font Arcadia.instance['conf']['splash.subtitle.font']
@@ -4440,5 +4440,19 @@ class ArcadiaUtils
       subpids.concat(unix_child_pids(ccp))
     }
     ret.concat(subpids)
+  end
+  
+  def ArcadiaUtils.exec(_cmd_=nil)
+    return nil if _cmd_.nil?
+    to_ret = ''
+    begin
+      open("|#{_cmd_}", "r"){|f| 
+        #to_ret = f.readlines
+        to_ret = f.read
+      }
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e)
+    end
+    to_ret
   end
 end

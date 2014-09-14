@@ -96,20 +96,12 @@ class SourceStructure
   
 end
 
-class CtagsSourceStructure < SourceStructure
-  SUPPORTED_LANG = ['Ant','Asm','Asp','Awk','Basic','BETA','C','C++','C#','Cobol','DosBatch','Eiffel','Erlang','Flex','Fortran','HTML','Java','JavaScript','Lisp','Lua','Make','MatLab','OCaml','Pascal','Perl','PHP','Python','REXX','Ruby','Scheme','Sh','SLang','SML','SQL','Tcl','Tex','Vera','Verilog','VHDL','Vim','YACC']
-  def initialize(_file, _ctags_string='ctags', _row_rif = nil, _language=nil)
+class FileSourceStructure < SourceStructure
+  def initialize(_file, _row_rif = nil)
     super()
     @file = _file
-    @ctags_string = _ctags_string
-    @language = (_language.nil?)?nil:_language.capitalize
-    @classes = Hash.new
-    @last_root = @root
-    @last_class_node = @root
-    @last_node = @root
-    @blank_rows = []    
+    @blank_rows = []
     initialize_blank_rows(_row_rif) if !_row_rif.nil?
-    build_structure
   end
   
   def initialize_blank_rows(_row = nil)
@@ -120,6 +112,147 @@ class CtagsSourceStructure < SourceStructure
     }
     @blank_rows << _row if _row 
   end
+  
+end
+
+module RubySourceStructureUtils
+  attr_reader :injected_row
+  def scheletor_from_node(_node, _source='', _injected_source='', _injected_class='')
+    _hinner_source = ''
+    #_sons = _node.sons.sort
+    _sons = _node.sons
+    for inode in 0.._sons.length - 1
+      _son = _sons[inode]
+      if _son.kind == 'class'
+         _hinner_source = "#{_hinner_source}#{_son.helptext}\n"
+      elsif _son.kind == 'module'
+         _hinner_source = "#{_hinner_source}#{_son.helptext}\n"
+      elsif _son.kind == 'method' && ((_son.label != 'initialize') || (_son.label == 'initialize') && _son.args)         
+         _hinner_source = "#{_hinner_source}  def #{_son.label}#{_son.args}\n"
+         _hinner_source = "#{_hinner_source}  end\n"
+      elsif _son.kind == 'singleton method'
+         _hinner_source = "#{_hinner_source}  def #{_son.label}\n"
+         _hinner_source = "#{_hinner_source}  end\n"
+      end
+      _hinner_source= scheletor_from_node(_son, _hinner_source, _injected_source, _injected_class)
+    end
+    _source = "#{_source}#{_hinner_source}" if _hinner_source.strip.length>0
+    if _node.kind == 'class' && _node.label == _injected_class
+      _source = "#{_source}  def initialize\n  #{_injected_source}  end\n"
+      @injected_row = _source.split("\n").length-2
+    elsif _node.kind == 'class'
+      _source = "#{_source}  def initialize\n  end\n"
+    end
+    _source = "#{_source}end\n" if _node.kind == 'class' || _node.kind == 'module'
+    _source
+  end
+end
+
+class RubyGrepFileSourceStructure < FileSourceStructure
+  include RubySourceStructureUtils
+  def initialize(_file, _row_rif = nil)
+    super(_file, _row_rif)
+    @last_class_node = @root
+    @last_node = @root
+    @last_end_node_row = 0
+    @last_class_node_row = 0
+    build_structure
+  end
+  
+  def build_structure
+    output = grep
+    output.each {|line|
+      row, other = line.split(':')
+      other.strip! if other
+      key_word, other = other.split
+      other.strip! if other
+      next if !['class','module','def','end'].include?(key_word)
+      if key_word == 'end'
+        @last_end_node_row = row
+        next
+      end
+      # kind
+      if ['class','module'].include?(key_word)
+        kind = key_word
+        if @last_end_node_row > @last_class_node_row || @last_class_node == @root
+          parent = @root
+        else
+          parent = @last_class_node
+        end
+      elsif ['def'].include?(key_word)
+        kind = 'method'
+        parent = @last_class_node
+      end
+      #name
+      name = other.split('(')[0].strip
+      next if name == '<<' && kind == 'class'
+      #helptext
+      helptext = line.strip
+      
+      if kind == 'method' && name.split('.')[0] == 'parent'
+        kind = 'singleton method'
+      end
+
+      # create node
+      node = SourceTreeNode.new(parent, kind)
+      node.label = name
+      node.helptext = helptext
+      node.args = ''
+      node.rif = row
+      ln_rif = node.rif.to_i - 1 
+      while @blank_rows.include?(ln_rif) && ln_rif > 0
+        ln_rif = ln_rif - 1
+      end
+      @last_node.rif_end = ln_rif.to_s
+
+      if ['class','module'].include?(key_word)
+        @last_class_node = node
+        @last_class_node_row = row
+      end
+      node.sortable = true
+      @last_node = node
+    }
+  end
+  
+  def grep
+    _cmd_ = "|grep -nE '^class\s|\sclass\s|^module\s|\smodule\s|^def\s|\sdef\s|^end\s|\send\s|^end$|\send$' #{@file}"
+    to_ret = ''
+    begin
+      open(_cmd_, "r"){|f| 
+        to_ret = f.readlines
+      }
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e)
+    end
+    to_ret
+  end
+end
+
+
+class CtagsFileSourceStructure < FileSourceStructure
+  SUPPORTED_LANG = ['Ant','Asm','Asp','Awk','Basic','BETA','C','C++','C#','Cobol','DosBatch','Eiffel','Erlang','Flex','Fortran','HTML','Java','JavaScript','Lisp','Lua','Make','MatLab','OCaml','Pascal','Perl','PHP','Python','REXX','Ruby','Scheme','Sh','SLang','SML','SQL','Tcl','Tex','Vera','Verilog','VHDL','Vim','YACC']
+  def initialize(_file, _ctags_string='ctags', _row_rif = nil, _language=nil)
+    super(_file, _row_rif)
+    #@file = _file
+    @ctags_string = _ctags_string
+    @language = (_language.nil?)?nil:_language.capitalize
+    @classes = Hash.new
+    @last_root = @root
+    @last_class_node = @root
+    @last_node = @root
+    #@blank_rows = []    
+    #initialize_blank_rows(_row_rif) if !_row_rif.nil?
+    build_structure
+  end
+  
+#  def initialize_blank_rows(_row = nil)
+#    File::open(@file,'rb'){ |file|
+#      file.readlines.each_with_index{| line, i | 
+#        @blank_rows << i+1 if line.strip == ''
+#      }
+#    }
+#    @blank_rows << _row if _row 
+#  end
 
   def build_structure
     output = ctags
@@ -187,47 +320,17 @@ class CtagsSourceStructure < SourceStructure
   end
 end
 
+class RubyCtagsFileSourceStructure < CtagsFileSourceStructure
+  include RubySourceStructureUtils
 
-class RubyCtagsSourceStructure < CtagsSourceStructure
-  attr_reader :injected_row
-  
   def initialize(_file, _ctags_string='ctags', _row_rif = nil)
     super(_file, _ctags_string, _row_rif, 'Ruby')
   end
-  
-  def scheletor_from_node(_node, _source='', _injected_source='', _injected_class='')
-    _hinner_source = ''
-    #_sons = _node.sons.sort
-    _sons = _node.sons
-    for inode in 0.._sons.length - 1
-      _son = _sons[inode]
-      if _son.kind == 'class'
-         _hinner_source = "#{_hinner_source}#{_son.helptext}\n"
-      elsif _son.kind == 'module'
-         _hinner_source = "#{_hinner_source}#{_son.helptext}\n"
-      elsif _son.kind == 'method' && ((_son.label != 'initialize') || (_son.label == 'initialize') && _son.args)         
-         _hinner_source = "#{_hinner_source}  def #{_son.label}#{_son.args}\n"
-         _hinner_source = "#{_hinner_source}  end\n"
-      elsif _son.kind == 'singleton method'
-         _hinner_source = "#{_hinner_source}  def #{_son.label}\n"
-         _hinner_source = "#{_hinner_source}  end\n"
-      end
-      _hinner_source= scheletor_from_node(_son, _hinner_source, _injected_source, _injected_class)
-    end
-    _source = "#{_source}#{_hinner_source}" if _hinner_source.strip.length>0
-    if _node.kind == 'class' && _node.label == _injected_class
-      _source = "#{_source}  def initialize\n  #{_injected_source}  end\n"
-      @injected_row = _source.split("\n").length-2
-    elsif _node.kind == 'class'
-      _source = "#{_source}  def initialize\n  end\n"
-    end
-    _source = "#{_source}end\n" if _node.kind == 'class' || _node.kind == 'module'
-    _source
-  end
 end
 
-class RubySourceStructure < SourceStructure
-  attr_reader :injected_row
+class RubySourceStructureParser < SourceStructure
+  include RubySourceStructureUtils
+#  attr_reader :injected_row
 
   def initialize(_source)
     super()
@@ -331,42 +434,42 @@ class RubySourceStructure < SourceStructure
   end
 
 
-  def scheletor_from_node(_node, _source='', _injected_source='', _injected_class='')
-    _hinner_source = ''
-    #_sons = _node.sons.sort
-    _sons = _node.sons
-    for inode in 0.._sons.length - 1
-      _son = _sons[inode]
-      if _son.kind == 'class'
-         _hinner_source = "#{_hinner_source}class #{_son.helptext}\n"
-      elsif _son.kind == 'module'
-         _hinner_source = "#{_hinner_source}module #{_son.helptext}\n"
-      elsif _son.kind == 'method' && _son.helptext != 'initialize'
-         
-         _hinner_source = "#{_hinner_source}  def #{_son.helptext}\n"
-         _hinner_source = "#{_hinner_source}  end\n"
-      elsif _son.kind == 'singleton method'
-         _hinner_source = "#{_hinner_source}  def #{_son.helptext}\n"
-         _hinner_source = "#{_hinner_source}  end\n"
-      end
-      _hinner_source= scheletor_from_node(_son, _hinner_source, _injected_source, _injected_class)
-    end
-    _source = "#{_source}#{_hinner_source}" if _hinner_source.strip.length>0
-    if _node.kind == 'class' && _node.label == _injected_class
-      _source = "#{_source}  def initialize\n  #{_injected_source}  end\n"
-      @injected_row = _source.split("\n").length-2
-    end
-    _source = "#{_source}end\n" if _node.kind == 'class' || _node.kind == 'module'
-    _source
-  end
-
-
-  def classies
-  end
-  def modules
-  end
-  def class_methods(_class)
-  end
+#  def scheletor_from_node(_node, _source='', _injected_source='', _injected_class='')
+#    _hinner_source = ''
+#    #_sons = _node.sons.sort
+#    _sons = _node.sons
+#    for inode in 0.._sons.length - 1
+#      _son = _sons[inode]
+#      if _son.kind == 'class'
+#         _hinner_source = "#{_hinner_source}class #{_son.helptext}\n"
+#      elsif _son.kind == 'module'
+#         _hinner_source = "#{_hinner_source}module #{_son.helptext}\n"
+#      elsif _son.kind == 'method' && _son.helptext != 'initialize'
+#         
+#         _hinner_source = "#{_hinner_source}  def #{_son.helptext}\n"
+#         _hinner_source = "#{_hinner_source}  end\n"
+#      elsif _son.kind == 'singleton method'
+#         _hinner_source = "#{_hinner_source}  def #{_son.helptext}\n"
+#         _hinner_source = "#{_hinner_source}  end\n"
+#      end
+#      _hinner_source= scheletor_from_node(_son, _hinner_source, _injected_source, _injected_class)
+#    end
+#    _source = "#{_source}#{_hinner_source}" if _hinner_source.strip.length>0
+#    if _node.kind == 'class' && _node.label == _injected_class
+#      _source = "#{_source}  def initialize\n  #{_injected_source}  end\n"
+#      @injected_row = _source.split("\n").length-2
+#    end
+#    _source = "#{_source}end\n" if _node.kind == 'class' || _node.kind == 'module'
+#    _source
+#  end
+#
+#
+#  def classies
+#  end
+#  def modules
+#  end
+#  def class_methods(_class)
+#  end
 end
 
 class CompleteCode
@@ -478,15 +581,19 @@ class RubyCompleteCode < CompleteCode
 #    @row = _row.to_i
 #    @col = _col.to_i
     super
-    if _editor && _editor.has_ctags?
+    if _editor && (_editor.has_ctags? || OS.unix?)
       tmp_file = _editor.create_temp_file
       begin
-        @ss = RubyCtagsSourceStructure.new(tmp_file, _editor.ctags_string, _row.to_i)
+        if _editor.has_ctags?
+          @ss = RubyCtagsFileSourceStructure.new(tmp_file, _editor.ctags_string, _row.to_i)
+        elsif OS.unix?
+          @ss = RubyGrepFileSourceStructure.new(tmp_file, _row.to_i)
+        end
       ensure
         File.delete(tmp_file)
       end
     else
-      @ss = RubySourceStructure.new(@source)
+      @ss = RubySourceStructureParser.new(@source)
     end
 #    @filter=''
 #    @words = Array.new
@@ -1122,19 +1229,27 @@ class AgEditorOutline
       @tree_exp.delete(@tree_exp.nodes('root'))
     end
     _txt = @editor.text.get('1.0','end')
-    if @editor.has_ctags?
+    if @editor.has_ctags? || (OS.unix? && @lang == 'ruby')
       if @editor.file && !@editor.modified?
-        @ss = CtagsSourceStructure.new(@editor.file, @editor.ctags_string)
+        if @editor.has_ctags?
+          @ss = CtagsFileSourceStructure.new(@editor.file, @editor.ctags_string)
+        elsif OS.unix?
+          @ss = RubyGrepFileSourceStructure.new(@editor.file)
+        end
       else
         tmp_file = @editor.create_temp_file
         begin
-          @ss = CtagsSourceStructure.new(tmp_file, @editor.ctags_string, @lang)
+          if @editor.has_ctags?
+            @ss = CtagsFileSourceStructure.new(tmp_file, @editor.ctags_string, @lang)
+          elsif OS.unix?
+            @ss = RubyGrepFileSourceStructure.new(tmp_file)
+          end
         ensure 
           File.delete(tmp_file)
         end
       end
     else
-      @ss = RubySourceStructure.new(_txt)
+      @ss = RubySourceStructureParser.new(_txt)
     end
     @selected = nil
     build_tree_from_node(@ss.root, _label_sel)
@@ -4101,9 +4216,22 @@ class AgMultiEditor < ArcadiaExtPlus
   attr_reader :has_ctags, :ctags_string
   attr_reader :main_frame
   
-  def on_before_build(_event)
+  
+  def has_ctags_exuberant?
+    ret = false
     Arcadia.is_windows? ? @ctags_string="lib/ctags.exe" : @ctags_string='ctags'
-    @has_ctags = !Arcadia.which(@ctags_string).nil?
+    ctags_file = Arcadia.which(@ctags_string)
+    if !ctags_file.nil?
+      output = ArcadiaUtils.exec("#{ctags_file} --version")  
+      ret = output && output.include?('Exuberant Ctags')
+    end
+    ret
+  end
+  
+  def on_before_build(_event)
+    #Arcadia.is_windows? ? @ctags_string="lib/ctags.exe" : @ctags_string='ctags'
+    #@has_ctags = !Arcadia.which(@ctags_string).nil?
+    @has_ctags = has_ctags_exuberant?
     if !@has_ctags
       msg = Arcadia.text("ext.editor.e.ctags.msg")
       ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>Arcadia.text("ext.editor.e.ctags.title"), "detail"=>msg).go!

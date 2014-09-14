@@ -158,8 +158,8 @@ ext.editor.file.save_modified.msg=$0 modified. Save?
 ext.editor.file.save_modified.title=Confirm saving
 ext.editor.file.close_modified_by_other.msg=$0 modified by other process. Continue closing?
 ext.editor.file.close_modified_by_other.title=Continue closing
-ext.editor.e.ctags.msg="ctags" package is required by class browsing, without it only ruby language is supported! 
-ext.editor.e.ctags.title=Ctags missing!
+ext.editor.e.ctags.msg="exuberant ctags" package is required by class browsing, without it only ruby language is supported! 
+ext.editor.e.ctags.title=Exuberant Ctags missing!
 ext.editor.e.prettify.title=(Arcadia) code prettify
 ext.editor.e.prettify.msg=Problems in prettify $0
 #dir_projects
