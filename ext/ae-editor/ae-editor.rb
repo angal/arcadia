@@ -156,6 +156,8 @@ class RubyGrepFileSourceStructure < FileSourceStructure
     @last_node = @root
     @last_end_node_row = 0
     @last_class_node_row = 0
+    @last_end_indentation = 0
+    @last_class_indentation = 0
     build_structure
   end
   
@@ -163,21 +165,35 @@ class RubyGrepFileSourceStructure < FileSourceStructure
     output = grep
     output.each {|line|
       row, other = line.split(':')
+      
+      indent = 0
+      l0 = other.length
+      if l0 > 0
+        indent = l0 - other.lstrip.length
+      end
+      
       other.strip! if other
       key_word, other = other.split
       other.strip! if other
       next if !['class','module','def','end'].include?(key_word)
       if key_word == 'end'
         @last_end_node_row = row
+        @last_end_indentation = indent
         next
+      end
+      # hinner class
+      if ['class','module','def'].include?(key_word) && @last_class_node != @root && @last_class_node.parent != @root  && ((@last_class_indentation.to_i - @last_end_indentation.to_i).abs <= 1)
+        @last_class_node = @last_class_node.parent
+        @last_class_node_row = row
       end
       # kind
       if ['class','module'].include?(key_word)
         kind = key_word
-        if @last_end_node_row > @last_class_node_row || @last_class_node == @root
+        if @last_end_node_row.to_i > @last_class_node_row.to_i || @last_class_node == @root
           parent = @root
         else
           parent = @last_class_node
+          @last_class_indentation = indent
         end
       elsif ['def'].include?(key_word)
         kind = 'method'
@@ -188,11 +204,11 @@ class RubyGrepFileSourceStructure < FileSourceStructure
       next if name == '<<' && kind == 'class'
       #helptext
       helptext = line.strip
-      
-      if kind == 'method' && name.split('.')[0] == 'parent'
+      #singleton
+      if kind == 'method' && name.split('.')[0] == parent.label
         kind = 'singleton method'
+        name = name.sub("#{parent.label}.",'')
       end
-
       # create node
       node = SourceTreeNode.new(parent, kind)
       node.label = name
