@@ -116,7 +116,7 @@ class Arcadia < TkApplication
     else
       start_width = (@screenwidth-4)
       start_height = (@screenheight-20)
-      if RUBY_PLATFORM =~ /mswin|mingw/ # on doze don't go below the start gar
+      if OS.windows? # on doze don't go below the start gar
         start_height -= 50
         start_width -= 20
       end
@@ -2666,7 +2666,7 @@ class ArcadiaSh < TkToplevel
       @text.delete('0.0','end')
     else
       begin
-        if RUBY_PLATFORM =~ /mingw|mswin/
+        if OS.windows?
           p = IO::popen("#{_cmd} 2>&1")
           out(p.read, 'response')
           @result = true

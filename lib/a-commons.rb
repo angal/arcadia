@@ -844,7 +844,21 @@ module Configurable
           if (_strip_line.length > 0)&&(_strip_line[0,1]!='#')
             var_plat = _line.split('::')
             if var_plat.length > 1
-              if (RUBY_PLATFORM =~ Regexp::new(var_plat[0]))
+              case var_plat[0]
+              when 'WINDOWS'
+                plat_enabled =  OS.windows?
+              when 'MAC'
+                plat_enabled =  OS.mac?
+              when 'LINUX'
+                plat_enabled =  OS.linux?
+              when 'FREEBSD'
+                plat_enabled =  OS.freebsd?
+              when 'UNIX'
+                plat_enabled =  OS.unix?
+              when 'ARM'
+                plat_enabled =  OS.arm?
+              end
+              if plat_enabled
                 _line = var_plat[1]
                 var_plat[2..-1].collect{|x| _line=_line+'::'+x} if var_plat.length > 2
               else
@@ -1307,4 +1321,13 @@ module OS
   def OS.linux?
     OS.unix? and not OS.mac?
   end
+  
+  def OS.freebsd?
+   (/freebsd/ =~ RUBY_PLATFORM) != nil
+  end  
+
+  def OS.arm?
+   (/arm/ =~ RUBY_PLATFORM) != nil
+  end  
+  
 end
