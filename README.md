@@ -1,4 +1,5 @@
 # Arcadia IDE
+[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/angal/arcadia?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 version 0.13.1
 
 by Antonio Galeone
