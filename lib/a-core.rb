@@ -153,7 +153,7 @@ class Arcadia < TkApplication
       Arcadia.runtime_error(e)
     end
     if self['conf']['geometry.state'] == 'zoomed'
-      if Arcadia.is_windows?
+      if Arcadia.is_windows? || OS.mac?
         @root.state('zoomed')
       else
         @root.wm_attributes('zoomed',1)
@@ -935,7 +935,7 @@ class Arcadia < TkApplication
   def save_layout
     self['conf']['geometry']= geometry_refine(TkWinfo.geometry(@root))
     begin
-      if Arcadia.is_windows?
+      if Arcadia.is_windows? || OS.mac?
         self['conf']['geometry.state'] = @root.state.to_s
       else
         if @root.wm_attributes('zoomed') == '1'
@@ -1560,6 +1560,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
     @menubar.configure(Arcadia.style('menu').delete_if {|key, value| key=='tearoff'})
     @menubar.extend(TkAutoPostMenu)
     root['menu'] = @menubar
+    @menu_contexts = {}
   end
   
   def initialize_old(menubar)
@@ -1578,6 +1579,22 @@ class ArcadiaMainMenu < ArcadiaUserControl
   end
 
   def get_menu_context(_menubar, _context, _underline=nil)
+    m = @menu_contexts[_context]
+    if !m.nil? 
+      m
+    else
+      topmenu = TkMenu.new(_menubar)
+      topmenu.configure(Arcadia.style('menu'))
+      topmenu.extend(TkAutoPostMenu)
+      opt = {:menu => topmenu, :label => _context}
+      opt[:underline]=_underline if _underline
+      _menubar.add(:cascade, opt)
+      @menu_contexts[_context] = topmenu
+      topmenu
+    end
+  end
+
+  def get_menu_context_old2(_menubar, _context, _underline=nil)
     count =  _menubar.index('end')
     # cerchiamo il context
     m_i = -1
