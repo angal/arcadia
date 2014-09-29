@@ -585,12 +585,12 @@ class Arcadia < TkApplication
   end
 
   def load_sysdefaultproperty
-    Tk.tk_call "eval","option add *background #{self['conf']['background']}"
-    Tk.tk_call "eval","option add *foreground #{self['conf']['foreground']}"
-    Tk.tk_call "eval","option add *activebackground #{self['conf']['activebackground']}"
-    Tk.tk_call "eval","option add *activeforeground #{self['conf']['activeforeground']}"
-    Tk.tk_call "eval","option add *highlightcolor  #{self['conf']['background']}"
-    Tk.tk_call "eval","option add *relief #{self['conf']['relief']}"
+#    Tk.tk_call "eval","option add *background #{self['conf']['background']}"
+#    Tk.tk_call "eval","option add *foreground #{self['conf']['foreground']}"
+#    Tk.tk_call "eval","option add *activebackground #{self['conf']['activebackground']}"
+#    Tk.tk_call "eval","option add *activeforeground #{self['conf']['activeforeground']}"
+#    Tk.tk_call "eval","option add *highlightcolor  #{self['conf']['background']}"
+#    Tk.tk_call "eval","option add *relief #{self['conf']['relief']}"
 
     if !Arcadia.is_windows? && File.basename(Arcadia.ruby) != 'ruby'
       begin
@@ -698,15 +698,15 @@ class Arcadia < TkApplication
       else
         pos = '0'
       end
-      mr.insert(pos,
-      :command ,{
+      args = {
         :image => image,
         :label => _run_title,
-        :font => Arcadia.conf('menu.font'),
         :compound => 'left',
         :command => _command
       }
-      )
+      args[:font] = Arcadia.conf('menu.font') #if !OS.mac?
+      
+      mr.insert(pos, :command , args)
     }
 
     insert_runner_instance_item = proc{|name, run|
@@ -728,15 +728,14 @@ class Arcadia < TkApplication
         RunCmdEvent.new(self, run)
         )
       }
-      mr.insert('0',
-      :command ,{
+      args = {
         :image => image,
         :label => _run_title,
-        :font => Arcadia.conf('menu.font'),
         :compound => 'left',
         :command => _command
       }
-      )
+      args[:font] = Arcadia.conf('menu.font') #if !OS.mac?
+      mr.insert('0', :command , args)
     }
 
     #conf runner
@@ -1531,7 +1530,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
       item_args = Hash.new
       item_args[:image]=Arcadia.image_res(@image_data) if @image_data
       item_args[:label]=@caption
-      item_args[:font]=Arcadia.conf('menu.font')
+      item_args[:font]=Arcadia.conf('menu.font') if !OS.mac?
       item_args[:underline]=@underline.to_i if @underline != nil
       item_args[:compound]='left'
       item_args[:command]=@command
@@ -1557,27 +1556,16 @@ class ArcadiaMainMenu < ArcadiaUserControl
   def initialize(root)
     # Creating Menubar
     @menubar = TkMenu.new(root)
-    @menubar.configure(Arcadia.style('menu').delete_if {|key, value| key=='tearoff'})
-    @menubar.extend(TkAutoPostMenu)
-    root['menu'] = @menubar
-    @menu_contexts = {}
-  end
-  
-  def initialize_old(menubar)
-    # create main menu
-    @menu = menubar
-    #help = TkSysMenu_Help.new(menubar)
-    #menubar.add_menu :cascade, :menu => help
-
-    build
     begin
-      @menu.configure(Arcadia.style('menu'))
+      @menubar.configure(Arcadia.style('menu').delete_if {|key, value| key=='tearoff'})
+      @menubar.extend(TkAutoPostMenu)
+      root['menu'] = @menubar
+      @menu_contexts = {}
     rescue RuntimeError => e
-      #p "RuntimeError : #{e.message}"
       Arcadia.runtime_error(e)
     end
   end
-
+  
   def get_menu_context(_menubar, _context, _underline=nil)
     m = @menu_contexts[_context]
     if !m.nil? 
@@ -1618,25 +1606,6 @@ class ArcadiaMainMenu < ArcadiaUserControl
       opt[:underline]=_underline if _underline
       _menubar.add(:cascade, opt)
       topmenu
-    end
-  end
-
-
-  def get_menu_context_old(_menubar, _context, _underline=nil)
-    menubuttons =  _menubar[0..-1]
-    # cerchiamo il context
-    m_i = -1
-    menubuttons.each_with_index{|mb, i|
-      _t = mb[0].cget('text')
-      if _t==_context
-        m_i = i
-        break
-      end
-    }
-    if m_i > -1
-      _menubar[m_i][1]
-    else
-      _menubar.add_menu([[_context,_underline],[]])[1].delete(0)
     end
   end
 
