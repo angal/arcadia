@@ -1557,8 +1557,11 @@ class ArcadiaMainMenu < ArcadiaUserControl
     # Creating Menubar
     @menubar = TkMenu.new(root)
     begin
-      @menubar.configure(Arcadia.style('menu').delete_if {|key, value| key=='tearoff'})
-      @menubar.extend(TkAutoPostMenu)
+      if !OS.mac?
+        @menubar.configure(Arcadia.style('menu').delete_if {|key, value| key=='tearoff'}) 
+        @menubar.extend(TkAutoPostMenu)
+        @menubar.event_posting_on
+      end
       root['menu'] = @menubar
       @menu_contexts = {}
     rescue RuntimeError => e
@@ -1572,39 +1575,14 @@ class ArcadiaMainMenu < ArcadiaUserControl
       m
     else
       topmenu = TkMenu.new(_menubar)
-      topmenu.configure(Arcadia.style('menu'))
-      topmenu.extend(TkAutoPostMenu)
+      if !OS.mac?
+        topmenu.configure(Arcadia.style('menu'))
+        topmenu.extend(TkAutoPostMenu)
+      end
       opt = {:menu => topmenu, :label => _context}
       opt[:underline]=_underline if _underline
       _menubar.add(:cascade, opt)
       @menu_contexts[_context] = topmenu
-      topmenu
-    end
-  end
-
-  def get_menu_context_old2(_menubar, _context, _underline=nil)
-    count =  _menubar.index('end')
-    # cerchiamo il context
-    m_i = -1
-    if count && count > 0
-      1.upto(count.to_i){|i|
-        _t = _menubar.entrycget(i, 'label')
-        if _t==_context
-          m_i = i
-          break
-        end
-      }
-    end
-    if m_i > -1
-      _menubar.entrycget(m_i, 'menu')
-      #_menubar[m_i][1]
-    else
-      topmenu = TkMenu.new(_menubar)
-      topmenu.configure(Arcadia.style('menu'))
-      topmenu.extend(TkAutoPostMenu)
-      opt = {:menu => topmenu, :label => _context}
-      opt[:underline]=_underline if _underline
-      _menubar.add(:cascade, opt)
       topmenu
     end
   end
@@ -1640,8 +1618,10 @@ class ArcadiaMainMenu < ArcadiaUserControl
       sub = TkMenu.new(
       :tearoff=>0
       )
-      sub.configure(Arcadia.style('menu'))
-      sub.extend(TkAutoPostMenu)
+      if !OS.mac?
+        sub.configure(Arcadia.style('menu'))
+        sub.extend(TkAutoPostMenu)
+      end
       #update_style(sub)
       menu_context.insert('end',
       :cascade,
@@ -1691,130 +1671,6 @@ class ArcadiaMainMenu < ArcadiaUserControl
       end
     end
     super(_sender, _args)
-  end
-
-
-  def build
-    top_item_spec_file = [Arcadia.text('main.menu.file'), 0]
-    top_item_spec_file << {'menu_name'=>'apple'} if OS.mac?
-    menu_spec_file = [
-      top_item_spec_file,
-      [Arcadia.text('main.menu.file.open'), proc{OpenBufferEvent.new(self).go!}, 0],
-      [Arcadia.text('main.menu.file.new'), proc{Arcadia.process_event(NewBufferEvent.new(self))}, 0],
-      #['Save', proc{EditorContract.instance.save_file_raised(self)},0],
-      [Arcadia.text('main.menu.file.save'), proc{Arcadia.process_event(SaveBufferEvent.new(self))},0],
-      [Arcadia.text('main.menu.file.save_as'), proc{Arcadia.process_event(SaveAsBufferEvent.new(self))},0],
-      '---',
-    [Arcadia.text('main.menu.file.quit'), proc{Arcadia.process_event(QuitEvent.new(self))}, 0]]
-
-    top_item_spec_edit = [Arcadia.text('main.menu.edit'), 0]
-    top_item_spec_edit << {'menu_name'=>'apple'} if OS.mac?
-    menu_spec_edit = [top_item_spec_edit,
-      [Arcadia.text('main.menu.edit.cut'), proc{Arcadia.process_event(CutTextEvent.new(self))}, 2],
-      [Arcadia.text('main.menu.edit.copy'), proc{Arcadia.process_event(CopyTextEvent.new(self))}, 0],
-      [Arcadia.text('main.menu.edit.paste'), proc{Arcadia.process_event(PasteTextEvent.new(self))}, 0],
-      [Arcadia.text('main.menu.edit.undo'), proc{Arcadia.process_event(UndoTextEvent.new(self))}, 0],
-      [Arcadia.text('main.menu.edit.redo'), proc{Arcadia.process_event(RedoTextEvent.new(self))}, 0],
-      [Arcadia.text('main.menu.edit.select_all'), proc{Arcadia.process_event(SelectAllTextEvent.new(self))}, 0],
-      [Arcadia.text('main.menu.edit.invert_selection'), proc{Arcadia.process_event(InvertSelectionTextEvent.new(self))}, 0],
-      [Arcadia.text('main.menu.edit.uppercase'), proc{Arcadia.process_event(UpperCaseTextEvent.new(self))}, 0],
-      [Arcadia.text('main.menu.edit.lowercase'), proc{Arcadia.process_event(LowerCaseTextEvent.new(self))}, 0],
-      [Arcadia.text('main.menu.edit.prettify_current'), proc{Arcadia.process_event(PrettifyTextEvent.new(self))}, 0],
-      '---',
-    [Arcadia.text('main.menu.edit.preferences'), proc{}, 0]]
-
-    top_item_spec_search = [Arcadia.text('main.menu.search'), 0] 
-    top_item_spec_search << {'menu_name'=>'apple'} if OS.mac?
-    menu_spec_search = [top_item_spec_search,
-      [Arcadia.text('main.menu.search.find_replace'), proc{Arcadia.process_event(SearchBufferEvent.new(self))}, 2],
-      [Arcadia.text('main.menu.search.find_in_files'), proc{Arcadia.process_event(SearchInFilesEvent.new(self))}, 2],
-      [Arcadia.text('main.menu.search.ack_im_file'), proc{Arcadia.process_event(AckInFilesEvent.new(self))}, 2],
-    [Arcadia.text('main.menu.search.go_to_line'), proc{Arcadia.process_event(GoToLineBufferEvent.new(self))}, 2]]
-
-    top_item_spec_view = [Arcadia.text('main.menu.view'), 0]
-    top_item_spec_view << {'menu_name'=>'apple'} if OS.mac?
-    menu_spec_view = [top_item_spec_view,
-      [Arcadia.text('main.menu.view.show_hide_toolbar'), proc{$arcadia.show_hide_toolbar}, 2],
-      [Arcadia.text('main.menu.view.close_current_tab'), proc{Arcadia.process_event(CloseCurrentTabEvent.new(self))}, 0],
-    ]
-
-    top_item_spec_tools = [Arcadia.text('main.menu.tools'), 0]
-    top_item_spec_tools << {'menu_name'=>'apple'} if OS.mac?
-    menu_spec_tools = [top_item_spec_tools,
-      [Arcadia.text('main.menu.tools.keys_test'), $arcadia['action.test.keys'], 2],
-      [Arcadia.text('main.menu.tools.edit_prefs'), proc{Arcadia.process_event(OpenBufferEvent.new(self,'file'=>$arcadia.local_file_config))}, 0],
-      [Arcadia.text('main.menu.tools.load_from_edited_prefs'), proc{$arcadia.load_local_config}, 0]
-    ]
-
-    top_item_spec_help = [Arcadia.text('main.menu.help'), 0]
-    top_item_spec_help << {'menu_name'=>'apple'} if OS.mac?
-    menu_spec_help = [top_item_spec_help,
-    [Arcadia.text('main.menu.help.about'), $arcadia['action.show_about'], 2],]
-    begin
-      @menu.add_menu(menu_spec_file)
-      @menu.add_menu(menu_spec_edit)
-      @menu.add_menu(menu_spec_search)
-      @menu.add_menu(menu_spec_view)
-      @menu.add_menu(menu_spec_tools)
-      @menu.add_menu(menu_spec_help)
-      p @menu
-    rescue RuntimeError => e
-      #p "RuntimeError : #{e.message}"
-      Arcadia.runtime_error(e)
-    end
-    #    #@menu.bind_append("1", proc{
-    #      chs = TkWinfo.children(@menu)
-    #      hh = 25
-    #      @last_post = nil
-    #      chs.each{|ch|
-    #        ch.bind_append("Enter", proc{|x,y,rx,ry|
-    #          @last_post.unpost if @last_post && @last_post != ch.menu
-    #          ch.menu.post(x-rx,y-ry+hh)
-    #          @last_post=ch.menu}, "%X %Y %x %y")
-    #        ch.bind_append("Leave", proc{
-    #          @last_post.unpost if @last_post
-    #          @last_post=nil
-    #        })
-    #      }
-    #
-    #    #})
-
-    #      @menu.bind_append("Leave", proc{
-    #        if Tk.focus != @last_menu_posted
-    #          @last_post.unpost if @last_post
-    #          @last_post=nil
-    #        end
-    #      })
-    #
-
-
-    #      chs = TkWinfo.children(@menu)
-    #      hh = 25
-    #      @last_post = nil
-    #      chs.each{|ch|
-    #        ch.bind_append("Enter", proc{|x,y,rx,ry|
-    #          @last_post.unpost if @last_post && @last_post != ch.menu
-    #          ch.menu.post(x-rx,y-ry+hh)
-    #          chmenus = TkWinfo.children(ch)
-    #          @last_menu_posted = chmenus[0]
-    #          @last_menu_posted.set_focus
-    #          #@last_post=ch.menu
-    #          }, "%X %Y %x %y")
-    #        ch.bind_append("Leave", proc{
-    #          @last_post.unpost if @last_post
-    #          #@last_post=nil
-    #          @last_post=ch.menu
-    #        })
-    #      }
-    #      @menu.bind_append("Leave", proc{
-    #        if Tk.focus != @last_menu_posted
-    #          @last_post.unpost if @last_post
-    #          @last_post=nil
-    #        end
-    #      })
-
-    @menu.extend(TkAutoPostMenu)
-    @menu.event_posting_on
   end
 
 end
