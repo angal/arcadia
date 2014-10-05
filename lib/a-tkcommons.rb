@@ -292,11 +292,37 @@ class TkFrameAdapter < TkFrame
     end
   end
 
-  def attach_frame(_frame)
+  def attach_frame(_frame, _extension = nil, _frame_index=0)
     @frame = _frame
     refresh_layout_manager
     self.map
-    self.bind("Map", proc{@frame.raise})
+    if _extension
+      @frame.bind("Map", proc{
+        if _extension.frame_raised?(_frame_index)
+          @frame.raise
+        else
+          @frame.lower
+        end
+      })
+
+      
+#      ffw = Arcadia.instance.layout.frame(_extension.frame_domain(_frame_index),_extension.name)
+#      if ffw
+#        ffw.bind("Map", proc{
+#          if _extension.frame_raised?(_frame_index)
+#            p "pack"
+#            @frame.pack
+#            @frame.raise
+#          else
+#            p "unpack"
+#            @frame.lower
+#            @frame.unpack
+#          end
+#        })
+#      end
+    else
+      self.bind("Map", proc{@frame.raise})
+    end
     self
   end
   

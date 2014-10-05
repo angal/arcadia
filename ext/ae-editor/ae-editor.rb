@@ -1107,6 +1107,8 @@ class AgEditorOutline
       end
       @tree_exp.close_tree(to_open) if _close_if_opened && to_open && !@opened
       @tree_exp.see(_node.rif)
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e)
     ensure
       @tree_exp.selectcommand(_proc)
       @selecting_node = false
@@ -1892,7 +1894,9 @@ class AgEditor
         else
           _dir = MonitorLastUsedDir.get_last_dir
         end
-        Arcadia.process_event(OpenBufferEvent.new(self,'file'=>Arcadia.open_file_dialog(_dir)))
+        _file = Arcadia.open_file_dialog(_dir)
+        Arcadia.process_event(OpenBufferEvent.new(self,'file'=>_file)) if _file
+        Tk.callback_break
         break
       when 's'
         save
@@ -2123,6 +2127,8 @@ class AgEditor
   
   def do_enter
     check_file_last_access_time
+    find = @controller.get_find
+    find.use(self) if find
   end
   
   def initialize_text_binding
@@ -3717,6 +3723,12 @@ class AgMultiEditorView
     @enb.bind_append("Map",refresh_after_map)
   end
 
+#  def initialize_notabs
+#    @frame_notabs = TkFrame.new(@frame.hinner_frame, Arcadia.style('panel')){
+#      pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
+#    }
+#  end
+
   def switch_2_tabs
     raised = raise
     @usetabs = true
@@ -3871,7 +3883,7 @@ class AgMultiEditorView
     else
       adapted_frame = _adapter
     end
-    adapted_frame.attach_frame(frame)
+    adapted_frame.attach_frame(frame, @parent)
     adapted_frame.raise
     @pages[_name]={'frame'=>adapted_frame, 'file'=>_file, 'text'=>_title, 'image' => _image, 'raisecmd'=>_raise_proc}
     adapted_frame
@@ -4269,21 +4281,6 @@ class AgMultiEditor < ArcadiaExtPlus
     Arcadia.attach_listener(self, FocusEvent)
     Arcadia.attach_listener(self, BookmarkEvent)
   end
-  
-#  def on_before_run_ruby_file(_event)
-#    _filename = _event.file
-#    if _filename.nil?
-#      current_editor = self.raised
-#       if current_editor
-#         if current_editor.file
-#           _event.file = current_editor.file
-#           _event.persistent = true
-#         else
-#           _event.file = current_editor.create_temp_file
-#         end
-#       end
-#    end
-#  end
   
   def on_before_run_cmd(_event)
     _filename = _event.file
@@ -5761,6 +5758,9 @@ class AgMultiEditor < ArcadiaExtPlus
 
   def open_buffer(_buffer_name = nil, _title = nil, _filename=nil, _lang=nil)
     #_index = @main_frame.index(resolve_tab_name(_buffer_name))
+    if frame_visible? && !frame_raised?
+      @arcadia.layout.change_domain(frame_domain, @name)
+    end
     if @main_frame.exist_buffer?(resolve_tab_name(_buffer_name))
       _tab = @main_frame.page_frame(resolve_tab_name(_buffer_name))
       #@main_frame.raise(resolve_tab_name(_buffer_name)) if frame_visible?
@@ -5810,16 +5810,9 @@ class AgMultiEditor < ArcadiaExtPlus
     end
     begin
       if raised != @tabs_editor[resolve_tab_name(_buffer_name)]
-        @main_frame.raise(resolve_tab_name(_buffer_name)) if frame_visible?
+        @main_frame.raise(resolve_tab_name(_buffer_name)) #if frame_visible?
         @main_frame.see(resolve_tab_name(_buffer_name))
       end
-#      if raised != @tabs_editor[resolve_tab_name(_buffer_name)]
-#        @main_frame.move(resolve_tab_name(_buffer_name), 0)
-#        @main_frame.raise(resolve_tab_name(_buffer_name)) if frame_visible?
-#        @main_frame.see(resolve_tab_name(_buffer_name))
-#      else
-#        @main_frame.move(resolve_tab_name(_buffer_name), 0)
-#      end
     rescue Exception => e
       Arcadia.runtime_error(e)
     end
@@ -6311,14 +6304,11 @@ class Finder < Findview
         self.editor.text.tag_add('sel', _index,_index_sel_end)
         self.editor.text.set_insert(_index)
         @idx1 =_index
-                @idx2 =_index_sel_end
+        @idx2 =_index_sel_end
         _found = true
         @controller.chrono_bookmark_add(self.editor.file, _index)
       else
-        _message = '"'+@e_what.value+'" not found'
-        Arcadia.hinner_dialog(self, 'type'=>'ok', 'msg'=> _message)
-        
-#        TkDialog2.new('message'=>_message, 'buttons'=>['Ok']).show()
+        Arcadia.hinner_dialog(self, 'type'=>'ok', 'msg'=> Arcadia.text('ext.editor.search.notfound',[@e_what.value, self.editor.tab_title]))
       end
 
     else

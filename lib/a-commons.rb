@@ -121,7 +121,7 @@ class FixedFrameWrapper < AbstractFrameWrapper
   end
 
   def hide
-    Arcadia.layout.hide_panel(@domain, @name)
+
   end
 
   def raised?
@@ -286,6 +286,10 @@ class ArcadiaExt
 
   def frame_visible?(_n=0)
     @frames != nil && @frames[_n] != nil && @frames[_n].hinner_frame && TkWinfo.mapped?(@frames[_n].hinner_frame)
+  end
+  
+  def frame_raised?(_n=0)
+    @arcadia.layout.raised?(frame_domain(_n), @name)
   end
 
   def frame(_n=0,create_if_not_exist=true)

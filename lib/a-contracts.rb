@@ -315,7 +315,8 @@ end
 class InputKeyboardQueryEvent < ArcadiaEvent
   class Result < Result
     attr_accessor :input
-  end 
+  end
+  attr_accessor :pid
 end
 
 class InputEvent < ArcadiaEvent

@@ -1031,14 +1031,14 @@ class Arcadia < TkApplication
     _event.mark
   end
 
-  def Arcadia.console_input(_sender)
+  def Arcadia.console_input(_sender, _pid=nil)
     @@input_ready = true if !defined?(@@input_ready)
     while !@@input_ready && !@@input_ready.nil?
       sleep(0.1)
     end
     begin
       @@input_ready=false
-      @@last_input_keyboard_query_event = InputKeyboardQueryEvent.new(_sender)
+      @@last_input_keyboard_query_event = InputKeyboardQueryEvent.new(_sender, :pid => _pid)
       @@last_input_keyboard_query_event.go!
       ret = @@last_input_keyboard_query_event.results.length > 0 ? @@last_input_keyboard_query_event.results[0].input : nil
     ensure
@@ -1490,7 +1490,6 @@ class ArcadiaMainToolbar < ArcadiaUserControl
   def new_item(_sender, _args= nil)
     _context = _args['context']
     _context_path = _args['context_path']
-
     if @last_context && _context != @last_context && _context_path.nil?
       new_separator
     end
@@ -1649,6 +1648,7 @@ class ArcadiaMainMenu < ArcadiaUserControl
 
   def new_item(_sender, _args= nil)
     return if _args.nil?
+
     if _args['context_caption']
       conte = _args['context_caption']
     else
@@ -2081,6 +2081,7 @@ class ArcadiaProblemsShowerNew
       end
       @dmc+=1
       @tree.itemconfigure('dependences_missing_node','text'=>"#{text} (#{@dmc})" )
+
     when ArcadiaProblemEvent::RUNTIME_ERROR_TYPE
       parent_node='runtime_error_node'
       text = Arcadia.text("main.ps.runtime_errors")
@@ -2108,6 +2109,7 @@ class ArcadiaProblemsShowerNew
       'image'=> Arcadia.image_res(ITEM_GIF)
     }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
     )
+
     if e.detail.kind_of?(Array)
       e.detail.each_with_index{|line,i|
         @tree.insert('end', title_node , "#{detail_node}_#{i}" , {
@@ -2185,12 +2187,12 @@ class ArcadiaProblemsShower
       @problems.each{|e|
         append_problem(e)
       }
-      if @tree.exist?('dependences_missing_node')
-        @tree.open_tree('dependences_missing_node', true)
-      end
-      if @tree.exist?('runtime_error_node')
-        @tree.open_tree('runtime_error_node', true)
-      end
+#      if @tree.exist?('dependences_missing_node')
+#        @tree.open_tree('dependences_missing_node', true)
+#      end
+#      if @tree.exist?('runtime_error_node')
+#        @tree.open_tree('runtime_error_node', true)
+#      end
       @showed=true
     rescue RuntimeError => e
       Arcadia.detach_listener(self, ArcadiaProblemEvent)
@@ -2205,71 +2207,66 @@ class ArcadiaProblemsShower
 
   def initialize_gui
     # float_frame
-    args = {'width'=>600, 'height'=>300, 'x'=>400, 'y'=>100}
-    @ff = @arcadia.layout.add_float_frame(args).hide
-    @ff.title(Arcadia.text("main.ps.title"))
-
-    #tree
-    @tree = BWidgetTreePatched.new(@ff.frame, Arcadia.style('treepanel')){
-      showlines false
-      deltay 22
-      # opencmd do_open_folder_cmd
-      # closecmd do_close_folder_cmd
-      # selectcommand do_select_item
-      # crosscloseimage  TkPhotoImage.new('dat' => PLUS_GIF)
-      # crossopenimage  TkPhotoImage.new('dat' => MINUS_GIF)
-    }
-    @tree.extend(TkScrollableWidget).show(0,0)
-
-    do_double_click = proc{
-      _selected = @tree.selected
-      _selected_text = @tree.itemcget(_selected, 'text')
-      if _selected_text
-        _file, _row, _other = _selected_text.split(':')
-        if File.exist?(_file)
-          begin
-            r = _row.strip.to_i
-            integer = true
-          rescue Exception => e
-            integer = false
-          end
-          if integer
-            OpenBufferTransientEvent.new(self,'file'=>_file, 'row'=>r).go!
-          end
-        end
-      end
-    }
-    @tree.textbind_append('Double-1',do_double_click)
-
-
-    # call button
-    command = proc{
-      if @ff.visible?
-        @ff.hide
-        #@visible = false
-      else
-        @ff.show
-        #@visible = true
-      end
-    }
-
-    b_style = Arcadia.style('toolbarbutton')
-    b_style["relief"]='groove'
-    #    b_style["borderwidth"]=2
-    b_style["highlightbackground"]='red'
-
-    b_text = button_text
-
-    @b_err = Tk::BWidget::Button.new(@arcadia['toolbar'].frame, b_style){
-      image  Arcadia.image_res(ALERT_GIF)
-      compound 'left'
-      padx  2
-      command command if command
-      #width 100
-      #height 20
-      #helptext  _hint if _hint
-      text b_text
-    }.pack('side' =>'left','before'=>@arcadia['toolbar'].items.values[0].item_obj, :padx=>2, :pady=>0)
+#    args = {'width'=>600, 'height'=>300, 'x'=>400, 'y'=>100}
+#    @ff = @arcadia.layout.add_float_frame(args).hide
+#    @ff.title(Arcadia.text("main.ps.title"))
+#
+#    #tree
+#    @tree = BWidgetTreePatched.new(@ff.frame, Arcadia.style('treepanel')){
+#      showlines false
+#      deltay 22
+#    }
+#    @tree.extend(TkScrollableWidget).show(0,0)
+#
+#    do_double_click = proc{
+#      _selected = @tree.selected
+#      _selected_text = @tree.itemcget(_selected, 'text')
+#      if _selected_text
+#        _file, _row, _other = _selected_text.split(':')
+#        if File.exist?(_file)
+#          begin
+#            r = _row.strip.to_i
+#            integer = true
+#          rescue Exception => e
+#            integer = false
+#          end
+#          if integer
+#            OpenBufferTransientEvent.new(self,'file'=>_file, 'row'=>r).go!
+#          end
+#        end
+#      end
+#    }
+#    @tree.textbind_append('Double-1',do_double_click)
+#
+#
+#    # call button
+#    command = proc{
+#      if @ff.visible?
+#        @ff.hide
+#        #@visible = false
+#      else
+#        @ff.show
+#        #@visible = true
+#      end
+#    }
+#
+#    b_style = Arcadia.style('toolbarbutton')
+#    b_style["relief"]='groove'
+#    #    b_style["borderwidth"]=2
+#    b_style["highlightbackground"]='red'
+#
+#    b_text = button_text
+#
+#    @b_err = Tk::BWidget::Button.new(@arcadia['toolbar'].frame, b_style){
+#      image  Arcadia.image_res(ALERT_GIF)
+#      compound 'left'
+#      padx  2
+#      command command if command
+#      #width 100
+#      #height 20
+#      #helptext  _hint if _hint
+#      text b_text
+#    }.pack('side' =>'left','before'=>@arcadia['toolbar'].items.values[0].item_obj, :padx=>2, :pady=>0)
 
   end
 
@@ -2279,74 +2276,80 @@ class ArcadiaProblemsShower
   end
 
   def append_problem(e)
-    parent_node='root'
+#    parent_node='root'
     case e.type
     when ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE
-      parent_node='dependences_missing_node'
+#      parent_node='dependences_missing_node'
       text = Arcadia.text("main.ps.dependences_missing")
-      if !@tree.exist?(parent_node)
-        @tree.insert('end', 'root' ,parent_node, {
-          'text' =>  text ,
-          'helptext' => text,
-          'drawcross'=>'auto',
-          'deltax'=>-1,
-          'image'=> Arcadia.image_res(BROKEN_GIF)
-        }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
-        )
+#      if !@tree.exist?(parent_node)
+#        @tree.insert('end', 'root' ,parent_node, {
+#          'text' =>  text ,
+#          'helptext' => text,
+#          'drawcross'=>'auto',
+#          'deltax'=>-1,
+#          'image'=> Arcadia.image_res(BROKEN_GIF)
+#        }.update(Arcadia.style('treeitem'))
+#        )
+#
+#      end
+#      @dmc+=1
+#      @tree.itemconfigure('dependences_missing_node','text'=>"#{text} (#{@dmc})" )
 
-      end
-      @dmc+=1
-      @tree.itemconfigure('dependences_missing_node','text'=>"#{text} (#{@dmc})" )
     when ArcadiaProblemEvent::RUNTIME_ERROR_TYPE
-      parent_node='runtime_error_node'
+#      parent_node='runtime_error_node'
       text = Arcadia.text("main.ps.runtime_errors")
-      if !@tree.exist?(parent_node)
-        @tree.insert('end', 'root' ,parent_node, {
-          'text' =>  text ,
-          'helptext' => text,
-          'drawcross'=>'auto',
-          'deltax'=>-1,
-          'image'=> Arcadia.image_res(ERROR_GIF)
-        }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
-        )
-      end
-      @rec+=1
-      @tree.itemconfigure('runtime_error_node','text'=>"#{text} (#{@rec})" )
+#      if !@tree.exist?(parent_node)
+#        @tree.insert('end', 'root' ,parent_node, {
+#          'text' =>  text ,
+#          'helptext' => text,
+#          'drawcross'=>'auto',
+#          'deltax'=>-1,
+#          'image'=> Arcadia.image_res(ERROR_GIF)
+#        }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
+#        )
+#      end
+#      @rec+=1
+#      @tree.itemconfigure('runtime_error_node','text'=>"#{text} (#{@rec})" )
     end
+
+    output_mark = Arcadia.console(self,'msg'=>"#{text} : ", 'level'=>'system_error', 'mark'=>output_mark)      
+
     title_node="node_#{new_sequence_value}"
     detail_node="detail_of_#{title_node}"
 
-    @tree.insert('end', parent_node ,title_node, {
-      'text' =>  e.title ,
-      'helptext' => e.title,
-      'drawcross'=>'auto',
-      'deltax'=>-1,
-      'image'=> Arcadia.image_res(ITEM_GIF)
-    }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
-    )
-    if e.detail.kind_of?(Array)
-      e.detail.each_with_index{|line,i|
-        @tree.insert('end', title_node , "#{detail_node}_#{i}" , {
-          'text' =>  line ,
-          'helptext' => i.to_s,
-          'drawcross'=>'auto',
-          'deltax'=>-1,
-          'image'=> Arcadia.image_res(ITEM_DETAIL_GIF)
-        }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
-        )
+#    @tree.insert('end', parent_node ,title_node, {
+#      'text' =>  e.title ,
+#      'helptext' => e.title,
+#      'drawcross'=>'auto',
+#      'deltax'=>-1,
+#      'image'=> Arcadia.image_res(ITEM_GIF)
+#    }.update(Arcadia.style('treeitem'))  
+#    )
 
-      }
+
+    if e.detail.kind_of?(Array)
+#      e.detail.each_with_index{|line,i|
+#        @tree.insert('end', title_node , "#{detail_node}_#{i}" , {
+#          'text' =>  line ,
+#          'helptext' => i.to_s,
+#          'drawcross'=>'auto',
+#          'deltax'=>-1,
+#          'image'=> Arcadia.image_res(ITEM_DETAIL_GIF)
+#        }.update(Arcadia.style('treeitem'))  
+#        )
+#     }
     else
-      @tree.insert('end', title_node , detail_node , {
-        'text' =>  e.detail ,
-        'helptext' => e.title,
-        'drawcross'=>'auto',
-        'deltax'=>-1,
-        'image'=> Arcadia.image_res(ITEM_DETAIL_GIF)
-      }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
-      )
+#      @tree.insert('end', title_node , detail_node , {
+#        'text' =>  e.detail ,
+#        'helptext' => e.title,
+#        'drawcross'=>'auto',
+#        'deltax'=>-1,
+#        'image'=> Arcadia.image_res(ITEM_DETAIL_GIF)
+#      }.update(Arcadia.style('treeitem'))  
+#      )
     end
 
+    output_mark = Arcadia.console(self,'msg'=>"#{e.title}\n> #{e.detail}", 'level'=>'system_error', 'mark'=>output_mark, 'append'=>true)      
 
   end
 end
@@ -3489,7 +3492,7 @@ class ArcadiaLayout
   def change_domain(_target_domain, _source_name)
     source_domain = @wrappers[_source_name].domain
     source_has_domain = !source_domain.nil?
-    if @arcadia.conf('layout.exchange_panel_if_no_tabbed')=='true' && source_has_domain && @panels[source_domain]['sons'].length ==1 && @panels[_target_domain]['sons'].length > 0
+    if @arcadia.conf('layout.exchange_panel_if_no_tabbed')=='true' && source_has_domain && @panels[source_domain]['sons'].length == 1 && @panels[_target_domain]['sons'].length > 0
       # change ------
       ffw1 = raised_fixed_frame(_target_domain)
       ffw2 = @panels[source_domain]['sons'].values[0]
@@ -3502,7 +3505,7 @@ class ArcadiaLayout
       @panels[_target_domain]['root'].save_caption(ffw2.name, @panels[source_domain]['root'].last_caption(ffw2.name), @panels[source_domain]['root'].last_caption_image(ffw2.name))
       @panels[source_domain]['root'].save_caption(ffw1.name, @panels[_target_domain]['root'].last_caption(ffw1.name), @panels[_target_domain]['root'].last_caption_image(ffw1.name))
       @panels[_target_domain]['root'].restore_caption(ffw2.name)
-      @panels[source_domain]['root'].restore_caption(ffw1.name)
+       @panels[source_domain]['root'].restore_caption(ffw1.name)
       @panels[_target_domain]['root'].change_adapters(ffw2.name, @panels[source_domain]['root'].forge_transient_adapter(ffw2.name))
       @panels[source_domain]['root'].change_adapters(ffw1.name, @panels[_target_domain]['root'].forge_transient_adapter(ffw1.name))
     elsif source_has_domain && @panels[source_domain]['sons'].length >= 1
@@ -3513,6 +3516,7 @@ class ArcadiaLayout
       @panels[_target_domain]['root'].save_caption(ffw2.name, @panels[source_domain]['root'].last_caption(ffw2.name), @panels[source_domain]['root'].last_caption_image(ffw2.name))
       @panels[_target_domain]['root'].restore_caption(ffw2.name)
       @panels[_target_domain]['root'].change_adapters(ffw2.name, @panels[source_domain]['root'].forge_transient_adapter(ffw2.name))
+      #Tk.event_generate(ffw2.hinner_frame, "Map")
     elsif !source_has_domain
       ffw2 = @wrappers[_source_name]
       ffw2.domain = _target_domain
@@ -3920,7 +3924,20 @@ class ArcadiaLayout
   def view_panel
   end
 
-  def hide_panel
+  def hide_panel(_domain, _extension)
+    pan = @panels[_domain]
+    if @tabbed
+      if pan && pan['notebook'] != nil
+        pan['notebook'].unpack
+      end
+    elsif pan
+      pan['sons'].each{|k,v|
+        if k == _extension
+          v.hide
+          break
+        end
+      }
+    end
   end
 
   def [](_row, _col)
@@ -3928,7 +3945,7 @@ class ArcadiaLayout
   end
 
   def frame(_domain_name, _name)
-    @panels[_domain_name]['sons'][_name].frame
+    @panels[_domain_name]['sons'][_name].hinner_frame
   end
 
   #  def domain_for_frame(_domain_name, _name)

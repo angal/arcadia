@@ -16,7 +16,7 @@ class OutputView
     #left_frame = TkFrame.new(parent.frame.hinner_frame, Arcadia.style('panel')).place('x' => '0','y' => '0','relheight' => '1','width' => '25')
     #right_frame = TkFrame.new(parent.frame.hinner_frame, Arcadia.style('panel')).place('x' => '25','y' => '0','relheight' => '1','relwidth' => '1','width' => '-25')
     @auto_open_file = false
-    
+    @parent = parent
     parent.frame.root.add_button(
       parent.name,
       Arcadia.text('ext.output.button.clear.hint'),
@@ -52,9 +52,17 @@ class OutputView
     'borderwidth'=>1,
     'relief'=> 'flat'
     )
+    @text.tag_configure('system_error_msg',
+    'background' => Arcadia.conf('hightlight.system_error.background'),
+    'foreground' => Arcadia.conf('hightlight.system_error.foreground'),
+    'borderwidth'=>1,
+    'relief'=> 'flat'
+    )
     @text.tag_configure('bord_msg',
-    #'foreground' => '#b9b8b9'
-    'foreground' => Arcadia.conf('hightlight.comment.foreground')
+    'foreground' => Arcadia.conf('hightlight.edge.foreground')
+    )
+    @text.tag_configure('prompt',
+      'foreground' => Arcadia.conf('hightlight.prompt.foreground')
     )
     @text.tag_configure('sel',
     'background'=>Arcadia.conf('hightlight.sel.background'),
@@ -72,7 +80,7 @@ class OutputView
   def input(_char)
     case _char
       when 'Return'
-        @input_buffer = @text.get("insert linestart","insert").sub(Output::PROMPT,'').strip
+        @input_buffer = @text.get("insert linestart","insert").sub(@parent.prompt,'').strip
     end
   end
 
@@ -161,13 +169,15 @@ end
 
 class Output < ArcadiaExt
   attr_reader :main_frame
+  attr_reader :prompt
   MARKSUF='mark-'
-  PROMPT='>>>'
+  PROMPT_SIMBOL='$'
   def on_before_build(_event)
     #ArcadiaContractListener.new(self, MsgContract, :do_msg_event)
     @tag_seq = 0
     @writing=false
     @prompt_active = false
+    @prompt = PROMPT_SIMBOL 
     Arcadia.attach_listener(self, MsgEvent)
     Arcadia.attach_listener(self, InputKeyboardQueryEvent)
     #_frame = @arcadia.layout.register_panel('_rome_',@name, 'Output')
@@ -201,9 +211,9 @@ class Output < ArcadiaExt
     else
       @main_frame.text.insert("end","\n")
       _index_begin = @main_frame.text.index('end')
-      TkTextImage.new(@main_frame.text, _index_begin, 'padx'=>0, 'pady'=>0, 'image'=> Arcadia.image_res(ITEM_START_LOG_GIF))
-      #@main_frame.text.insert("end"," +--- #{format_time(_event.time)} ---+\n", 'bord_msg')
-      sync_insert("end"," +--- #{format_time(_event.time)} ---+\n", 'bord_msg')
+#      TkTextImage.new(@main_frame.text, _index_begin, 'padx'=>0, 'pady'=>0, 'image'=> Arcadia.image_res(ITEM_START_LOG_GIF))
+#      sync_insert("end"," +--- #{format_time(_event.time)} ---+\n", 'bord_msg')
+      sync_insert("end","===== #{format_time(_event.time)} ======\n", 'bord_msg')
     end
     if _event.append
       _index_begin = "#{@main_frame.text.index(_index_begin)} - 2 lines lineend"
@@ -236,7 +246,6 @@ class Output < ArcadiaExt
     #       TkTextWindow.new(@main_frame.text, 'end', 'window'=> _b)
     #     end
 
-      
   end
 
   def sync_insert(_index, _txt, _tag=nil)
@@ -247,7 +256,7 @@ class Output < ArcadiaExt
       @writing = true
       if @prompt_active
         start =  @main_frame.text.get("#{_index} -1 lines linestart", _index).strip
-        if start == PROMPT
+        if start == @prompt.strip
           _index = "#{_index} -1 lines linestart"
         end
       end
@@ -262,19 +271,23 @@ class Output < ArcadiaExt
   end
 
   def on_input_keyboard_query(_event)
+    if _event.pid
+      @prompt = "~#{_event.pid} #{PROMPT_SIMBOL} "
+    end
     @prompt_active = true
-    sync_insert("end","#{PROMPT}",'bord_msg')
+    sync_insert("end", @prompt, 'prompt')
     @main_frame.text.focus
     @main_frame.text.see("end")
-
+    prompt_index = @main_frame.text.index("insert")
     @main_frame.input_buffer = nil
     while @main_frame.input_buffer.nil? && !_event.is_breaked?
       sleep(0.1)
     end
     if !_event.is_breaked?
       _event.add_result(self, 'input'=>@main_frame.input_buffer)
+      @main_frame.text.tag_add("prompt","#{prompt_index} linestart","#{prompt_index} lineend")
     else
-      if @main_frame.text.get("end -1 lines linestart", "end -1 lines lineend").strip == PROMPT
+      if @main_frame.text.get("end -1 lines linestart", "end -1 lines lineend").strip == @prompt.strip
         @main_frame.text.delete("end -1 lines linestart", "end -1 lines lineend")
       end
     end
