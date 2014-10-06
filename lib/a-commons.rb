@@ -551,7 +551,10 @@ class ArcadiaExtPlus < ArcadiaExt
 
   def clean_instance
     if main_instance?
-      @frames.each_index{|i| destroy_frame(i)}
+      @frames.each_index{|i| 
+        LayoutChangedDomainEvent.new(self, 'old_domain'=>self.frame_domain(i), 'new_domain'=>nil).go!
+        destroy_frame(i)
+      }
       @frames.clear
       instances.each{|i| 
         if i != self

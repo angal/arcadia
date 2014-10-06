@@ -281,11 +281,6 @@ class TkFrameAdapter < TkFrame
 
   def detach_frame
     if @frame
-#      if @movable
-#        @frame.bind_remove("Configure")
-#        @frame.bind_remove("Map")
-#        @frame.bind_remove("Unmap")
-#      end
       self.bind_remove("Map")
       self.unmap(@manager_forced_to_frame)
       @frame = nil
@@ -324,6 +319,10 @@ class TkFrameAdapter < TkFrame
       self.bind("Map", proc{@frame.raise})
     end
     self
+  end
+  
+  def layout_manager
+    @frame_manager
   end
   
   def refresh_layout_manager

@@ -3690,6 +3690,7 @@ end
 
 class AgMultiEditorView
   #attr_reader :enb
+  attr_reader :usetabs
   def initialize(_parent=nil, _frame=nil, _usetabs=true)
     @parent = _parent
     @frame = _frame
@@ -4280,8 +4281,35 @@ class AgMultiEditor < ArcadiaExtPlus
   # Arcadia.attach_listener(self, StartDebugEvent)
     Arcadia.attach_listener(self, FocusEvent)
     Arcadia.attach_listener(self, BookmarkEvent)
+    Arcadia.attach_listener(self, LayoutChangedDomainEvent)
   end
   
+  def on_layout_changed_domain(_event)
+    # workaround for a problem in stack rendering with usetabs == false 
+    if @main_frame && !@main_frame.usetabs && self.frame_domain(0) == _event.old_domain 
+       if  _event.old_domain == _event.new_domain 
+         if self.frame_raised?(0)
+           if !@last_fa.nil?
+             @last_fa.refresh_layout_manager
+             @last_fa.map(@last_fa_layout_manager)
+             @last_fa = nil
+           end
+         else
+           @last_fa = @main_frame.page_frame(@main_frame.raise)        
+           @last_fa.refresh_layout_manager
+           @last_fa_layout_manager = @last_fa.layout_manager
+           @last_fa.unmap(@last_fa_layout_manager)
+         end
+       else
+         if !@last_fa.nil?
+           @last_fa.refresh_layout_manager
+           @last_fa.map(@last_fa_layout_manager)
+           @last_fa = nil
+         end
+       end
+    end
+  end
+
   def on_before_run_cmd(_event)
     _filename = _event.file
     _event.persistent = true
@@ -5173,11 +5201,13 @@ class AgMultiEditor < ArcadiaExtPlus
   end
 
   def show_hide_current_line_numbers
+    return if !self.frame_raised?(0)
     _e = active_instance.raised
     _e.show_hide_line_numbers if _e
   end
 
   def show_hide_tabs
+    return if !self.frame_raised?(0)
     if active? 
       if @usetabs
         @main_frame.switch_2_notabs
