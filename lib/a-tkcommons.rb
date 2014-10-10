@@ -2355,6 +2355,14 @@ class HinnerFileDialog < HinnerDialog
         end
       end
     }   
+    
+    @dir_text.bind_append("Control-KeyPress"){|e|
+      case e.keysym
+      when 'd'
+        _self.close
+        Tk.callback_break
+      end
+    }    
 
     @select_button = Tk::BWidget::Button.new(self, Arcadia.style('toolbarbutton')){
       command proc{_self.close}

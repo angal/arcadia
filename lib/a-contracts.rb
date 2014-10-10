@@ -255,6 +255,9 @@ class SubProcessEvent < ArcadiaEvent
    attr_accessor :abort_action, :alive_check, :name, :pid, :timeout, :timecheck
 end
 
+class SubProcessProgressEvent < SubProcessEvent
+  attr_accessor :max, :varprogress
+end
 
 #class DebugMsgEvent < MsgEvent
 #end
