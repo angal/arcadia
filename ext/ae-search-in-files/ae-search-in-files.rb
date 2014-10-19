@@ -93,10 +93,8 @@ class SearchInFiles < ArcadiaExt
         _files = Dir[_filter]
         _node = @search_output.new_result(_search_title, _files.length)
         progress_stop=false
-        progress_bar = TkProgressframe.new(self.arcadia.layout.root, _files.length)		  
-        progress_bar.title(Arcadia.text('ext.search_in_files.progress.title'))
-        progress_bar.on_cancel=proc{progress_stop=true}
-        #@progress_bar.on_cancel=proc{cancel}
+        hint = "#{Arcadia.text('ext.search_in_files.progress.title')} '#{@find.e_what.text}' into '#{@find.e_dir.text}'"
+        progress_bar = self.frame.root.add_progress(self.frame.name, _files.length, proc{progress_stop=true}, hint)
         pattern = Regexp.new(@find.e_what.text)
         _files.each do |_filename|
             next if File.ftype(_filename) != 'file'
@@ -120,13 +118,13 @@ class SearchInFiles < ArcadiaExt
         Arcadia.console(self, 'msg'=>e.message, 'level'=>'error')
         #Arcadia.new_error_msg(self, e.message)
       ensure
-        progress_bar.destroy if progress_bar
+        self.frame.root.destroy_progress(self.frame.name, progress_bar) if progress_bar
+        #progress_bar.destroy if progress_bar
         self.frame.show_anyway
       end
     end
   end
-  
-  
+
 end
 
 class SearchOutput
@@ -134,13 +132,16 @@ class SearchOutput
     @sequence = 0
     @ext = _ext
     left_frame = TkFrame.new(@ext.frame.hinner_frame, Arcadia.style('panel')).place('x' => '0','y' => '0','relheight' => '1','width' => '25')
-    #right_frame = TkFrame.new(@ext.frame.hinner_frame, Arcadia.style('panel')).place('x' => '25','y' => '0','relwidth' => '1', 'relheight' => '1', 'width' => '-25')
+    #left_frame = TkFrame.new(@ext.hinner_dialog, Arcadia.style('panel')).place('x' => '0','y' => '0','relheight' => '1','width' => '25')
+    #left_frame = TkFrame.new(@ext.hinner_splitted_dialog, Arcadia.style('panel')).place('x' => '0','y' => '0','relheight' => '1','width' => '25')
     @results = {}
     _open_file = proc do |tree, sel|
       n_parent, n = sel.split('@@@')
       Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>@results[n_parent][n][0], 'row'=>@results[n_parent][n][1]))  if n && @results[n_parent][n]
     end
     @tree = BWidgetTreePatched.new(@ext.frame.hinner_frame, Arcadia.style('treepanel')){
+    #@tree = BWidgetTreePatched.new(@ext.hinner_dialog, Arcadia.style('treepanel')){
+    #@tree = BWidgetTreePatched.new(@ext.hinner_splitted_dialog, Arcadia.style('treepanel')){
       selectcommand(_open_file)
       deltay 15
     }

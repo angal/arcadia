@@ -261,6 +261,7 @@ class AGTkObjPlace
 
 end
 
+
 class TkFrameAdapter < TkFrame
   #include TkMovable
   attr_reader :frame
@@ -861,6 +862,10 @@ class TkBaseTitledFrame < TkFrame
     __add_sep(_width, @button_frame)
   end
 
+  def add_fixed_progress(_max=100, _canc_proc=nil, _hint=nil)
+    __add_progress(_max, _canc_proc, @button_frame, _hint)
+  end
+
   def __add_button(_label,_proc=nil,_image=nil, _side= 'right', _frame=nil)
     return if _frame.nil?
     begin
@@ -995,6 +1000,34 @@ class TkBaseTitledFrame < TkFrame
     end
   end
   private :__add_state_button
+
+  def __add_progress(_max, _canc_proc=nil, _frame=nil, _hint=nil, _side= 'left')
+    
+    return if _frame.nil?
+    begin
+      last = @last_for_frame[_frame]
+      @last_for_frame[_frame] = TkFrameProgress.new(_frame, _max)
+      if last
+        @last_for_frame[_frame].pack('side'=> _side,'anchor'=> 'e', 'after'=>last)
+      else
+        @last_for_frame[_frame].pack('side'=> _side,'anchor'=> 'e')
+      end
+      
+      @last_for_frame[_frame].on_cancel=_canc_proc if _canc_proc
+
+      Tk::BWidget::DynamicHelp::add(@last_for_frame[_frame], 'text'=>_hint) if _hint
+      @last_for_frame[_frame]
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e)
+    end
+  end
+  private :__add_progress
+
+  def __destroy_progress(_progress, _frame)
+    @last_for_frame[_frame] = nil if @last_for_frame[_frame] == _progress
+    _progress.destroy
+  end
+  private :__destroy_progress
 
   def menu_button(_name='default')
     @menu_buttons[_name]
@@ -1252,6 +1285,17 @@ class TkLabelTitledFrame < TkTitledFrame
     end
   end
 end
+
+class TkLabelTitledFrameClosable < TkLabelTitledFrame
+    def head_buttons
+      @bclose = add_fixed_button('[ ]',proc{}, CLOSE_FRAME_GIF)
+    end
+    
+    def add_close_action(_proc)
+      @bclose.bind_append("1", _proc)
+    end
+end
+
 
 class TkMenuTitledFrame < TkTitledFrame
   def create_left_title
@@ -1538,6 +1582,15 @@ class TkTitledFrameAdapter < TkMenuTitledFrame
     __add_state_button(_label,_proc,_image, _side, @transient_frame_adapter[_sender_name][:state])
   end
 
+  def add_progress(_sender_name, _max=100, _canc_proc=nil, _hint=nil)
+    forge_transient_adapter(_sender_name)
+    __add_progress(_max, _canc_proc, @transient_frame_adapter[_sender_name][:action], _hint)
+  end
+
+  def destroy_progress(_sender_name, _progress)
+    __destroy_progress(_progress, @transient_frame_adapter[_sender_name][:action])
+  end
+
 end
 
 
@@ -1700,6 +1753,57 @@ class TkProgressframe < TkFloatTitledFrame
     @b_cancel.bind_append('1', _proc)
   end
 end
+
+class TkFrameProgress < TkFrame
+  attr_accessor :max
+  def initialize(parent=nil, _max=100,  *args)
+    super(parent, Arcadia.style('panel').update({:background => Arcadia.conf('titlelabel.background')}), *args)
+    _max=1 if _max<=0
+    @max = _max
+    @progress = TkVariable.new
+    @progress.value = -1
+    Tk::BWidget::ProgressBar.new(self, :width=>50, :height=>16,
+      :background=>Arcadia.conf('titlelabel.background'),
+      :troughcolor=>Arcadia.conf('titlelabel.background'),
+      :foreground=>Arcadia.conf('progress.foreground'),
+      :variable=>@progress,
+      :borderwidth=>0,
+      :relief=>'flat',
+      :maximum=>_max).pack('side'=>'left','padx'=>0, 'pady'=>0)
+    @b_cancel = TkButton.new(self, Arcadia.style('toolbarbutton')){|b|
+      background  Arcadia.conf('titlelabel.background')
+      foreground  Arcadia.conf('titlelabel.background')
+      highlightbackground Arcadia.conf('titlelabel.background')
+      highlightcolor Arcadia.conf('titlelabel.background')
+      image Arcadia.image_res(CLOSE_FRAME_GIF)
+      borderwidth 0
+      relief 'flat'
+      padx 0
+      pady 0
+      anchor 'n'
+      pack('side'=>'left','padx'=>0, 'pady'=>0)
+    }
+  end
+
+  def destroy
+    @on_destroy.call if defined?(@on_destroy)
+    super
+  end
+
+  def progress(_incr=1)
+    @progress.numeric += _incr
+  end
+
+  def on_cancel=(_proc)
+    @b_cancel.bind_append('1', _proc)
+  end
+
+  def on_destroy=(_proc)
+    @on_destroy=_proc
+  end
+  
+end
+
 
 class TkBuffersChoiseView < TkToplevel
 
@@ -2239,9 +2343,10 @@ class HinnerDialog < TkFrame
     if !args.nil?
       newargs.update(args) 
     end
-    super(Arcadia.layout.base_frame, newargs)
+    super(Arcadia.layout.parent_frame, newargs)
     case side
       when 'top'
+#        self.pack('side' =>side,'before'=>Arcadia.layout.root, 'anchor'=>'nw','fill'=>'both', 'padx'=>0, 'pady'=>0, 'expand'=>'yes')
         self.pack('side' =>side,'before'=>Arcadia.layout.root, 'anchor'=>'nw','fill'=>'x', 'padx'=>0, 'pady'=>0)
       when 'bottom'
         self.pack('side' =>side,'after'=>Arcadia.layout.root, 'anchor'=>'nw','fill'=>'x', 'padx'=>0, 'pady'=>0)
@@ -2272,6 +2377,62 @@ class HinnerDialog < TkFrame
     Tk.update
     self.destroy if _destroy
   end
+end
+
+
+class HinnerSplittedDialog < HinnerDialog
+  attr_reader :frame, :splitter_frame
+  def initialize(side='top', height=100, args=nil)
+    super(side, args)
+    y0 = height
+    fr = TkFrame.new(self){
+      height y0 
+      pack('side' =>side,'padx'=>0, 'pady'=>0, 'fill'=>'x', 'expand'=>'1')
+    }
+    splitter_frame = TkFrame.new(self, Arcadia.style('splitter')){
+      height 5
+      pack('side' =>side,'padx'=>0, 'pady'=>0, 'fill'=>'x', 'expand'=>'1')
+    }
+    oldcursor = splitter_frame.cget('cursor')
+    tmpcursor = 'sb_v_double_arrow'
+    yx=0
+    
+    splitter_frame.bind_append("Enter", proc{|x, y| 
+      splitter_frame.configure('cursor'=> tmpcursor)
+    } , "%x %y")
+
+    splitter_frame.bind_append("B1-Motion", proc{|x, y| 
+      yx=y
+      splitter_frame.raise
+    } ,"%x %y")
+     
+    splitter_frame.bind_append("ButtonRelease-1", proc{|e|
+      splitter_frame.configure('cursor'=> oldcursor)
+      if side == 'top'
+        h = (y0+yx).abs
+      elsif side == 'bottom'
+        h = (y0-yx).abs
+      end
+      y0 = h
+      fr.configure('height'=>h)
+    })    
+    @frame = fr
+    @splitter_frame = splitter_frame
+  end
+end
+
+class HinnerSplittedDialogTitled < HinnerSplittedDialog
+  attr_accessor :hinner_frame
+  def initialize(title=nil, side='top', height=100, args=nil)
+    super(side, height, args)
+    btf = TkLabelTitledFrameClosable.new(self.frame, title).place('x'=>0, 'y'=>0,'relheight'=>1, 'relwidth'=>1)
+    close = proc{
+      self.destroy
+      Tk.callback_break
+    }
+    btf.add_close_action(close)
+    @hinner_frame = btf.frame
+  end  
 end
 
 class HinnerFileDialog < HinnerDialog

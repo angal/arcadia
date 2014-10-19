@@ -224,6 +224,7 @@ class ArcadiaExt
     @float_frames = Array.new
     @float_geometries = conf_array("float_frames")
     @float_labels = conf_array("float_labels")
+    @hinner_dialogs = []
     Arcadia.attach_listener(self, BuildEvent)
     Arcadia.attach_listener(self, InitializeEvent)
     Arcadia.attach_listener(self, ExitQueryEvent)
@@ -304,6 +305,29 @@ class ArcadiaExt
     end
     return @frames[_n]
   end
+
+  def hinner_dialog(_n=0, side='top', args=nil)
+    if @hinner_dialogs[0].nil?
+      @hinner_dialogs[_n] = @arcadia.layout.add_hinner_dialog(side, args)
+      @hinner_dialogs[_n].pack('side' =>side,'padx'=>0, 'pady'=>0, 'fill'=>'x', 'expand'=>'1')
+    end
+    @hinner_dialogs[_n]
+  end
+  
+  def hinner_splitted_dialog(_n=0, _side='top', _height=100, _args=nil)
+    if @hinner_dialogs[0].nil?
+      @hinner_dialogs[_n] = @arcadia.layout.add_hinner_splitted_dialog(_side, _height, _args)
+    end
+    @hinner_dialogs[_n]
+  end
+  
+  def hinner_splitted_dialog_titled(_title=nil, _n=0, _side='top', _height=100, _args=nil)
+    if @hinner_dialogs[0].nil?
+      @hinner_dialogs[_n] = @arcadia.layout.add_hinner_splitted_dialog_titled(_title, _side, _height, _args)
+    end
+    @hinner_dialogs[_n]
+  end
+  
 
   def frame_domain(_n=0, _value=nil)
     if conf('frames')

@@ -585,13 +585,14 @@ class Arcadia < TkApplication
   end
 
   def load_sysdefaultproperty
-#    Tk.tk_call "eval","option add *background #{self['conf']['background']}"
-#    Tk.tk_call "eval","option add *foreground #{self['conf']['foreground']}"
-#    Tk.tk_call "eval","option add *activebackground #{self['conf']['activebackground']}"
-#    Tk.tk_call "eval","option add *activeforeground #{self['conf']['activeforeground']}"
-#    Tk.tk_call "eval","option add *highlightcolor  #{self['conf']['background']}"
-#    Tk.tk_call "eval","option add *relief #{self['conf']['relief']}"
-
+    if !OS.mac?
+      Tk.tk_call "eval","option add *background #{self['conf']['background']}"
+      Tk.tk_call "eval","option add *foreground #{self['conf']['foreground']}"
+      Tk.tk_call "eval","option add *activebackground #{self['conf']['activebackground']}"
+      Tk.tk_call "eval","option add *activeforeground #{self['conf']['activeforeground']}"
+      Tk.tk_call "eval","option add *highlightcolor  #{self['conf']['background']}"
+      Tk.tk_call "eval","option add *relief #{self['conf']['relief']}"
+    end
     if !Arcadia.is_windows? && File.basename(Arcadia.ruby) != 'ruby'
       begin
         if !FileTest.exist?("#{local_dir}/bin")
@@ -2731,13 +2732,13 @@ class ArcadiaLayout
   #    :frame,
   #    :ffw
   #  )
-  attr_reader :base_frame
+  attr_reader :parent_frame
   HIDDEN_DOMAIN = '-1.-1'
   def initialize(_arcadia, _frame, _autotab=true)
     @arcadia = _arcadia
     @frames = Array.new
     @frames[0] = Array.new
-    @base_frame = _frame
+    @parent_frame = _frame
     @content_frame = TkFrame.new(_frame).pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
 #    @dialog_frame = TkFrame.new(_frame)
 
@@ -3532,33 +3533,6 @@ class ArcadiaLayout
     LayoutChangedDomainEvent.new(self, 'old_domain'=>source_domain, 'new_domain'=>_target_domain).go!
   end
 
-  #  def change_domain_old(_dom1, _dom2, _name2)
-  #    tt1= @panels[_dom1]['root'].top_text
-  #    tt2= @panels[_dom2]['root'].top_text
-  #    if  @panels[_dom2]['sons'].length ==1 && @panels[_dom1]['sons'].length > 0
-  #      # change ------
-  #      ffw1 = raised_fixed_frame(_dom1)
-  #      ffw2 = @panels[_dom2]['sons'].values[0]
-  #      unregister_panel(ffw1,false,false) if ffw1
-  #      unregister_panel(ffw2,false,false)
-  #      ffw1.domain = _dom2 if ffw1
-  #      ffw2.domain = _dom1
-  #      register_panel(ffw1, ffw1.hinner_frame) if ffw1
-  #      register_panel(ffw2, ffw2.hinner_frame)
-  #      @panels[_dom1]['root'].top_text(tt2)
-  #      @panels[_dom2]['root'].top_text(tt1)
-  #    elsif @panels[_dom2]['sons'].length > 1
-  #      ffw2 = @panels[_dom2]['sons'][_name2]
-  #      unregister_panel(ffw2, false, false)
-  #      ffw2.domain = _dom1
-  #      register_panel(ffw2, ffw2.hinner_frame)
-  #      @panels[_dom1]['root'].top_text(tt2)
-  #      @panels[_dom2]['root'].top_text('')
-  #    end
-  #    # refresh -----
-  #    build_invert_menu
-  #  end
-
   def sorted_menu_index(_menu, _label)
     index = '0'
     i_end = _menu.index('end').to_i - 4
@@ -3654,7 +3628,7 @@ class ArcadiaLayout
   end
 
   def process_frame(_ffw)
-    #p "processo frame #{_ffw.title}"
+    #p "process frame #{_ffw.title}"
     #-------
     is_plus = Arcadia.extension(_ffw.name).kind_of?(ArcadiaExtPlus)
     #-------
@@ -3968,6 +3942,21 @@ class ArcadiaLayout
     _frame.on_close=proc{_frame.hide}
     _frame.place(_args)
     return _frame
+  end
+
+  def add_hinner_dialog(side='top', args=nil)
+    hd = HinnerDialog.new(side, args)
+    return hd
+  end
+
+  def add_hinner_splitted_dialog(side='top', height=100, args=nil)
+    hd = HinnerSplittedDialog.new(side, height, args)
+    return hd
+  end
+
+  def add_hinner_splitted_dialog_titled(title=nil, side='top', height=100, args=nil)
+    hd = HinnerSplittedDialogTitled.new(title, side, height, args)
+    return hd
   end
 
   def dump_splitter(_splitter)
