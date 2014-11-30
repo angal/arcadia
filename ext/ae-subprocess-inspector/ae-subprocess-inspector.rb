@@ -51,10 +51,59 @@ class SubProcessInspector < ArcadiaExt
       
 end
 
-class SubProcessWidget < Tk::BWidget::Button
+#class SubProcessWidget < Tk::BWidget::Button
+#  attr_reader :event
+#  def initialize(_parent=nil, _event=nil, *args)
+#    super(Arcadia['toolbar'].frame, Arcadia.style('button').update("compound"=>'left', "background"=>Arcadia.conf("background"),"activebackground"=>'black', 'relief'=>'groove'))
+#    @parent = _parent
+#    @event = _event
+#    b_command = proc{
+#      message = Arcadia.text('ext.spi.d.kill.msg', [_event.pid, _event.name])
+#      r=Arcadia.hinner_dialog(self,
+#          'type'=>'yes_no', 
+#          'level'=>'warning',
+#          'title'=> Arcadia.text('ext.spi.d.kill.title'), 
+#          'msg'=>message)
+#      if r=="yes"
+#        _event.abort_action.call
+#      end
+#    }
+#    command b_command
+#    begin
+#      text File.basename(_event.name)
+#    rescue
+#      text _event.name
+#    end  
+#    helptext "#{_event.name} [pid #{_event.pid}]"
+#    pack('side' =>'left', :padx=>2, :pady=>0)
+#    Tk::Anigif.image(self, "#{Dir.pwd}/ext/ae-subprocess-inspector/process.res")
+#    start_check  
+#  end
+#  
+#  def start_check
+#    if @event.timecheck
+#      timecheck = @event.timecheck
+#    else
+#      timecheck = 1000
+#    end
+#    @timer = TkAfter.new
+#    proc_check = proc{
+#      alive = @event.alive_check.call
+#      #p "ALIVE=#{alive}"
+#      if !alive
+#        @timer.stop
+#        @parent.do_delete_process(self)
+#        self.destroy
+#      end
+#    }
+#    @timer.set_procs(timecheck,-1,proc_check)
+#    @timer.start
+#  end  
+#end
+
+class SubProcessWidget
   attr_reader :event
   def initialize(_parent=nil, _event=nil, *args)
-    super(Arcadia['toolbar'].frame, Arcadia.style('button').update("compound"=>'left', "background"=>Arcadia.conf("background"),"activebackground"=>'black', 'relief'=>'groove'))
     @parent = _parent
     @event = _event
     b_command = proc{
@@ -68,16 +117,36 @@ class SubProcessWidget < Tk::BWidget::Button
         _event.abort_action.call
       end
     }
-    command b_command
+    #command b_command
     begin
-      text File.basename(_event.name)
+      l_text = File.basename(_event.name)
     rescue
-      text _event.name
+      l_text = _event.name
     end  
-    helptext "#{_event.name} [pid #{_event.pid}]"
-    pack('side' =>'left', :padx=>2, :pady=>0)
-    Tk::Anigif.image(self, "#{Dir.pwd}/ext/ae-subprocess-inspector/process.res")
+    helptext = "#{_event.name} [pid #{_event.pid}]"
+    
+
+    @label = TkLabel.new(Arcadia['toolbar'].frame, Arcadia.style('label')){
+      compound 'left'
+      text l_text
+      pack('side' =>'left', :padx=>2, :pady=>0)
+    }
+    Tk::Anigif.image(@label, "#{Dir.pwd}/ext/ae-subprocess-inspector/process.res")
+
+    @button = Arcadia.wf.toolbutton(Arcadia['toolbar'].frame){
+      command b_command
+      image Arcadia.image_res(CLOSE_FRAME_GIF)      
+      pack('side' =>'left', :padx=>2, :pady=>0)
+    }
+    @button.hint=helptext
+
     start_check  
+  end
+
+  def destroy
+   # @img.destroy
+    @label.destroy
+    @button.destroy
   end
   
   def start_check

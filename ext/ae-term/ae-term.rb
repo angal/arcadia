@@ -10,8 +10,8 @@ class Term < ArcadiaExtPlus
   def on_before_build(_event)
     @has_xterm = !Arcadia.which("xterm").nil?
     @has_xdotool = !Arcadia.which("xdotool").nil?
-    @can_run = @has_xterm || Arcadia.is_windows? 
-    if !Arcadia.is_windows?
+    @can_run = @has_xterm || OS.windows? || OS.mac?
+    if !(OS.windows? || OS.mac?)
       if !@has_xterm
         msg = Arcadia.text("ext.term.dependences_missing.xterm.msg")
         ArcadiaProblemEvent.new(self, "type"=>ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE,"title"=>Arcadia.text("ext.term.dependences_missing.xterm.title"), "detail"=>msg).go!
@@ -32,7 +32,7 @@ class Term < ArcadiaExtPlus
   
   def on_initialize(_event)
     # called at startup
-    return if Arcadia.is_windows?
+    return if OS.windows? || OS.mac?
     @xterm_pid = -1
     @finalizing = false
     @bind_after_run = false
@@ -46,7 +46,7 @@ class Term < ArcadiaExtPlus
   end
   
   def on_finalize(_event)
-    return if Arcadia.is_windows?
+    return if OS.windows? || OS.mac?
     @finalizing = true
     killall_xterm if @has_xterm && @has_xdotool
   end  
@@ -138,15 +138,17 @@ class Term < ArcadiaExtPlus
   end
   
   def do_run_external_term(_dir)
-    if Arcadia.is_windows?
+    if OS.windows?
       system("cd #{_dir} & start cmd")
+    elsif OS.mac?
+      system("open -a Terminal '#{_dir}'")
     else
       system("cd #{_dir}; xterm &")
     end
   end
   
   def on_term(_event)
-    if !@has_xdotool || Arcadia.is_windows?
+    if !@has_xdotool || OS.windows? || OS.mac?
       do_run_external_term(_event.dir)
     else 
       if xterm_running?

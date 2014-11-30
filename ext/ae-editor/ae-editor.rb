@@ -998,16 +998,25 @@ class AgEditorOutlineToolbar
   def initialize(_controller)
     @controller = _controller
     @panel = @controller.main_instance.frame(1).root.add_panel(@controller.main_instance.frame(1).name, "sync");
-    @cb_sync = TkCheckButton.new(@panel, Arcadia.style('checkbox').update('background'=>@panel.background)){
-      text  'Sync'
-      justify  'left'
-      indicatoron 0
-      offrelief 'flat'
+#    @cb_sync = TkCheckButton.new(@panel, Arcadia.style('checkbox').update('background'=>@panel.background)){
+#      text  'Sync'
+#      justify  'left'
+#      indicatoron 0
+#      offrelief 'flat'
+#      image Arcadia.image_res(SYNC_GIF)
+#      pack
+#    }        
+#    Tk::BWidget::DynamicHelp::add(@cb_sync, 
+#      'text'=> Arcadia.text('ext.editor.button.link.hint'))
+
+    @cb_sync = Arcadia.wf.titlecontextcheckbutton(@panel){
+      variable TkVariable.new
       image Arcadia.image_res(SYNC_GIF)
       pack
-    }        
-    Tk::BWidget::DynamicHelp::add(@cb_sync, 
-      'text'=> Arcadia.text('ext.editor.button.link.hint'))
+    }
+    
+    @cb_sync.hint=Arcadia.text('ext.editor.button.link.hint')
+
 
     do_check = proc {
       if @cb_sync.cget('onvalue')==@cb_sync.cget('variable').value.to_i
@@ -1177,6 +1186,8 @@ class AgEditorOutline
       crossopenimage  Arcadia.image_res(ARROWDOWN_GIF)
     }
     @tree_exp.extend(TkScrollableWidget)
+    @tree_exp.bind_append("Enter", proc{@tree_exp.focus})
+
     self.show
     pop_up_menu_tree
   end
@@ -1279,14 +1290,15 @@ class AgEditorOutline
   end
   
   def pop_up_menu_tree
-    @pop_up_tree = TkMenu.new(
+    #@pop_up_tree = TkMenu.new(
+    @pop_up_tree = Arcadia.wf.menu(
       :parent=>@tree_exp,
       :tearoff=>0,
       :title => 'Menu tree'
     )
-    @pop_up_tree.extend(TkAutoPostMenu)
-    @pop_up_tree.configure(Arcadia.style('menu'))
-    #Arcadia.instance.main_menu.update_style(@pop_up_tree)
+#    @pop_up_tree.extend(TkAutoPostMenu)
+#    @pop_up_tree.configure(Arcadia.style('menu'))
+
     @pop_up_tree.insert('end',
       :command,
       :label=> Arcadia.text('ext.editor.outline.menu.rebuild'),
@@ -1306,6 +1318,7 @@ end
 
 class AgEditor
   attr_accessor :file
+  attr_accessor :start_index
   attr_accessor :line_numbers_visible
   attr_accessor :id
   attr_reader :read_only 
@@ -1315,7 +1328,9 @@ class AgEditor
   attr_reader :last_tmp_file
   attr_reader :lang
   attr_reader :file_info  
-  attr_reader :outline  
+  attr_reader :outline
+  attr_reader :file_loaded  
+  attr_reader :edit_initialized  
   def initialize(_controller, _page_frame)
     @controller = _controller
     @page_frame = _page_frame
@@ -1336,6 +1351,9 @@ class AgEditor
     @line_numbers_visible = @controller.conf('line-numbers') == 'yes'
     @id = -1
     @file_info = Hash.new
+    @file_loaded = false
+    @edit_initialized = false
+    @start_index='1.0'
   end
 
   def set_controller(_controller)
@@ -1350,14 +1368,14 @@ class AgEditor
     !@highlighting || (@last_line_end && @last_line_end > 0)
   end
   
-
-  
   def show_line_numbers
     if !@line_numbers_visible
       #@fm1.hide_right
       @fm1.show_left
       @line_numbers_visible = true
       do_line_update
+      @need_recalc=true
+      resize_line_num
     end
   end
   
@@ -1433,6 +1451,7 @@ class AgEditor
       Arcadia.runtime_error(e)
       #p "RuntimeError : #{e.message}"
     end
+    @edit_initialized = true
   end
 
   def create_temp_file
@@ -2108,7 +2127,7 @@ class AgEditor
     if _r.length>0
       _text=@text.get(_r[0][0],_r[0][1])
       if _text.length > 0
-        @controller.get_find.e_what.text(_text)
+        @controller.get_find.e_what.value=_text
       end
     else
     end
@@ -2219,6 +2238,10 @@ class AgEditor
       },
     "%x %y")
     
+    @text_line_num_resized = false
+    @text_line_num.bind("Map", proc{resize_line_num if !@text_line_num_resized })
+    
+    
     #@text_line_num.configure('font', @font);
     @text_line_num.tag_configure('line_num',
       'foreground' => '#FFFFFF',
@@ -2228,13 +2251,14 @@ class AgEditor
     )
     
     #--- menu
-    _pop_up = TkMenu.new(
+#    _pop_up = TkMenu.new(
+    _pop_up = Arcadia.wf.menu(
       :parent=>@text_line_num,
       :tearoff=>0,
       :title => 'Menu'
     )
-    _pop_up.extend(TkAutoPostMenu)
-    _pop_up.configure(Arcadia.style('menu'))
+    #_pop_up.extend(TkAutoPostMenu)
+    #_pop_up.configure(Arcadia.style('menu'))
     #Arcadia.instance.main_menu.update_style(@pop_up)
     _title_item = _pop_up.insert('end',
       :command,
@@ -2281,7 +2305,7 @@ class AgEditor
 
         _pop_up.popup(_x,_y)
       })
-    
+
   end
 
   def file_line_to_text_line_num_line(_line)
@@ -2493,13 +2517,14 @@ class AgEditor
   end
 
   def pop_up_menu
-    @pop_up = TkMenu.new(
+    #@pop_up = TkMenu.new(
+    @pop_up = Arcadia.wf.menu(
       :parent=>@text,
       :tearoff=>0,
       :title => 'Menu'
     )
-    @pop_up.extend(TkAutoPostMenu)
-    @pop_up.configure(Arcadia.style('menu'))
+    #@pop_up.extend(TkAutoPostMenu)
+    #@pop_up.configure(Arcadia.style('menu'))
     
     @pop_up.insert('end',
       :command,
@@ -2701,13 +2726,14 @@ class AgEditor
     @pop_up.insert('end', :separator)
 
     #---- debug menu
-    _sub_debug = TkMenu.new(
+    #_sub_debug = TkMenu.new(
+    _sub_debug = Arcadia.wf.menu(
       :parent=>@pop_up,
       :tearoff=>0,
       :title => 'Debug'
     )
-    _sub_debug.extend(TkAutoPostMenu)
-    _sub_debug.configure(Arcadia.style('menu'))
+    #_sub_debug.extend(TkAutoPostMenu)
+    #_sub_debug.configure(Arcadia.style('menu'))
     _sub_debug.insert('end',
       :command,
       :label=>Arcadia.text('ext.editor.text.menu.eval_selected'),
@@ -2733,13 +2759,14 @@ class AgEditor
 
 
     #---- code menu
-    _sub_code = TkMenu.new(
+    #_sub_code = TkMenu.new(
+    _sub_code = Arcadia.wf.menu(
       :parent=>@pop_up,
       :tearoff=>0,
       :title => 'Code'
     )
-    _sub_code.extend(TkAutoPostMenu)
-    _sub_code.configure(Arcadia.style('menu'))
+    #_sub_code.extend(TkAutoPostMenu)
+    #_sub_code.configure(Arcadia.style('menu'))
     _sub_code.insert('end',
       :command,
       :label=>Arcadia.text('ext.editor.text.menu.set_wrap'),
@@ -3112,7 +3139,7 @@ class AgEditor
 
   # modify in this instance means the (...) in the tab header of each file
   def modified?
-    return !(@buffer === text_value)
+    return @text != nil && !(@buffer === text_value)
   end
 
   def set_modify
@@ -3166,6 +3193,21 @@ class AgEditor
   
   def zone_of_row(_row)
     ((_row) / @highlight_zone_length).to_i + 1
+  end
+
+  def visible_line_begin
+    line_begin_index = @text.index('@0,0')
+    line_begin = line_begin_index.split('.')[0].to_i
+    line_begin
+  end
+
+  def visible_line_end
+    line_end = @text.index('@0,'+TkWinfo.height(@text).to_s).split('.')[0].to_i + 1
+    line_end
+  end
+
+  def visible_lines
+    visible_line_end - visible_line_begin
   end
   
   def do_line_update
@@ -3259,7 +3301,7 @@ class AgEditor
           @line_num_rx_e, @line_num_ry_e, @line_num_width_e, @line_num_heigth_e = @text_line_num.bbox("0.1 lineend - 1 chars");
           if @line_num_width_e.nil?
             @line_num_width_e = @font.split()[-1].strip.to_i
-            @need_recalc = true            
+            @need_recalc = true    
 #            linfo_x, linfo_y, linfo_w, linfo_h, linfo_b  = @text_line_num.dlineinfo('0.1')            
 #            if linfo_w
 #              @line_num_width_e = linfo_w.to_f/(line_end_chars+1.5)
@@ -3278,6 +3320,7 @@ class AgEditor
           @last_line_end_chars = -1
         end
       end
+      @text_line_num_resized = true
     end
   end
 
@@ -3609,7 +3652,7 @@ class AgEditor
 #    else
 #      @fm1 = AGTkVSplittedFrames.new(@page_frame,_w2)
 #    end
-    @fm1 = AGTkVSplittedFrames.new(@page_frame, @page_frame,0,5,false,false)
+    @fm1 = AGTkVSplittedFrames.new(@page_frame, @page_frame,0,0,false,false)
     @fm1.splitter_frame.configure('relief'=>'flat')
     @fm1.bind_append("Enter", proc{@controller.activate})    
     initialize_text(@fm1.right_frame)
@@ -3640,6 +3683,7 @@ class AgEditor
   def load_file(_filename = nil)
     #if filename is nil then open a new tab
     @loading=true
+    initialize_editing(Arcadia.file_extension(_filename) || 'rb') if !@edit_initialized
     @dos_line_endings=false
     begin
       @file = _filename
@@ -3656,11 +3700,29 @@ class AgEditor
 	        @dos_line_endings=true if file.read.include?("\r\n") # pesky windows line endings
 	      }
       end
+      @file_loaded = true
       set_read_only(!File.stat(_filename).writable?)
       reset(false)
       refresh
     ensure
       @loading=false
+    end
+  end
+  
+  def load_file_if_not_loaded
+    if @file && !@file_loaded
+      load_file(@file)
+      if @start_index
+        vl = visible_lines
+        if vl && vl > 0
+          text_see("#{@start_index} + #{vl/2 -1} lines")
+        else
+          text_see(@start_index) 
+        end
+      end
+      do_line_update
+      @need_recalc=true
+      resize_line_num
     end
   end
   
@@ -3904,13 +3966,14 @@ class AgMultiEditorView
   def add_menu_button(_name, _buffer_string)
     @buffer_menu_button = @frame.root.add_menu_button(
       _name, 'files', nil, 'right', 
-      {'relief'=>:flat, 
-       'borderwidth'=>1, 
+      {
+      #'relief'=>:flat, 
+      # 'borderwidth'=>1, 
        'compound'=> 'left',
-       'anchor'=>'w',
-       'font'=> "#{Arcadia.conf('titlelabel.font')} italic",
-       'activebackground'=>Arcadia.conf('titlelabel.background'),
-       'foreground' => Arcadia.conf('titlecontext.foreground'),
+  #     'anchor'=>'w',
+  #     'font'=> "#{Arcadia.conf('titlelabel.font')} italic",
+  #     'activebackground'=>Arcadia.conf('titlelabel.background'),
+  #     'foreground' => Arcadia.conf('titlecontext.foreground'),
        'textvariable'=> _buffer_string
       }
     )
@@ -4210,8 +4273,8 @@ class CoderayHighlightScanner < HighlightScanner
       elsif !([:open, :close, :begin_group,:end_group].include?(tok[0])&& tok[1].class==Symbol)
         toklength = tok[0].length
         t_begin="#{row}.#{col}"
-        if tok[0].include?("\n")
-        #if tok[0].to_s.include?("\n")
+        #if tok[0].include?("\n")
+        if tok[0].to_s.include?("\n")
           ar = tok[0].split("\n")
           row+=tok[0].count("\n")
           begin_gap = ar[-1]
@@ -4284,6 +4347,15 @@ class AgMultiEditor < ArcadiaExtPlus
     Arcadia.attach_listener(self, LayoutChangedDomainEvent)
   end
   
+  def unmap_last_frame
+    @last_fa = @main_frame.page_frame(@main_frame.raise)        
+    if @last_fa
+      @last_fa.refresh_layout_manager
+      @last_fa_layout_manager = @last_fa.layout_manager
+      @last_fa.unmap(@last_fa_layout_manager)
+    end
+  end
+  
   def on_layout_changed_domain(_event)
     # workaround for a problem in stack rendering with usetabs == false 
     if @main_frame && !@main_frame.usetabs && self.frame_domain(0) == _event.old_domain 
@@ -4295,10 +4367,7 @@ class AgMultiEditor < ArcadiaExtPlus
              @last_fa = nil
            end
          else
-           @last_fa = @main_frame.page_frame(@main_frame.raise)        
-           @last_fa.refresh_layout_manager
-           @last_fa_layout_manager = @last_fa.layout_manager
-           @last_fa.unmap(@last_fa_layout_manager)
+           unmap_last_frame
          end
        else
          if !@last_fa.nil?
@@ -4419,7 +4488,9 @@ class AgMultiEditor < ArcadiaExtPlus
       self.name,
       'Close current',
       proc{self.activate;Arcadia.process_event(CloseCurrentTabEvent.new(self))}, 
-      CLOSE_DOCUMENT_GIF)
+      #CLOSE_DOCUMENT_GIF
+      CLOSE_FRAME_GIF
+    )
     frame.root.add_sep(self.name, 1)
     @buffer_number = TkVariable.new
     @buffer_string = TkVariable.new
@@ -4484,7 +4555,7 @@ class AgMultiEditor < ArcadiaExtPlus
         end
       }
     end
-    instance.move_buffer_here(raised_name)
+    #instance.move_buffer_here(raised_name)
     instance
   end
 
@@ -4609,8 +4680,8 @@ class AgMultiEditor < ArcadiaExtPlus
     make_buffer_string("") if @buffer_menu.index('end').nil?
     if _sender == self
       instances.each{|i|
-        if i != self
-          i.del_buffer_menu_item(_file, self)
+        if i != self || instances.count == 1
+          i.del_buffer_menu_item(_file, self) if instances.count > 1
           i.refresh_buffer_string
         end
       }
@@ -4697,6 +4768,10 @@ class AgMultiEditor < ArcadiaExtPlus
     reset_status if @main_frame.pages.empty?
   end
 
+#  def on_after_initialize(_event)
+#    @editors.each{|e| e.resize_line_num} 
+#  end
+
   def on_exit_query(_event)    
     _event.can_exit=true
     return if _event.sender.instance_of?(AgMultiEditor) && _event.sender != self 
@@ -4762,9 +4837,6 @@ class AgMultiEditor < ArcadiaExtPlus
         lang_exts.each{|ext|
           @langs_hash_by_ext[ext] = lang_props
         } if lang_exts
-      
-      
-      
       end
     }
   end
@@ -4813,13 +4885,14 @@ class AgMultiEditor < ArcadiaExtPlus
 
 
   def pop_up_menu
-    @pop_up = TkMenu.new(
+    #@pop_up = TkMenu.new(
+    @pop_up = Arcadia.wf.menu(
       :parent=> self.frame.hinner_frame,
       :tearoff=>0,
       :title => 'Menu'
     )
-    @pop_up.extend(TkAutoPostMenu)
-    @pop_up.configure(Arcadia.style('menu'))
+    #@pop_up.extend(TkAutoPostMenu)
+    #@pop_up.configure(Arcadia.style('menu'))
     #Arcadia.instance.main_menu.update_style(@pop_up)
 
 
@@ -4958,7 +5031,7 @@ class AgMultiEditor < ArcadiaExtPlus
           @bookmarks << {:file=>"__TMP__#{_event.id}",:from_line=>_event.from_row, :to_line=>_event.to_row}
           _e = @editors[_event.id]
         end
-        if _e
+        if _e && _e.text
           index_from = "#{_event.from_row}.0"
           index_to = "#{_event.to_row}.0 lineend"
           _event.content = _e.text.get(index_from, index_to)
@@ -5231,7 +5304,7 @@ class AgMultiEditor < ArcadiaExtPlus
     @tabs_editor.each_value{|editor|
       if editor.file != nil
         #_insert_index = editor.text.index('insert')
-        _insert_index = editor.text.index('@0,0')
+        _insert_index = editor.text.nil?? editor.start_index : editor.text.index('@0,0')
         _files=_files+'|' if _files.strip.length > 0
         _files=_files + "#{editor.file};#{_insert_index};#{editor.line_numbers_visible.to_s}"
       end
@@ -5320,9 +5393,14 @@ class AgMultiEditor < ArcadiaExtPlus
   end
   
   def on_layout_raising_frame(_event)
-    if _event.extension_name == "editor" && _event.frame_name=="editor_outline"
+    if _event.extension_name && _event.extension_name == "editor" && _event.frame_name=="editor_outline"
       _e = raised
       change_outline(_e, true) if  _e
+    end
+    if Arcadia.extension(_event.extension_name) && frame_domain == Arcadia.extension(_event.extension_name).frame_domain
+      if  @main_frame && !@main_frame.usetabs
+        unmap_last_frame
+      end
     end
   end
 
@@ -5335,27 +5413,34 @@ class AgMultiEditor < ArcadiaExtPlus
 
   def open_last_files
     @batch_files = true
+    last_ed = nil
     if Arcadia.persistent("#{@name}.files.open")
       _files_index =Arcadia.persistent("#{@name}.files.open").split("|")
       _files_index.each do |value| 
         _file,_index,_line_numbers_visible_as_string = value.split(';')
         if _file && _index
-          ed = open_file(_file,_index,false)
+          ed = open_file(_file,_index,false, false)
         else
-          ed = open_file(_file)
+          ed = open_file(_file,'1.0', false, false)
         end
         if ed && _line_numbers_visible_as_string && ed.line_numbers_visible
           ed.line_numbers_visible = _line_numbers_visible_as_string == 'true'
         end
+        last_ed = ed
       end
     end
     @batch_files = false
+    change_outline(last_ed) if last_ed
     to_raise_file = Arcadia.persistent("#{@name}.files.last")
     if to_raise_file
+      ed_to_raise = @tabs_editor[self.tab_file_name(to_raise_file)]
+      ed_to_raise.load_file_if_not_loaded if ed_to_raise
       raise_file(to_raise_file,0)
     else
       _first_page = @main_frame.pages[0] if @main_frame.pages.length > 0
       if _first_page
+        ed_to_raise = @tabs_editor[_first_page]
+        ed_to_raise.load_file_if_not_loaded if ed_to_raise
         @main_frame.raise(_first_page) if frame_def_visible?
         @main_frame.see(_first_page)
       end
@@ -5495,7 +5580,6 @@ class AgMultiEditor < ArcadiaExtPlus
 
   def make_buffer_string(_str=nil)
     value = "[#{@buffer_number.value}] #{_str}"
-    #@buffer_menu_button.configure(:text => )
     @last_buffer_str = _str
     @buffer_string.value = value
   end
@@ -5534,6 +5618,7 @@ class AgMultiEditor < ArcadiaExtPlus
       mod_buffer_menu_item(@tabs_editor[p_name].file, _new_text, _new_file, self)
     else
       mod_buffer_menu_item(unname_modified(tab_title_by_tab_name(p_name)), _new_text, nil, self)
+      @last_fa.refresh_layout_manager if @last_fa
     end
 #    mod_buffer_menu_item(@main_frame.page(p_name)['file'], _new_text)
     @main_frame.page_title(p_name, _new_text)
@@ -5594,7 +5679,7 @@ class AgMultiEditor < ArcadiaExtPlus
       if _editor
         @last_e = raise_editor(_editor, @last_index, false, false)
       else
-        @last_e = open_file(_filename, @last_index, false, false)
+        @last_e = open_file(_filename, @last_index, false)
       end
       #@last_e.hide_exp
       @last_e.mark_debug(@last_index) if @last_e
@@ -5611,7 +5696,7 @@ class AgMultiEditor < ArcadiaExtPlus
   end
   
   def change_outline(_e, _raised=false)
-    return if defined?(@@last_outline_e) && @@last_outline_e == _e
+    return if (defined?(@@last_outline_e) && @@last_outline_e == _e)
     _raised = _raised || main_instance.frame(1).raised?
     if !@batch_files && _raised
       @@last_outline_e.hide_outline if defined?(@@last_outline_e)
@@ -5628,6 +5713,7 @@ class AgMultiEditor < ArcadiaExtPlus
     _new_caption = '...'
     if _index != -1
       _e = @tabs_editor[resolve_tab_name(_name)]
+      _e.load_file_if_not_loaded if _e
       change_outline(_e) if _e
       if _e && _e.file != nil
         _new_caption = _e.file
@@ -5673,7 +5759,7 @@ class AgMultiEditor < ArcadiaExtPlus
         size_str = "#{size} b"      
       end
       @@statusbar_items['file_name'].text(File.basename(raised.file))
-      @@statusbar_items['file_mtime'].text =  raised.file_info['mtime'].localtime
+      @@statusbar_items['file_mtime'].text =  raised.file_info['mtime'].localtime if raised.file_info['mtime']
       @@statusbar_items['file_size'].text = size_str 
       #@statusbar_item.text("#{File.basename(raised.file)} | #{raised.file_info['mtime'].localtime} | #{size_str}")
     else
@@ -5748,7 +5834,7 @@ class AgMultiEditor < ArcadiaExtPlus
     end    
   end
   
-  def open_file(_filename = nil, _text_index='1.0', _mark_selected=true, _exp=true)
+  def open_file(_filename = nil, _text_index='1.0', _mark_selected=true, _load_file=true)
     return if _filename == nil || !File.exist?(_filename) || File.ftype(_filename) != 'file'
     _basefilename = File.basename(_filename)
     _tab_name = self.tab_file_name(_filename)
@@ -5758,12 +5844,26 @@ class AgMultiEditor < ArcadiaExtPlus
     if _exist_buffer
       open_buffer(_tab_name)
       # ??? _text_index = nil 
+      if !@tabs_editor[_tab_name].file_loaded 
+        @tabs_editor[_tab_name].reset_highlight
+        begin
+          @tabs_editor[_tab_name].load_file_if_not_loaded
+        rescue RuntimeError => e
+          close_editor(@tabs_editor[_tab_name], true)
+          Arcadia.runtime_error(e)
+        end
+      end
     else
 #      @tabs_file[_tab_name]= _filename
-      open_buffer(_tab_name, _basefilename, _filename)
+      open_buffer(_tab_name, _basefilename, _filename, nil, false)
       @tabs_editor[_tab_name].reset_highlight
       begin
-        @tabs_editor[_tab_name].load_file(_filename)
+        if _load_file
+          @tabs_editor[_tab_name].load_file(_filename)
+        else
+          @tabs_editor[_tab_name].file = _filename
+          @tabs_editor[_tab_name].start_index = _text_index
+        end
       rescue RuntimeError => e
         #Arcadia.dialog(self,'type'=>'ok', 'level'=>'error','title' => 'RuntimeError', 'msg'=>"RuntimeError : #{e.message}")
         #p "RuntimeError : #{e.message}"
@@ -5773,11 +5873,13 @@ class AgMultiEditor < ArcadiaExtPlus
       change_outline_frame_caption(File.basename(_filename)) if _filename    
     end
     editor = @tabs_editor[_tab_name]
-    if _text_index != nil && _text_index != '1.0' && editor
-      editor.text_see(_text_index)
-      editor.mark_selected(_text_index) if _mark_selected 
+    if editor && _load_file
+      if _text_index != nil && _text_index != '1.0' && editor
+        editor.text_see(_text_index)
+        editor.mark_selected(_text_index) if _mark_selected 
+      end
+      editor.do_line_update if editor && !editor.highlighted?
     end
-    editor.do_line_update if editor && !editor.highlighted?
     return editor
   end
 
@@ -5786,7 +5888,7 @@ class AgMultiEditor < ArcadiaExtPlus
     #@raw_buffer_name[_name]=_name
   end
 
-  def open_buffer(_buffer_name = nil, _title = nil, _filename=nil, _lang=nil)
+  def open_buffer(_buffer_name = nil, _title = nil, _filename=nil, _lang=nil, _initialize_editing=true)
     #_index = @main_frame.index(resolve_tab_name(_buffer_name))
     if frame_visible? && !frame_raised?
       @arcadia.layout.change_domain(frame_domain, @name)
@@ -5821,7 +5923,6 @@ class AgMultiEditor < ArcadiaExtPlus
         _image = Arcadia.file_icon(_title)
       end
       _tab = @main_frame.add_page(_buffer_name, _filename, _title, _image, proc{do_buffer_raise(_buffer_name, _title)})
-#      @raw_buffer_name[_buffer_name]=_buffer_name
       if _filename
         add_buffer_menu_item(_filename)
       else
@@ -5829,14 +5930,11 @@ class AgMultiEditor < ArcadiaExtPlus
       end
       _e = AgEditor.new(self, _tab)
       register_editor(_e, _buffer_name, _filename)
-#      @editor_seq=@editor_seq+1
-#      _e.id=@editor_seq
-#      @editors[@editor_seq]=_e
-#      @tabs_editor[_buffer_name]=_e
-      ext = Arcadia.file_extension(_title)
-      ext='rb' if ext.nil?
-      _e.initialize_editing(ext, _lang)
-      _e.text.set_focus
+      if _initialize_editing
+        ext= Arcadia.file_extension(_title) || 'rb'
+        _e.initialize_editing(ext, _lang)
+        _e.text.set_focus
+      end
     end
     begin
       if raised != @tabs_editor[resolve_tab_name(_buffer_name)]
@@ -5867,6 +5965,7 @@ class AgMultiEditor < ArcadiaExtPlus
   
   def raise_editor(_editor = nil, _text_index='0.0', _mark_selected=true, _exp=true)
     return if _editor == nil
+    #_editor.load_file_if_not_loaded
     _tab_name = nil
     @tabs_editor.each{|tn,e|
       if e == _editor
@@ -5942,7 +6041,7 @@ class AgMultiEditor < ArcadiaExtPlus
   def close_editor(_editor, _force=false)
     if _force || can_close_editor?(_editor)
       file = _editor.file
-      index = _editor.text.index("@0,0")
+      index = _editor.text.nil?? _editor.start_index : _editor.text.index("@0,0")
       r,c = index.split('.')
       _editor.destroy_outline
       change_outline_frame_caption('') if raised==_editor      
@@ -5980,7 +6079,11 @@ class AgMultiEditor < ArcadiaExtPlus
         else
           ind = _index-1
         end
-        @main_frame.raise(@main_frame.pages[ind]) if TkWinfo.mapped?(@main_frame.root_frame)
+        if TkWinfo.mapped?(@main_frame.root_frame)
+          @main_frame.raise(@main_frame.pages[ind]) 
+          editor = @tabs_editor[@main_frame.pages[ind]]
+          #editor.load_file_if_not_loaded if editor
+        end
       else
         frame.root.top_text_clear if TkWinfo.mapped?(frame.hinner_frame)
         make_buffer_string("")
@@ -6036,20 +6139,22 @@ class Findview < TkFloatTitledFrame
    	  place('x' => 8,'y' => y0,'height' => 19)
     }
     y0 = y0 + d
-    @e_what = Tk::BWidget::ComboBox.new(self.frame, Arcadia.style('combobox')){
-      editable true
+#    @e_what = Tk::BWidget::ComboBox.new(self.frame, Arcadia.style('combobox')){
+    @e_what = Arcadia.wf.combobox(self.frame){
+ #     editable true
       justify  'left'
-      #relief  'ridge'
-      autocomplete 'true'
-      expand 'tab'
-      takefocus 'true'
-      #pack('padx'=>10, 'fill'=>'x')
+ #     autocomplete 'true'
+ #     expand 'tab'
+      exportselection true
+      width 100
+      takefocus true
       place('relwidth' => 1, 'width'=>-16,'x' => 8,'y' => y0,'height' => 19)
     }
-    @e_what_entry = TkWinfo.children(@e_what)[0]
-
-    #@e_what_entry.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_what_entry))})
-    @e_what_entry.extend(TkInputThrow)
+  
+    @e_what.extend(TkInputThrow)
+    
+#    @e_what_entry = TkWinfo.children(@e_what)[0]
+#    @e_what_entry.extend(TkInputThrow)
 
 
     y0 = y0 + d
@@ -6059,40 +6164,45 @@ class Findview < TkFloatTitledFrame
     }
     y0 = y0 + d
    
-    @e_with = Tk::BWidget::ComboBox.new(self.frame, Arcadia.style('combobox')){
-      editable true
+#    @e_with = Tk::BWidget::ComboBox.new(self.frame, Arcadia.style('combobox')){
+    @e_with = Arcadia.wf.combobox(self.frame){
+   #   editable true
       justify  'left'
-      autocomplete 'true'
-      expand 'tab'
-      takefocus 'true'
-      #pack('padx'=>10, 'fill'=>'x')
+   #   autocomplete 'true'
+   #   expand 'tab'
+      exportselection true
+      width 100
+      takefocus true
       place('relwidth' => 1, 'width'=>-16,'x' => 8,'y' => y0,'height' => 19)
     }
-    @e_with_entry = TkWinfo.children(@e_with)[0]
-    #@e_with_entry.bind_append("1",proc{Arcadia.process_event(InputEnterEvent.new(self,'receiver'=>@e_with_entry))})
-    @e_with_entry.extend(TkInputThrow)
+
+    @e_with.extend(TkInputThrow)
+
+#    @e_with_entry = TkWinfo.children(@e_with)[0]
+#    @e_with_entry.extend(TkInputThrow)
+
     y0 = y0 + d
-    @cb_reg = TkCheckButton.new(self.frame, Arcadia.style('checkbox')){|_cb_reg|
+#    @cb_reg = TkCheckButton.new(self.frame, Arcadia.style('checkbox')){|_cb_reg|
+    @cb_reg = Arcadia.wf.checkbutton(self.frame){|_cb_reg|
       text  Arcadia.text('ext.editor.search.label.use_regexp')
-      justify  'left'
-      #relief  'flat'
-      #pack('side'=>'left', 'anchor'=>'e')
+   #   justify  'left'
+      variable TkVariable.new
       place('x' => 8,'y' => y0,'height' => 22)
     }
     y0 = y0 + d
-    @cb_back = TkCheckButton.new(self.frame, Arcadia.style('checkbox')){|_cb_reg|
+    #@cb_back = TkCheckButton.new(self.frame, Arcadia.style('checkbox')){|_cb_reg|
+    @cb_back = Arcadia.wf.checkbutton(self.frame){|_cb_reg|
       text  Arcadia.text('ext.editor.search.label.search_back')
-      justify  'left'
-      #relief  'flat'
-      #pack('side'=>'left', 'anchor'=>'e')
+      variable TkVariable.new
+    #  justify  'left'
       place('x' => 8,'y' => y0,'height' => 22)
     }
     y0 = y0 + d
-    @cb_ignore_case = TkCheckButton.new(self.frame, Arcadia.style('checkbox')){|_cb_reg|
+    #@cb_ignore_case = TkCheckButton.new(self.frame, Arcadia.style('checkbox')){|_cb_reg|
+    @cb_ignore_case = Arcadia.wf.checkbutton(self.frame){|_cb_reg|
       text  Arcadia.text('ext.editor.search.label.ignore_case')
-      justify  'left'
-      #relief  'flat'
-      #pack('side'=>'left', 'anchor'=>'e')
+    #  justify  'left'
+      variable TkVariable.new
       place('x' => 8,'y' => y0,'height' => 22)
     }
     
@@ -6101,45 +6211,39 @@ class Findview < TkFloatTitledFrame
     y0 = y0 + d
     @buttons_frame = TkFrame.new(self.frame, Arcadia.style('panel')).pack('fill'=>'x', 'side'=>'bottom')	
 
-    @b_replace_all = TkButton.new(@buttons_frame, Arcadia.style('button')){|_b_go|
+    #@b_replace_all = TkButton.new(@buttons_frame, Arcadia.style('button')){|_b_go|
+    @b_replace_all = Arcadia.wf.button(@buttons_frame){|_b_go|
     		state 'disabled'
-      default  'disabled'
+#      default  'disabled'
       text  Arcadia.text('ext.editor.search.label.replace_all')
-      #overrelief  'raised'
-      justify  'center'
-      #width 15
+#      justify  'center'
+      width 10
       pack('side'=>'right','ipadx'=>5, 'padx'=>5)
-      #place('width' => 50,'x' => 0,'y' => y0,'height' => 23,'bordermode' => 'inside')
     }
 
 
-    @b_replace = TkButton.new(@buttons_frame, Arcadia.style('button')){|_b_go|
+#    @b_replace = TkButton.new(@buttons_frame, Arcadia.style('button')){|_b_go|
+    @b_replace = Arcadia.wf.button(@buttons_frame){|_b_go|
     		state 'disabled'
-      default  'disabled'
+ #     default  'disabled'
       text  Arcadia.text('ext.editor.search.label.replace')
-      #overrelief  'raised'
-      justify  'center'
-      #width 15
+#      justify  'center'
+      width 10
       pack('side'=>'right','ipadx'=>5, 'padx'=>5)
-      #place('width' => 50,'x' => 0,'y' => y0,'height' => 23,'bordermode' => 'inside')
     }
 
     
-    @b_go = TkButton.new(@buttons_frame, Arcadia.style('button')){|_b_go|
+#    @b_go = TkButton.new(@buttons_frame, Arcadia.style('button')){|_b_go|
+    @b_go = Arcadia.wf.button(@buttons_frame){|_b_go|
       compound  'none'
-      default  'disabled'
+#      default  'disabled'
       text  Arcadia.text('ext.editor.search.label.find_next')
-      #background  '#ffffff'
-      #image TkPhotoImage.new('dat' => FIND_GIF)
-      #overrelief  'raised'
-      justify  'center'
-      #relief  'ridge'
-      #width 15
+#      justify  'center'
+      width 10
       pack('side'=>'right','ipadx'=>5, 'padx'=>5)
-      #place('width' => 50,'x' => 0,'y' => y0,'height' => 23,'bordermode' => 'inside')
     }
     #place('x'=>0,'y'=>0,'relheight'=> 1,'relwidth'=> 1)
-    place('x'=>100,'y'=>100,'height'=> 240,'width'=> 300)
+    place('x'=>100,'y'=>100,'height'=> 240,'width'=> 310)
     
   end
 
@@ -6147,8 +6251,10 @@ class Findview < TkFloatTitledFrame
     super
     self.focus
     @e_what.focus
-    @e_what_entry.select_throw
-    @e_what_entry.selection_range(0,'end')
+    @e_what.select_throw
+    @e_what.selection_range(0,'end')
+#    @e_what_entry.select_throw
+#    @e_what_entry.selection_range(0,'end')
   end
 
   
@@ -6172,7 +6278,8 @@ class Finder < Findview
     
   	 @b_replace_all.bind('1', proc{hide; do_replace_all})  
 
-    @e_what_entry.bind_append('KeyRelease'){|e|
+#    @e_what_entry.bind_append('KeyRelease'){|e|
+    @e_what.bind_append('KeyRelease'){|e|
       case e.keysym
       when 'Return'
         @find_action.call
@@ -6181,10 +6288,7 @@ class Finder < Findview
         widget_state
       end
     }
-    e2 =  TkWinfo.children(@e_with)[0]
-    e2.bind_append('KeyPress'){|e|
-        widget_state
-    }
+
     @last_index='insert'
     
     @goto_line_dialog = GoToLine.new(_frame).hide
@@ -6210,6 +6314,7 @@ class Finder < Findview
           self.editor.check_modify
         end
     end
+    update_combo(@e_with) if @e_with.value.length > 0
   end
 
   def do_replace_all
@@ -6231,6 +6336,7 @@ class Finder < Findview
           break
         end
     end
+    update_combo(@e_with) if @e_with.value.length > 0
   end
   
   def widget_state
@@ -6287,20 +6393,24 @@ class Finder < Findview
     use(@controller.raised)
   end
 
-  def update_combo(_txt)
-    values = @e_what.cget('values')
-    if (values != nil && !values.include?(_txt))
-      @e_what.insert('end', @e_what.value)
+  def update_combo(_combobox=nil)
+    return if _combobox.nil?
+    values = _combobox.cget('values')
+    if (values != nil && !values.include?(_combobox.value))
+      values << _combobox.value
+      _combobox.values=values
+  #    @e_what.insert('end', @e_what.value)
     end
   end
 
   def do_find(_istart=nil)
+   
     @forwards =  @cb_back.cget('onvalue') != @cb_back.cget('variable').value.to_i
     _found = false
     @idx1 = nil
     @idx2 = nil
-    if @e_what.text.length > 0
-      update_combo(@e_what.text)
+    if @e_what.value.length > 0
+      update_combo(@e_what)
       if !_istart && self.editor.text.index('insert')!=nil
         _istart ='insert'
       elsif defined?(@last_index)
@@ -6320,12 +6430,12 @@ class Finder < Findview
       if @cb_ignore_case.cget('onvalue')==@cb_ignore_case.cget('variable').value.to_i
         options << 'nocase'
       end
-      _index = self.editor.text.tksearch(options,@e_what.text,_istart)
+      _index = self.editor.text.tksearch(options,@e_what.value,_istart)
       
       if _index && _index.length>0
         self.editor.text.see(_index)
         _row, _col = _index.split('.')
-        _index_sel_end = _row.to_i.to_s+'.'+(_col.to_i+@e_what.text.length).to_i.to_s
+        _index_sel_end = _row.to_i.to_s+'.'+(_col.to_i+@e_what.value.length).to_i.to_s
         if @forwards
           @last_index= _index_sel_end
         else

@@ -107,13 +107,14 @@ class Breakpoints < ArcadiaExt
   end
   
   def build_popup
-    _pop_up = TkMenu.new(
+    #_pop_up = TkMenu.new(
+    _pop_up = Arcadia.wf.menu(
       :parent=>@tree_break,
       :tearoff=>0,
       :title => 'Menu'
     )
-    _pop_up.extend(TkAutoPostMenu)
-    _pop_up.configure(Arcadia.style('menu'))
+    #_pop_up.extend(TkAutoPostMenu)
+    #_pop_up.configure(Arcadia.style('menu'))
     _title_item = _pop_up.insert('end',
       :command,
       :label=>'...',

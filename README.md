@@ -1,13 +1,12 @@
 # Arcadia IDE
-[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/angal/arcadia?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-version 0.13.1
+version 1.0.0
 
 by Antonio Galeone
-on Nov 3, 2013
+on Nov 30, 2014
 
 ## About
 
-Arcadia is a light Integrated Development Environment (IDE) for Ruby language 
+Arcadia is a light editor (IDE) for Ruby language 
 written in Ruby using the classic Tcl/Tk GUI toolkit.
 
 Some of Arcadia ide project features include:
@@ -30,7 +29,13 @@ can be install ActiveTcl 8.5 and use ruby via rvm.
 [https://github.com/angal/arcadia/wiki]
 
 ## News
-
+[1.0.0]
+    This release:
+  - improves crossplatform features
+  - changes dialogs metaphor
+  - improves start speed
+  - introduces others general improvements  
+  
 [0.13.1]
     This release:
   - added Russian translation (Thanks to Michael)
@@ -38,7 +43,7 @@ can be install ActiveTcl 8.5 and use ruby via rvm.
 
 [0.13.0]
     This release:
-  - improves file-history  introducing bookmarks management
+  - improves file-history introducing bookmarks management
   - improves layout    
   - fixes bugs 
 
@@ -105,7 +110,8 @@ These are same editor short-cut:
 - Ctrl-v  => paste copied text
 - Ctrl-x  => cut selected text
 - Ctrl-g  => show go to line dialog
-- Ctrl-o  => show open file dialog
+- Ctrl-o  => open file dialog
+- Ctrl-d  => close file dialog
 - Ctrl-z  => undo
 - Ctrl-r  => redo
 - Ctrl-f  => copy the selected text on input combobox of find dialog and moves focus
@@ -149,25 +155,26 @@ under ~/.arcadia  directory. The format of property definition are:
 <OPERATING SYSTEM IDENTIFY::>PROPERTY_NAME=PROPERTY_VALUE
 
 
-I have tested arcadia with ruby 1.8, 1.9, 2.0 on 
+I have tested arcadia with ruby 1.8, 1.9, 2.x on 
 
  * Archlinux
  * Ubuntu/Mint
  * Fedora
- * FreeBsd6.x, FreeBsd7.x, 
- * Vector linux 5.*,
+ * FreeBsd, 
+ * Vector linux,
+ * Mac OS X
  * Windows 2000/XP/7, 
  * Cygwin (note: same page fault error on dll under cygwin may be solved in this way: `by ash.exe exec "/bin/rebaseall"`) 
 
 ## Developers e general information
-Released on arcadia web site (http://arcadia.rubyforge.org) 
+Released on arcadia web site (http://www.arcadia-ide.org) 
 
 ## License
 Arcadia is released under the Ruby License
 
 ## Contacts
 For all questions:
-antonio-galeone@rubyforge.org
+support@arcadia-ide.org
 
 For bugs, support request, features request:
 http://github.com/angal/arcadia/issues

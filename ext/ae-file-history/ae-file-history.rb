@@ -96,17 +96,27 @@ class FilesHistrory < ArcadiaExt
     @bookmarks_frame = TkFrame.new(self.frame.hinner_frame)    
     @history_frame = TkFrame.new(self.frame.hinner_frame).pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')    
     @panel = self.frame.root.add_panel(self.frame.name, "sync");
-    @cb_sync = TkCheckButton.new(@panel, Arcadia.style('checkbox').update('background'=>@panel.background)){
-      text  'Sync'
-      justify  'left'
-      indicatoron 0
-      offrelief 'flat'
+    
+#    @cb_sync = TkCheckButton.new(@panel, Arcadia.style('checkbox').update('background'=>@panel.background)){
+#      text  'Sync'
+#      justify  'left'
+#      indicatoron 0
+#      offrelief 'flat'
+#      image Arcadia.image_res(SYNC_GIF)
+#      pack
+#    }
+#
+#    Tk::BWidget::DynamicHelp::add(@cb_sync, 
+#      'text'=>Arcadia.text('ext.file_history.button.link.hint'))
+
+    @cb_sync = Arcadia.wf.titlecontextcheckbutton(@panel){
+      variable TkVariable.new
       image Arcadia.image_res(SYNC_GIF)
       pack
     }
+    
+    @cb_sync.hint=Arcadia.text('ext.file_history.button.link.hint')
 
-    Tk::BWidget::DynamicHelp::add(@cb_sync, 
-      'text'=>Arcadia.text('ext.file_history.button.link.hint'))
 
     do_check = proc {
       if @cb_sync.cget('onvalue')==@cb_sync.cget('variable').value.to_i
@@ -261,16 +271,19 @@ class FilesHistrory < ArcadiaExt
         bookmark[:from_line] = _event.from_row
         bookmark[:to_line] = _event.to_row
         bookmark[:persistent] = _event.persistent
-        bookmark[:widget] = Tk::BWidget::Button.new(@bookmarks_frame, Arcadia.style('toolbarbutton')){
+        #bookmark[:widget] = Tk::BWidget::Button.new(@bookmarks_frame, Arcadia.style('toolbarbutton')){
+        bookmark[:widget] = Arcadia.wf.toolbutton(@bookmarks_frame){
           image Arcadia.image_res(BOOKMARK_GIF)
           compound 'left'
-          anchor "w"
+          #anchor "w"
           command proc{OpenBufferTransientEvent.new(self,'file'=>_event.file, 'row'=> _event.from_row).go!}
           #width 20
           #height 20
-          helptext  _event.content
+          #helptext  _event.content
           text caption
-        }.pack('side' =>'top','anchor'=>'nw', 'fill'=>'x', :padx=>0, :pady=>0)    
+          pack('side' =>'top','anchor'=>'nw', 'fill'=>'x', :padx=>0, :pady=>0)    
+        }
+        bookmark[:widget].hint=_event.content
 
         Tk::BWidget::Button.new(bookmark[:widget], Arcadia.style('toolbarbutton')){
           image  TkPhotoImage.new('dat' => CLOSE_GIF)
@@ -560,21 +573,23 @@ class FilesHistrory < ArcadiaExt
   end
 
   def pop_up_menu_tree
-    @pop_up_tree = TkMenu.new(
+    #@pop_up_tree = TkMenu.new(
+    @pop_up_tree = Arcadia.wf.menu(
       :parent=>@htree,
       :tearoff=>0,
       :title => 'Menu tree'
     )
-    @pop_up_tree.extend(TkAutoPostMenu)
-    @pop_up_tree.configure(Arcadia.style('menu'))
+    #@pop_up_tree.extend(TkAutoPostMenu)
+    #@pop_up_tree.configure(Arcadia.style('menu'))
     #----- search submenu
-    sub_ref_search = TkMenu.new(
+    #sub_ref_search = TkMenu.new(
+    sub_ref_search = Arcadia.wf.menu(
       :parent=>@pop_up_tree,
       :tearoff=>0,
       :title => 'Ref'
     )
-    sub_ref_search.extend(TkAutoPostMenu)
-    sub_ref_search.configure(Arcadia.style('menu'))
+    #sub_ref_search.extend(TkAutoPostMenu)
+    #sub_ref_search.configure(Arcadia.style('menu'))
     sub_ref_search.insert('end',
       :command,
       :label=>Arcadia.text('ext.file_history.menu.find_in_files'),

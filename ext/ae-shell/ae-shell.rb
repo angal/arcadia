@@ -136,7 +136,7 @@ class Shell < ArcadiaExt
     if _event.cmd
       #p "_event.cmd = #{_event.cmd}"
       begin
-        output_mark = Arcadia.console(self,'msg'=>"Running #{_event.title} as #{_event.lang}...", 'level'=>'debug') # info?
+        output_mark = Arcadia.console(self,'msg'=>"Running #{_event.title} as #{_event.lang}...", 'level'=>'info') # info?
         start_time = Time.now
         @arcadia['pers']['run.file.last']=_event.file if _event.persistent
         @arcadia['pers']['run.cmd.last']=_event.cmd if _event.persistent
@@ -188,7 +188,7 @@ class Shell < ArcadiaExt
 
               Open3.popen3(_cmd_){|stdin, stdout, stderr, th|
                 fi_pid = th.pid if th
-                output_mark = Arcadia.console(self,'msg'=>" [pid #{fi_pid}]", 'level'=>'debug', 'mark'=>output_mark, 'append'=>true)
+                output_mark = Arcadia.console(self,'msg'=>" [pid #{fi_pid}]", 'level'=>'info', 'mark'=>output_mark, 'append'=>true)
                 alive_check = proc{th.status != false}
                 abort_action = proc{Process.kill(9,fi_pid.to_i)}
 
@@ -251,7 +251,7 @@ class Shell < ArcadiaExt
                 end
                 te.exit
               }
-              output_mark = Arcadia.console(self,'msg'=>"\n"+Arcadia.text('ext.shell.done.1', [_event.title]), 'level'=>'debug', 'mark'=>output_mark)
+              output_mark = Arcadia.console(self,'msg'=>"\n"+Arcadia.text('ext.shell.done.1', [_event.title]), 'level'=>'info', 'mark'=>output_mark)
 
 
 #              open(_cmd_, "r"){|f|

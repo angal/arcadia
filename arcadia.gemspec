@@ -4,18 +4,18 @@
 require 'rubygems'
   SPEC = Gem::Specification.new do |s|
   s.name = "arcadia"
-  s.version = "0.13.1"
-  s.date = "2013-11-03"
+  s.version = "1.0.0"
+  s.date = "2014-11-30"
   s.author = "Antonio Galeone"
-  s.email = "antonio-galeone@rubyforge.org"
-  s.homepage = "http://arcadia.rubyforge.org"
+  s.email = "support@arcadia-ide.org"
+  s.homepage = "http://www.arcadia-ide.org"
   s.rubyforge_project = "arcadia"
   s.license = 'Ruby'
   s.platform = Gem::Platform::RUBY
-  s.description = "Arcadia Ide"
-  s.summary = "Light Editor Ide written in Ruby using the classic tcl/tk GUI toolkit."
+  s.description = "Arcadia IDE"
+  s.summary = "Light Editor IDE written in Ruby using the classic tcl/tk GUI toolkit."
   candidates = Dir.glob("{lib,ext/*,tcl}/**/*")
-  candidates << "README"
+  candidates << "README.md"
   candidates << "bin/arcadia"
   candidates << "bin/arcadia.bat"
   candidates << "bin/arc"
@@ -34,7 +34,7 @@ require 'rubygems'
   s.executables << "arc"
   s.default_executable = 'arcadia'
   s.rdoc_options << '--title' << 'Arcadia Documentation' <<  '--main'  << 'README' << '-q'
-  s.extra_rdoc_files = ["README"]
+  s.extra_rdoc_files = ["README.md"]
   s.add_dependency("coderay",">= 1.0.3")
 #  s.add_dependency("ruby-debug", ">= 0.9.3") # TODO 
 #  s.add_dependency("rdp-rbeautify") # prettifier plugin TODO uncomment once published

@@ -302,6 +302,7 @@ class ArcadiaExt
       (@frames_labels[_n].nil?)? _label = @name : _label = @frames_labels[_n]
       (@frames_names[_n].nil?)? _name = @name : _name = @frames_names[_n]
       @frames[_n] = FixedFrameWrapper.new(self, @frames_points[_n], _name, _label, _n)
+      @frames[_n].hinner_frame.bind_append("Enter", proc{self.frame.root.shift_on if self.frame_visible?})
     end
     return @frames[_n]
   end
@@ -482,15 +483,15 @@ class ArcadiaExtPlus < ArcadiaExt
 
   def activate(_obj=self, _raise_event=true)
     return if @@active_instance[_obj.class] == _obj
-    if _obj.frame_visible?
-      @@active_instance[_obj.class] = nil
-    else
-      @@active_instance[_obj.class] = _obj
-    end
-    #@@active_instance[self.class].frame.root.shift_on if @@active_instance[self.class].frame != nil
+    @@active_instance[_obj.class] = _obj #if @arcadia.initialized?
+#    if _obj.frame_visible?
+#      @@active_instance[_obj.class] = nil
+#    else
+#      @@active_instance[_obj.class] = _obj
+#    end
     _obj.frame.root.shift_on if _obj.frame_visible?
     instances.each{|i|
-      i.frame.root.shift_off if i != _obj  && i.frame != nil && i.frame.root != _obj.frame.root
+      i.frame.root.shift_off if i != _obj  && i.frame != nil && i.frame.root != _obj.frame.root && i.frame_raised?
     }
     ActivateInstanceEvent.new(Arcadia.instance, 'name'=>_obj.name).go! if _raise_event
   end
@@ -692,43 +693,44 @@ module EventBus #(or SourceEvent)
   def process_event(_event, _listeners=nil)
     # _listener rapresent a filter on @@listeners if != nil
     return _event if !defined?(@@listeners)
+    @@listeners_listeners = {} unless defined? @@listeners_listeners
     event_classes = _event_class_stack(_event.class)
     #before fase
     event_classes.each do |_c|
       if _listeners.nil?
-        _process_fase(_c, _event, @@listeners[_c], 'before')
+        _process_fase(_c, _event, @@listeners[_c], @@listeners_listeners[_c], 'before')
       else
         listeners_to_process = []
         _listeners.each{|lis|
           listeners_to_process << lis if @@listeners[_c] && @@listeners[_c].include?(lis)
         }
-        _process_fase(_c, _event, listeners_to_process, 'before')
+        _process_fase(_c, _event, listeners_to_process, @@listeners_listeners[_c], 'before')
       end
       break if _event.is_breaked? # not responding to this means "you need to pass in an instance, not a class name
     end unless _event.is_breaked?
     # fase
     event_classes.each do |_c|
       if _listeners.nil?
-        _process_fase(_c, _event, @@listeners[_c])
+        _process_fase(_c, _event, @@listeners[_c], @@listeners_listeners[_c])
       else
         listeners_to_process = []
         _listeners.each{|lis|
           listeners_to_process << lis if @@listeners[_c] && @@listeners[_c].include?(lis)
         }
-        _process_fase(_c, _event, listeners_to_process)
+        _process_fase(_c, _event, listeners_to_process, @@listeners_listeners[_c])
       end
       break if _event.is_breaked?
     end unless _event.is_breaked?
     #after fase
     event_classes.each do |_c|
       if _listeners.nil?
-        _process_fase(_c, _event, @@listeners[_c], 'after')
+        _process_fase(_c, _event, @@listeners[_c], @@listeners_listeners[_c], 'after')
       else
         listeners_to_process = []
         _listeners.each{|lis|
           listeners_to_process << lis if @@listeners[_c] && @@listeners[_c].include?(lis)
         }
-        _process_fase(_c, _event, listeners_to_process, 'after')
+        _process_fase(_c, _event, listeners_to_process, @@listeners_listeners[_c], 'after')
       end
       break if _event.is_breaked?
     end unless _event.is_breaked?
@@ -756,7 +758,7 @@ module EventBus #(or SourceEvent)
   end
   private :_event_class_stack
 
-  def _process_fase(_class, _event, _listeners=nil, _fase_name = nil)
+  def _process_fase(_class, _event, _listeners=nil, _listeners_listeners=nil, _fase_name = nil)
     return if _listeners.nil?
     _fase_name.nil?? suf = '':suf = _fase_name
     method_name = _method_name(_class, suf)
@@ -769,12 +771,26 @@ module EventBus #(or SourceEvent)
         elsif _listener.respond_to?(method_name)
           _listener.send(method_name, _event)
         end
+        if _listeners_listeners
+          _listeners_listeners.each do |ll|
+            if ll.respond_to?(sub_method_name)
+              ll.send(sub_method_name, _event, _listener)
+            elsif ll.respond_to?(method_name)
+              ll.send(method_name, _event, _listener)
+            end
+          end
+        end
         break if _event.is_breaked?
       end
     else
       _listeners.each do|_listener|
         next if _listener.kind_of?(ArcadiaExtPlus) && !(_listener.active? || (_event.kind_of?(ArcadiaSysEvent)))
         _listener.send(method_name, _event) if _listener.respond_to?(method_name)
+        if _listeners_listeners
+          _listeners_listeners.each do |ll|
+            ll.send(method_name, _event, _listener) if ll.respond_to?(method_name)
+          end
+        end
         break if _event.is_breaked?
       end
     end
@@ -789,6 +805,7 @@ module EventBus #(or SourceEvent)
     return 'on_'+(_suf+_pre+_in.gsub(/[A-Z]/){|s| '_'+s.to_s}).downcase.gsub('_event','')
   end
   private :_method_name
+
   def _broadcast_fase(_class, _event)
     return if @@listeners[_class].nil?
     method_name = _method_name(_class)
@@ -830,6 +847,25 @@ module EventBus #(or SourceEvent)
     @@listeners[_class_event] << _listener
   end
 
+  def attach_listeners_listener(_listener, _class_event)
+    @@listeners_listeners = {} unless defined? @@listeners_listeners
+    @@listeners_listeners[_class_event] = []   unless @@listeners_listeners.has_key?(_class_event)
+    @@listeners_listeners[_class_event] << _listener
+  end
+  
+  def detach_listeners_listener(_listener, _class_event=nil)
+    if _class_event != nil
+      if @@listeners_listeners[_class_event]
+        @@listeners_listeners[_class_event].delete(_listener)
+      end
+    else
+      #delete all the issues of listenere
+      @@listeners_listeners.each{|klass, header|
+        header.delete(_listener)
+      }
+    end
+  end
+  
 end
 
 

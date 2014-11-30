@@ -45,68 +45,81 @@ class DirProjects < ArcadiaExtPlus
     @h_stack = Array.new
     @opened_folder = Array.new
     #--- button_box 
-    @button_box = Tk::BWidget::ButtonBox.new(self.frame.hinner_frame){
-      homogeneous true
-      spacing 0
-      padx 0
-      pady 0
-      background Arcadia.conf('panel.background')
-    }.place('x'=>0)
-    TkWinfo.parent(@button_box).configure(:background => Arcadia.conf('panel.background'))
+#    @button_box = Tk::BWidget::ButtonBox.new(self.frame.hinner_frame){
+#      homogeneous true
+#      spacing 0
+#      padx 0
+#      pady 0
+#      background Arcadia.conf('panel.background')
+#    }.place('x'=>0)
+#    TkWinfo.parent(@button_box).configure(:background => Arcadia.conf('panel.background'))
     
-    @button_box.add(Arcadia.style('toolbarbutton').update({
-      'name'=>'new_proj',
-      'anchor' => 'center',
-      'command'=>proc{self.do_new_project},
-      'helptext'=>Arcadia.text('ext.dir_projects.button.new.hint'),
-      'image'=> Arcadia.image_res(NEW_GIF)})
-    )
+#    @button_box.add(Arcadia.style('toolbarbutton').update({
+#      'name'=>'new_proj',
+#      'anchor' => 'center',
+#      'command'=>proc{self.do_new_project},
+#      'helptext'=>Arcadia.text('ext.dir_projects.button.new.hint'),
+#      'image'=> Arcadia.image_res(NEW_GIF)})
+#    )
 
-    @button_box.add(Arcadia.style('toolbarbutton').update({
-      'name'=>'open_proj',
-      'anchor' => 'center',
-      'command'=>proc{self.do_open_project},
-      'helptext'=>Arcadia.text('ext.dir_projects.button.open.hint'),
-      'image'=> Arcadia.image_res(OPEN_PROJECT_GIF)})
-    )
 
-    @button_box.add(Arcadia.style('toolbarbutton').update({
-      'name'=>'parent_folder',
-      'anchor' => 'center',
-      'command'=>proc{self.do_goto_parent_folder},
-      'helptext'=>Arcadia.text('ext.dir_projects.button.up.hint'),
-      'image'=> Arcadia.image_res(PARENTFOLDER_GIF)})
-    )
+
+#    @button_box.add(Arcadia.style('toolbarbutton').update({
+#      'name'=>'open_proj',
+#      'anchor' => 'center',
+#      'command'=>proc{self.do_open_project},
+#      'helptext'=>Arcadia.text('ext.dir_projects.button.open.hint'),
+#      'image'=> Arcadia.image_res(OPEN_PROJECT_GIF)})
+#    )
+
+
+
+#    @button_box.add(Arcadia.style('toolbarbutton').update({
+#      'name'=>'parent_folder',
+#      'anchor' => 'center',
+#      'command'=>proc{self.do_goto_parent_folder},
+#      'helptext'=>Arcadia.text('ext.dir_projects.button.up.hint'),
+#      'image'=> Arcadia.image_res(PARENTFOLDER_GIF)})
+#    )
+
+
     
-    @button_box.add(Arcadia.style('toolbarbutton').update({
-      'name'=>'search_in_files',
-      'anchor' => 'center',
-      'command'=>proc{self.do_search_files},
-      'helptext'=>Arcadia.text('ext.dir_projects.button.search.hint'),
-      'image'=> Arcadia.image_res(SEARCH_FILES_GIF)})
-    )
+#    @button_box.add(Arcadia.style('toolbarbutton').update({
+#      'name'=>'search_in_files',
+#      'anchor' => 'center',
+#      'command'=>proc{self.do_search_files},
+#      'helptext'=>Arcadia.text('ext.dir_projects.button.search.hint'),
+#      'image'=> Arcadia.image_res(SEARCH_FILES_GIF)})
+#    )
 
-    @button_box.add(Arcadia.style('toolbarbutton').update({
-      'name'=>'terminal',
-      'anchor' => 'center',
-      'command'=>proc{self.do_open_term},
-      'helptext'=>Arcadia.text('ext.dir_projects.button.term.hint'),
-      'image'=> Arcadia.image_res(TERMINAL_GIF)})
-    )
 
+
+#    @button_box.add(Arcadia.style('toolbarbutton').update({
+#      'name'=>'terminal',
+#      'anchor' => 'center',
+#      'command'=>proc{self.do_open_term},
+#      'helptext'=>Arcadia.text('ext.dir_projects.button.term.hint'),
+#      'image'=> Arcadia.image_res(TERMINAL_GIF)})
+#    )
+
+    
+    
     #--- button_box
+    
+    
     @panel = self.frame.root.add_panel(self.frame.name, "sync");
-    @cb_sync = TkCheckButton.new(@panel, Arcadia.style('checkbox').update('background'=>@panel.background)){
-      text  'Sync'
-      justify  'left'
-      indicatoron 0
-      offrelief 'flat'
+#    @cb_sync = TkCheckButton.new(@panel, Arcadia.style('checkbox').update('background'=>@panel.background)){
+    
+    @cb_sync = Arcadia.wf.titlecontextcheckbutton(@panel){
+      variable TkVariable.new
       image Arcadia.image_res(SYNC_GIF)
       pack
     }
+    
+    @cb_sync.hint=Arcadia.text('ext.dir_projects.button.link.hint')
 
-    Tk::BWidget::DynamicHelp::add(@cb_sync, 
-      'text'=>Arcadia.text('ext.dir_projects.button.link.hint'))
+#    Tk::BWidget::DynamicHelp::add(@cb_sync, 
+#      'text'=>Arcadia.text('ext.dir_projects.button.link.hint'))
 
     do_check = proc {
       if @cb_sync.cget('onvalue')==@cb_sync.cget('variable').value.to_i
@@ -139,6 +152,16 @@ class DirProjects < ArcadiaExtPlus
         shure_delete_node(_selected)
       end
     }
+
+    self.frame.root.add_button(self.frame.name, Arcadia.text('ext.dir_projects.button.up.hint'), proc{self.do_goto_parent_folder}, ARROW_UP_GIF)
+#    self.frame.root.add_sep(self.frame.name,1)
+#    self.frame.root.add_button(self.frame.name, Arcadia.text('ext.dir_projects.button.term.hint'), proc{self.do_open_term}, TERMINAL_GIF)
+#    self.frame.root.add_sep(self.frame.name,1)
+#    self.frame.root.add_button(self.frame.name, Arcadia.text('ext.dir_projects.button.search.hint'), proc{self.do_search_files}, SEARCH_FILES_GIF)
+#    self.frame.root.add_sep(self.frame.name,1)
+#    self.frame.root.add_button(self.frame.name, Arcadia.text('ext.dir_projects.button.open.hint'), proc{Tk.callback_break;self.do_open_project}, OPEN_PROJECT_GIF)
+#    self.frame.root.add_sep(self.frame.name,1)
+#    self.frame.root.add_button(self.frame.name, Arcadia.text('ext.dir_projects.button.new.hint'), proc{self.do_new_project}, NEW_GIF)
     
     
     do_open_folder_cmd = proc{|_node| do_open_folder(_node)}
@@ -152,7 +175,8 @@ class DirProjects < ArcadiaExtPlus
       crosscloseimage  Arcadia.image_res(PLUS_GIF)
       crossopenimage  Arcadia.image_res(MINUS_GIF)
     }
-    @htree.extend(TkScrollableWidget).show(0,24)
+#    @htree.extend(TkScrollableWidget).show(0,24)
+    @htree.extend(TkScrollableWidget).show(0,0)
     self.pop_up_menu_tree
     @image_kdir = Arcadia.image_res(ICON_FOLDER_OPEN_GIF)
     @image_kdir_closed = Arcadia.image_res(FOLDER_GIF)
@@ -289,21 +313,23 @@ class DirProjects < ArcadiaExtPlus
   end
 
   def pop_up_menu_tree
-    @pop_up_tree = TkMenu.new(
+    #@pop_up_tree = TkMenu.new(
+    @pop_up_tree = Arcadia.wf.menu(
       :parent=>@htree,
       :tearoff=>0,
       :title => Arcadia.text('ext.dir_projects.menu.title')
     )
-    @pop_up_tree.extend(TkAutoPostMenu)
-    @pop_up_tree.configure(Arcadia.style('menu'))
+    #@pop_up_tree.extend(TkAutoPostMenu)
+    #@pop_up_tree.configure(Arcadia.style('menu'))
     #----- new submenu
-    sub_new = TkMenu.new(
+    #sub_new = TkMenu.new(
+    sub_new = Arcadia.wf.menu(
       :parent=>@pop_up_tree,
       :tearoff=>0,
       :title => Arcadia.text('ext.dir_projects.menu.new')
     )
-    sub_new.extend(TkAutoPostMenu)
-    sub_new.configure(Arcadia.style('menu'))
+    #sub_new.extend(TkAutoPostMenu)
+    #sub_new.configure(Arcadia.style('menu'))
     sub_new.insert('end',
       :command,
       :label=>Arcadia.text('ext.dir_projects.menu.new_dir_proj'),
@@ -343,13 +369,14 @@ class DirProjects < ArcadiaExtPlus
     )
     #-----------------
     #----- refactor submenu
-    sub_ref = TkMenu.new(
+    #sub_ref = TkMenu.new(
+    sub_ref = Arcadia.wf.menu(
       :parent=>@pop_up_tree,
       :tearoff=>0,
       :title => Arcadia.text('ext.dir_projects.menu.refactor')
     )
-    sub_ref.extend(TkAutoPostMenu)
-    sub_ref.configure(Arcadia.style('menu'))
+    #sub_ref.extend(TkAutoPostMenu)
+    #sub_ref.configure(Arcadia.style('menu'))
     sub_ref.insert('end',
       :command,
       :label=>Arcadia.text('ext.dir_projects.menu.refactor.rename'),
@@ -384,13 +411,14 @@ class DirProjects < ArcadiaExtPlus
     
     #-----------------
     #----- search submenu
-    sub_ref_search = TkMenu.new(
+    #sub_ref_search = TkMenu.new(
+    sub_ref_search = Arcadia.wf.menu(
       :parent=>@pop_up_tree,
       :tearoff=>0,
       :title => Arcadia.text('ext.dir_projects.menu.search')
     )
-    sub_ref_search.extend(TkAutoPostMenu)
-    sub_ref_search.configure(Arcadia.style('menu'))
+    #sub_ref_search.extend(TkAutoPostMenu)
+    #sub_ref_search.configure(Arcadia.style('menu'))
     sub_ref_search.insert('end',
       :command,
       :label=>Arcadia.text('ext.dir_projects.menu.search.find'),
@@ -499,7 +527,8 @@ class DirProjects < ArcadiaExtPlus
   end
 
   def do_search_files
-    _target = @htree.selected
+    active_instance.do_search_files if active_instance != self
+    _target = @htree.selected || MonitorLastUsedDir.get_last_dir
     if _target
       _target = File.dirname(_target) if File.ftype(_target) == 'file'
       Arcadia.process_event(SearchInFilesEvent.new(self,'dir'=>_target))
@@ -507,7 +536,8 @@ class DirProjects < ArcadiaExtPlus
   end
 
   def do_open_term
-    _target = @htree.selected
+    active_instance.do_open_term if active_instance != self
+    _target = @htree.selected || MonitorLastUsedDir.get_last_dir
     if _target
       _target = File.dirname(_target) if File.ftype(_target) == 'file'
       TermEvent.new(self,'dir'=>_target, 'title'=>_target).go!
@@ -558,6 +588,7 @@ class DirProjects < ArcadiaExtPlus
 #  end
 
   def do_new_project(_parent_folder_node=nil)
+    active_instance.do_new_project if active_instance != self
     if _parent_folder_node.nil?
       #_parent_folder_node=Tk.chooseDirectory 'initialdir' =>  MonitorLastUsedDir.get_last_dir
       _parent_folder_node=Arcadia.select_dir_dialog(MonitorLastUsedDir.get_last_dir)
@@ -586,6 +617,8 @@ class DirProjects < ArcadiaExtPlus
   end
   
   def do_open_project(_proj_name=nil)
+    active_instance.do_open_project if active_instance != self
+
     if _proj_name.nil?
       #_proj_name=Tk.chooseDirectory 'initialdir' =>  MonitorLastUsedDir.get_last_dir
       _proj_name=Arcadia.select_dir_dialog(MonitorLastUsedDir.get_last_dir)
@@ -938,11 +971,26 @@ class DirProjects < ArcadiaExtPlus
       del_project_from_file(_dir) 
   end
 
-
+  def sort_files_name(_files=nil)
+    return if _files.nil?
+    sorted = []
+    names = []
+    files_hash = {}
+    _files.each{|file|
+      name = File.split(file)[1]
+      names << name
+      files_hash[name]=file
+    }
+    names.sort!
+    names.each{|n| sorted << files_hash[n]}
+    sorted
+  end
+    
   def load_projects
     f = File::open(projects_file,'r')
     begin
       _lines = f.readlines.collect!{| line | line.chomp}
+      _lines = sort_files_name(_lines)
     ensure
       f.close unless f.nil?
     end

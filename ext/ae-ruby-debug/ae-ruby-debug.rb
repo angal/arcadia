@@ -1397,10 +1397,12 @@ class RubyDebug < ArcadiaExt
         #p "on_debug --> @rdc.is_alive?=#{@rdc.is_alive?}"
         #p "on_debug --> @rds.is_alive?=#{@rds.is_alive?}"
       when SetBreakpointEvent
-        if _event.file
-          self.breakpoint_add(File.expand_path(_event.file), _event.row)
-        elsif _event.id
-          self.breakpoint_add(_event.id, _event.row)
+        if _event.active > 0
+          if _event.file
+            self.breakpoint_add(File.expand_path(_event.file), _event.row)
+          elsif _event.id
+            self.breakpoint_add(_event.id, _event.row)
+          end
         end
       when UnsetBreakpointEvent
         return if _event.file.nil?
@@ -1553,7 +1555,7 @@ class RubyDebug < ArcadiaExt
           end
         end
       rescue Exception => e
-        Arcadia.console(self, Arcadia.text('ext.ruby_debug.e.do_debug', [e.to_s, e.backtrace[0]]), 'level'=>'debug')
+        Arcadia.console(self, 'msg'=> Arcadia.text('ext.ruby_debug.e.do_debug', [e.to_s, e.backtrace[0]]), 'level'=>'debug')
       end
     end
   end

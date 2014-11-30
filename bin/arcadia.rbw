@@ -1,1 +1,2 @@
-load "arcadia"
+system("ruby arcadia")
+#load "arcadia"

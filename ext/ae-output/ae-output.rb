@@ -56,9 +56,9 @@ class OutputView
     'background' => Arcadia.conf('hightlight.system_error.background'),
     'foreground' => Arcadia.conf('hightlight.system_error.foreground'),
     'borderwidth'=>1,
-    'relief'=> 'flat'
+    'relief'=> 'groove'
     )
-    @text.tag_configure('bord_msg',
+    @text.tag_configure('info_msg',
     'foreground' => Arcadia.conf('hightlight.edge.foreground')
     )
     @text.tag_configure('prompt',
@@ -86,13 +86,14 @@ class OutputView
 
 
   def pop_up_menu
-    @pop_up = TkMenu.new(
+    #@pop_up = TkMenu.new(
+    @pop_up = Arcadia.wf.menu(
     :parent=>@text,
     :tearoff=>0,
     :title => 'Menu'
     )
-    @pop_up.extend(TkAutoPostMenu)
-    @pop_up.configure(Arcadia.style('menu'))
+    #@pop_up.extend(TkAutoPostMenu)
+    #@pop_up.configure(Arcadia.style('menu'))
 
     @pop_up.insert('end',
     :command,
@@ -212,8 +213,8 @@ class Output < ArcadiaExt
       @main_frame.text.insert("end","\n")
       _index_begin = @main_frame.text.index('end')
 #      TkTextImage.new(@main_frame.text, _index_begin, 'padx'=>0, 'pady'=>0, 'image'=> Arcadia.image_res(ITEM_START_LOG_GIF))
-#      sync_insert("end"," +--- #{format_time(_event.time)} ---+\n", 'bord_msg')
-      sync_insert("end","===== #{format_time(_event.time)} ======\n", 'bord_msg')
+#      sync_insert("end"," +--- #{format_time(_event.time)} ---+\n", 'info_msg')
+      sync_insert("end","===== #{format_time(_event.time)} ======\n", 'info_msg')
     end
     if _event.append
       _index_begin = "#{@main_frame.text.index(_index_begin)} - 2 lines lineend"

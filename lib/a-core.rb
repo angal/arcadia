@@ -58,7 +58,7 @@ class Arcadia < TkApplication
       title _title
       withdraw
       protocol( "WM_DELETE_WINDOW", proc{Arcadia.process_event(QuitEvent.new(self))})
-      iconphoto(Arcadia.image_res(ARCADIA_RING_GIF)) if Arcadia.instance.tcltk_info.level >= '8.4.9'
+      iconphoto(Arcadia.image_res(A_LOGO_STRIP_GIF)) if Arcadia.instance.tcltk_info.level >= '8.4.9'
     }
     @on_event = Hash.new
 
@@ -85,7 +85,7 @@ class Arcadia < TkApplication
     @mf_root.show_toolbar(0,@is_toolbar_show)
     @use_splash = self['conf']['splash.show']=='yes'
     @splash = ArcadiaAboutSplash.new if @use_splash
-    @splash.set_progress(31) if @splash
+    @splash.set_progress(62) if @splash
     @splash.deiconify if @splash
     Tk.update
     @screenwidth=TkWinfo.screenwidth(@root)
@@ -160,6 +160,7 @@ class Arcadia < TkApplication
       end
     end
     #sleep(1)
+    @splash.last_step if @splash
     @splash.destroy  if @splash
     if @first_run # first ARCADIA ever
       Arcadia.process_event(OpenBufferEvent.new(self,'file'=>'README.md'))
@@ -175,6 +176,7 @@ class Arcadia < TkApplication
     Arcadia.persistent("version", self['applicationParams'].version)
     @@last_input_keyboard_query_event=nil
     @initialized=true
+ #   @focus_event_manager = FocusEventManager.new
   end
 
   def initialized?
@@ -652,7 +654,6 @@ class Arcadia < TkApplication
       sysmenu = TkSysMenu_System.new(self['menubar'].menubar)
       self['menubar'].menubar.add :cascade, :menu => sysmenu
     end
-
     @splash.next_step(Arcadia.text('main.splash.loading_runners'))  if @splash
     load_runners
     do_make_clones
@@ -1222,13 +1223,17 @@ class Arcadia < TkApplication
     end
     # $PATH check
     if _ret.nil?
-      ENV['PATH'].split(File::PATH_SEPARATOR).each{|_path|
-        _file = File.join(_path, _command)
-        if FileTest.exist?(_file)
-          _ret = _file
-          break
-        end
-      }
+      begin
+        ENV['PATH'].split(File::PATH_SEPARATOR).each{|_path|
+          _file = File.join(_path, _command)
+          if FileTest.exist?(_file)
+            _ret = _file
+            break
+          end
+        }
+      rescue RuntimeError => e
+        Arcadia.runtime_error(e)
+      end
     end
     # gem path check
     gem_path = Gem.path
@@ -1438,29 +1443,52 @@ class ArcadiaMainToolbar < ArcadiaUserControl
       _hint = @hint
       _font = @font
       _caption = @caption
-      @item_obj = Tk::BWidget::Button.new(_args['frame'], Arcadia.style('toolbarbutton')){
+      @item_obj = Arcadia.wf.toolbutton(_args['frame']){
         image  _image if _image
         command _command if _command
+#        height 23
         width 23
-        height 23
-        helptext  _hint if _hint
-        #compound 'left'
+        padding "5 0"
         text _caption if _caption
       }
+      return if @item_obj.nil?
+      @item_obj.hint=_hint
+
+#      @item_obj = Tk::BWidget::Button.new(_args['frame'], Arcadia.style('toolbarbutton')){
+#        image  _image if _image
+#        command _command if _command
+#        width 23
+#        height 23
+#        helptext  _hint if _hint
+#        #compound 'left'
+#      }
       if _args['context_path'] && _args['last_item_for_context']
         @item_obj.pack('after'=>_args['last_item_for_context'].item_obj, 'side' =>'left', :padx=>2, :pady=>0)
       else
         @item_obj.pack('side' =>'left', :padx=>2, :pady=>0)
       end
       if _args['menu_button'] && _args['menu_button'] == 'yes'
-        @menu_button = TkMenuButton.new(_args['frame'], Arcadia.style('toolbarbutton')){|mb|
-          indicatoron false
-          menu TkMenu.new(mb, Arcadia.style('menu'))
-          image Arcadia.image_res(MENUBUTTON_ARROW_DOWN_GIF)
-          padx 0
-          pady 0
+
+#        item_menu = TkMenu.new(mb)
+#        if !OS.mac?
+#          item_menu.configure(Arcadia.style('menu'))
+#        end
+        item_menu = Arcadia.wf.menu(mb)
+        @menu_button = Arcadia.wf.menubutton(_args['frame']){|mb|
+          menu item_menu
+         # image Arcadia.image_res(MENUBUTTON_ARROW_DOWN_GIF)
           pack('side'=> 'left','anchor'=> 's','pady'=>3)
         }
+      
+      
+#        @menu_button = TkMenuButton.new(_args['frame'], Arcadia.style('toolbarbutton')){|mb|
+#          indicatoron false
+#          menu TkMenu.new(mb, Arcadia.style('menu'))
+#          image Arcadia.image_res(MENUBUTTON_ARROW_DOWN_GIF)
+#          padx 0
+#          pady 0
+#          pack('side'=> 'left','anchor'=> 's','pady'=>3)
+#        }
         Arcadia.menu_root(_args['name'], @menu_button.cget('menu'))
       end
       #Tk::BWidget::Separator.new(@frame, :orient=>'vertical').pack('side' =>'left', :padx=>2, :pady=>2, :fill=>'y',:anchor=> 'w')
@@ -1470,7 +1498,7 @@ class ArcadiaMainToolbar < ArcadiaUserControl
       if _value
         @item_obj.state='normal'
       else
-        @item_obj.state='disable'
+        @item_obj.state='disabled' if !OS.mac? # Workaround for #1100117 on mac
       end
     end
   end
@@ -1555,13 +1583,14 @@ class ArcadiaMainMenu < ArcadiaUserControl
   
   def initialize(root)
     # Creating Menubar
-    @menubar = TkMenu.new(root)
+    @menubar = Arcadia.wf.menu(root)
+#    @menubar = TkMenu.new(root)
     begin
-      if !OS.mac?
-        @menubar.configure(Arcadia.style('menu').delete_if {|key, value| key=='tearoff'}) 
-        @menubar.extend(TkAutoPostMenu)
-        @menubar.event_posting_on
-      end
+#      if !OS.mac?
+#        @menubar.configure(Arcadia.style('menu').delete_if {|key, value| key=='tearoff'}) 
+#        @menubar.extend(TkAutoPostMenu)
+#        @menubar.event_posting_on
+#      end
       root['menu'] = @menubar
       @menu_contexts = {}
     rescue RuntimeError => e
@@ -1574,11 +1603,12 @@ class ArcadiaMainMenu < ArcadiaUserControl
     if !m.nil? 
       m
     else
-      topmenu = TkMenu.new(_menubar)
-      if !OS.mac?
-        topmenu.configure(Arcadia.style('menu'))
-        topmenu.extend(TkAutoPostMenu)
-      end
+      topmenu = Arcadia.wf.menu(_menubar)
+#      topmenu = TkMenu.new(_menubar)
+#      if !OS.mac?
+#        topmenu.configure(Arcadia.style('menu'))
+#        topmenu.extend(TkAutoPostMenu)
+#      end
       opt = {:menu => topmenu, :label => _context}
       opt[:underline]=_underline if _underline
       _menubar.add(:cascade, opt)
@@ -1615,13 +1645,14 @@ class ArcadiaMainMenu < ArcadiaUserControl
   def get_sub_menu(menu_context, folder=nil)
     sub = ArcadiaMainMenu.sub_menu(menu_context, folder)
     if sub.nil?
-      sub = TkMenu.new(
-      :tearoff=>0
-      )
-      if !OS.mac?
-        sub.configure(Arcadia.style('menu'))
-        sub.extend(TkAutoPostMenu)
-      end
+      sub = Arcadia.wf.menu(:tearoff=>0)
+#      sub = TkMenu.new(
+#      :tearoff=>0
+#      )
+#      if !OS.mac?
+#        sub.configure(Arcadia.style('menu'))
+#        sub.extend(TkAutoPostMenu)
+#      end
       #update_style(sub)
       menu_context.insert('end',
       :cascade,
@@ -1717,12 +1748,16 @@ class RunnerManager < TkFloatTitledFrame
           self.destroy
         end
       }
-      Tk::BWidget::Button.new(self,
-      'command'=>_close_command,
-      'helptext'=>@runner_hash[:file],
-      'background'=>'white',
-      'image'=> Arcadia.image_res(TRASH_GIF),
-      'relief'=>'flat').pack('side' =>'right','padx'=>0)
+      #Tk::BWidget::Button.new(self,
+      b = Arcadia.wf.toolbutton(self,
+        'command'=>_close_command,
+       # 'helptext'=>@runner_hash[:file],
+       # 'background'=>'white',
+        'image'=> Arcadia.image_res(TRASH_GIF)
+       # 'relief'=>'flat'
+        ).pack('side' =>'right','padx'=>0)
+      b.hint=@runner_hash[:file]
+
       pack('side' =>'top','anchor'=>'nw','fill'=>'x','padx'=>5, 'pady'=>5)
     end
 
@@ -1857,6 +1892,19 @@ class ArcadiaAboutSplash < TkToplevel
     info = TkApplication.sys_info
     set_sysinfo(info)
     Arcadia.attach_listener(self, ArcadiaProblemEvent)
+    Arcadia.attach_listeners_listener(self, BuildEvent)
+  end
+  
+  def on_build(_event, _listener)
+    next_step("... building #{_listener.class}")
+  end
+
+  def on_before_build(_event, _listener)
+    next_step("... pre building #{_listener.class}")
+  end
+
+  def on_after_build(_event, _listener)
+    next_step("... after building #{_listener.class}")
   end
 
   def problem_str
@@ -1870,7 +1918,7 @@ class ArcadiaAboutSplash < TkToplevel
       @tkAlert = TkLabel.new(self){
         image Arcadia.image_res(ALERT_GIF)
         background  'black'
-        place('x'=> 10,'y' => 150)
+        place('x'=> 10,'y' => 152)
       }
 
       @tkLabelProblems = TkLabel.new(self){
@@ -1909,7 +1957,12 @@ class ArcadiaAboutSplash < TkToplevel
 
   def next_step(_txt = nil)
     @progress.numeric += 1
-    labelStep(_txt) if _txt
+    labelStep("#{perc}% #{_txt}")
+  end
+
+  def perc
+    ret = @progress.numeric*100/@max
+    ret > 100 ? 100:ret
   end
 
   def labelStep(_txt)
@@ -1921,222 +1974,10 @@ class ArcadiaAboutSplash < TkToplevel
     @progress.numeric = @max
     labelStep(_txt) if _txt
     Arcadia.detach_listener(self, ArcadiaProblemEvent)
+    Arcadia.detach_listeners_listener(self, BuildEvent)
   end
 end
 
-class ArcadiaProblemsShowerNew
-  def initialize(_arcadia)
-    @arcadia = _arcadia
-    @created = false
-    @initialized = false
-    @toolbar_created = false
-    #@visible = false
-    @problems = Array.new
-    @seq = 0
-    @dmc=0
-    @rec=0
-    Arcadia.attach_listener(self, ArcadiaProblemEvent)
-    Arcadia.attach_listener(self, InitializeEvent)
-  end
-
-  def on_arcadia_problem(_event)
-    @problems << _event
-    if @initialized
-      if !@created
-        show_problems
-      else
-        append_problem(_event)
-        @b_err.configure('text'=> button_text)
-      end
-    end
-  end
-
-  def on_after_initialize(_event)
-    @initialized = true
-    if @problems.count > 0
-      Thread.new do
-        num_sleep = 0
-        while TkWinfo.viewable(Arcadia.layout.root) == false && num_sleep < 20
-          sleep(1)
-          num_sleep += 1
-        end
-        show_problems
-      end
-#      p TkWinfo.viewable(Arcadia.layout.root)
-#      Tk.after(1000, proc{@ff.show; p TkWinfo.viewable(Arcadia.layout.root)})
-      
-    end
-  end
-
-  def show_problems
-    begin
-      add_toolbar_button if !@toolbar_created 
-      create_dialog
-      @problems.each{|e|
-        append_problem(e)
-      }
-      if @tree.exist?('dependences_missing_node')
-        @tree.open_tree('dependences_missing_node', true)
-      end
-      if @tree.exist?('runtime_error_node')
-        @tree.open_tree('runtime_error_node', true)
-      end
-      @created=true
-    rescue RuntimeError => e
-      Arcadia.detach_listener(self, ArcadiaProblemEvent)
-      Arcadia.detach_listener(self, InitializeEvent)
-    end
-  end
-
-  def button_text
-    @problems.count > 1 ? Arcadia.text("main.ps.problems", [@problems.count]) : Arcadia.text("main.ps.problem", [@problems.count])
-  end
-
-  def error_frame (_parent)
-    @tree = BWidgetTreePatched.new(_parent, Arcadia.style('treepanel')){
-      showlines false
-      deltay 22
-      # opencmd do_open_folder_cmd
-      # closecmd do_close_folder_cmd
-      # selectcommand do_select_item
-      # crosscloseimage  TkPhotoImage.new('dat' => PLUS_GIF)
-      # crossopenimage  TkPhotoImage.new('dat' => MINUS_GIF)
-    }
-    @tree.extend(TkScrollableWidget).show(0,0)
-
-    do_double_click = proc{
-      _selected = @tree.selected
-      _selected_text = @tree.itemcget(_selected, 'text')
-      if _selected_text
-        _file, _row, _other = _selected_text.split(':')
-        if File.exist?(_file)
-          begin
-            r = _row.strip.to_i
-            integer = true
-          rescue Exception => e
-            integer = false
-          end
-          if integer
-            OpenBufferTransientEvent.new(self,'file'=>_file, 'row'=>r).go!
-          end
-        end
-      end
-    }
-    @tree.textbind_append('Double-1',do_double_click)
-  end
-  
-  def create_dialog
-    param =  HinnerDialogWithButtons::DialogParams.new
-    param.type = 'ok'
-    param.res_array = ['Pippo']
-    param.level = 'error'
-    dialog =  HinnerDialogWithButtons.new(param)
-    frame = dialog.new_frame('top')
-    error_frame(frame)
-    dialog.show_modal
-    dialog.destroy
-  end
-
-  def add_toolbar_button
-    b_style = Arcadia.style('toolbarbutton')
-    b_style["relief"]='groove'
-    #    b_style["borderwidth"]=2
-    b_style["highlightbackground"]='red'
-
-    b_text = button_text
-    
-    b_proc = proc{ create_dialog }
-  
-    @b_err = Tk::BWidget::Button.new(@arcadia['toolbar'].frame, b_style){
-      image  Arcadia.image_res(ALERT_GIF)
-      compound 'left'
-      padx  2
-      command b_proc
-      text b_text
-    }.pack('side' =>'left','before'=>@arcadia['toolbar'].items.values[0].item_obj, :padx=>2, :pady=>0)
-    @toolbar_created = true
-
-  end
-
-
-  def new_sequence_value
-    @seq+=1
-  end
-
-  def append_problem(e)
-    parent_node='root'
-    case e.type
-    when ArcadiaProblemEvent::DEPENDENCE_MISSING_TYPE
-      parent_node='dependences_missing_node'
-      text = Arcadia.text("main.ps.dependences_missing")
-      if !@tree.exist?(parent_node)
-        @tree.insert('end', 'root' ,parent_node, {
-          'text' =>  text ,
-          'helptext' => text,
-          'drawcross'=>'auto',
-          'deltax'=>-1,
-          'image'=> Arcadia.image_res(BROKEN_GIF)
-        }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
-        )
-
-      end
-      @dmc+=1
-      @tree.itemconfigure('dependences_missing_node','text'=>"#{text} (#{@dmc})" )
-
-    when ArcadiaProblemEvent::RUNTIME_ERROR_TYPE
-      parent_node='runtime_error_node'
-      text = Arcadia.text("main.ps.runtime_errors")
-      if !@tree.exist?(parent_node)
-        @tree.insert('end', 'root' ,parent_node, {
-          'text' =>  text ,
-          'helptext' => text,
-          'drawcross'=>'auto',
-          'deltax'=>-1,
-          'image'=> Arcadia.image_res(ERROR_GIF)
-        }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
-        )
-      end
-      @rec+=1
-      @tree.itemconfigure('runtime_error_node','text'=>"#{text} (#{@rec})" )
-    end
-    title_node="node_#{new_sequence_value}"
-    detail_node="detail_of_#{title_node}"
-
-    @tree.insert('end', parent_node ,title_node, {
-      'text' =>  e.title ,
-      'helptext' => e.title,
-      'drawcross'=>'auto',
-      'deltax'=>-1,
-      'image'=> Arcadia.image_res(ITEM_GIF)
-    }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
-    )
-
-    if e.detail.kind_of?(Array)
-      e.detail.each_with_index{|line,i|
-        @tree.insert('end', title_node , "#{detail_node}_#{i}" , {
-          'text' =>  line ,
-          'helptext' => i.to_s,
-          'drawcross'=>'auto',
-          'deltax'=>-1,
-          'image'=> Arcadia.image_res(ITEM_DETAIL_GIF)
-        }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
-        )
-
-      }
-    else
-      @tree.insert('end', title_node , detail_node , {
-        'text' =>  e.detail ,
-        'helptext' => e.title,
-        'drawcross'=>'auto',
-        'deltax'=>-1,
-        'image'=> Arcadia.image_res(ITEM_DETAIL_GIF)
-      }.update(Arcadia.style('treeitem'))  #.update({'fill'=>Arcadia.conf('inactiveforeground')}))
-      )
-    end
-
-
-  end
-end
 
 class ArcadiaProblemsShower
   def initialize(_arcadia)
@@ -2159,7 +2000,7 @@ class ArcadiaProblemsShower
         show_problems
       else
         append_problem(_event)
-        @b_err.configure('text'=> button_text)
+        #@b_err.configure('text'=> button_text)
       end
     end
   end
@@ -2683,12 +2524,14 @@ class ArcadiaDialogManager
     }
     res = nil
     par.res_array.reverse_each{|value|
-      Tk::BWidget::Button.new(dialog_frame, Arcadia.style('button')){
+    #  Tk::BWidget::Button.new(dialog_frame, Arcadia.style('button')){
+      Arcadia.wf.button(dialog_frame){
         command proc{res = value;dialog_frame.release}
         text value.capitalize
-        helptext  value.capitalize
+        #helptext  value.capitalize
         width max_width*2
-      }.pack('side' =>'right','padx'=>5, 'pady'=>5)
+        pack('side' =>'right','padx'=>5, 'pady'=>5)
+      }.hint=value.capitalize
     }
 
     Tk::BWidget::Label.new(dialog_frame,Arcadia.style('label')){
@@ -3584,13 +3427,15 @@ class ArcadiaLayout
           submenu = ArcadiaMainMenu.sub_menu(_menu, submenu_title)
         end
         if submenu.nil?
-          submenu = TkMenu.new(
+        
+          #submenu = TkMenu.new(
+          submenu = Arcadia.wf.menu(
             :parent=>_menu,
             :tearoff=>0,
             :title => submenu_title
           )
-          submenu.extend(TkAutoPostMenu)
-          submenu.configure(Arcadia.style('menu'))
+          #submenu.extend(TkAutoPostMenu)
+          #submenu.configure(Arcadia.style('menu'))
           _menu.insert(ind,
             :cascade,
             :image=>Arcadia.image_res(ARROW_LEFT_GIF),

@@ -449,9 +449,12 @@ class AGTkVSplittedFrames < AGTkSplittedFrames
       "ButtonRelease-1",
       proc{do_resize}
       )
-      _xbutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
-        background '#4966d7'
+      _xbutton = Arcadia.wf.toolbutton(@splitter_frame){
+        image Arcadia.image_res(VERTICAL_SPLITTER_HIDE_LEFT_GIF)
       }
+#      _xbutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
+#        background '#4966d7'
+#      }
       _xbutton.place(
       'x' => 0,
       'y' => 0,
@@ -463,9 +466,12 @@ class AGTkVSplittedFrames < AGTkSplittedFrames
       "ButtonPress-1",
       proc{hide_left}
       )
-      _ybutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
-        background '#118124'
+      _ybutton = Arcadia.wf.toolbutton(@splitter_frame){
+        image Arcadia.image_res(VERTICAL_SPLITTER_HIDE_RIGHT_GIF)
       }
+#      _ybutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
+#        background '#118124'
+#      }
       _ybutton.place(
       'x' => 0,
       'y' => 21,
@@ -692,9 +698,12 @@ class AGTkOSplittedFrames < AGTkSplittedFrames
       "ButtonRelease-1",
       proc{do_resize}
       )
-      _xbutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
-        background '#4966d7'
+      _xbutton = Arcadia.wf.toolbutton(@splitter_frame){
+        image Arcadia.image_res(HORIZONTAL_SPLITTER_HIDE_TOP_GIF)
       }
+#      _xbutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
+#        background '#4966d7'
+#      }
       _xbutton.place(
       'x' => 0,
       'y' => 0,
@@ -706,9 +715,13 @@ class AGTkOSplittedFrames < AGTkSplittedFrames
       "ButtonPress-1",
       proc{hide_top}
       )
-      _ybutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
-        background '#118124'
+
+      _ybutton = Arcadia.wf.toolbutton(@splitter_frame){
+        image Arcadia.image_res(HORIZONTAL_SPLITTER_HIDE_BOTTOM_GIF)
       }
+#      _ybutton = TkButton.new(@splitter_frame, Arcadia.style('toolbarbutton')){
+#        background '#118124'
+#      }
       _ybutton.place(
       'x' => 21,
       'y' => 0,
@@ -870,11 +883,12 @@ class TkBaseTitledFrame < TkFrame
     return if _frame.nil?
     begin
       last = @last_for_frame[_frame]
-      @last_for_frame[_frame] = TkButton.new(_frame, Arcadia.style('titletoolbarbutton')){
+#      @last_for_frame[_frame] = TkButton.new(_frame, Arcadia.style('titletoolbarbutton')){
+      @last_for_frame[_frame] = Arcadia.wf.titletoolbutton(_frame){
         text  _label if _label
         image  Arcadia.image_res(_image) if _image
-        padx 0
-        pady 0
+#        padx 0
+#        pady 0
         if last
           pack('side'=> _side,'anchor'=> 'e', 'after'=>last)
         else
@@ -895,21 +909,38 @@ class TkBaseTitledFrame < TkFrame
     args = Arcadia.style('titlelabel')
     args.update(_args) if _args
     last = @last_for_frame[_frame]
-    @last_for_frame[_frame] =  @menu_buttons[_name] = TkMenuButton.new(_frame, args){|mb|
-      menu TkMenu.new(mb, Arcadia.style('titlemenu'))
+    @last_for_frame[_frame] =  @menu_buttons[_name] = Arcadia.wf.titlecontextmenubutton(_frame, _args){|mb|
+      menu Arcadia.wf.titlemenu(mb)
+#      menu TkMenu.new(mb, Arcadia.style('titlemenu'))
       if _image
-        indicatoron false
+#        indicatoron false
         image Arcadia.image_res(_image)
       else
-        indicatoron true
+#        indicatoron true
       end
-      padx 0
+#      padx 0
       if last
         pack('side'=> _side,'anchor'=> 'e', 'after'=>last)
       else
         pack('side'=> _side,'anchor'=> 'e')
       end
     }
+    
+#    @last_for_frame[_frame] =  @menu_buttons[_name] = TkMenuButton.new(_frame, args){|mb|
+#      menu TkMenu.new(mb, Arcadia.style('titlemenu'))
+#      if _image
+#        indicatoron false
+#        image Arcadia.image_res(_image)
+#      else
+#        indicatoron true
+#      end
+#      padx 0
+#      if last
+#        pack('side'=> _side,'anchor'=> 'e', 'after'=>last)
+#      else
+#        pack('side'=> _side,'anchor'=> 'e')
+#      end
+#    }
     @menu_buttons[_name]
   end
   private :__add_menu_button
@@ -918,11 +949,24 @@ class TkBaseTitledFrame < TkFrame
     return if _frame.nil?
     begin
       last = @last_for_frame[_frame]
-      @last_for_frame[_frame] = TkCheckButton.new(_frame, Arcadia.style('checkbox').update('background'=>_frame.background)){
+#      @last_for_frame[_frame] = TkCheckButton.new(_frame, Arcadia.style('checkbox').update('background'=>_frame.background)){
+#        text  _label if _label
+#        image  Arcadia.image_res(_image) if _image
+#        padx 0
+#        pady 0
+#        if last
+#          pack('side'=> _side,'anchor'=> 'e', 'after'=>last)
+#        else
+#          pack('side'=> _side,'anchor'=> 'e')
+#        end
+#        command(_proc) if _proc
+#      }
+#      Tk::BWidget::DynamicHelp::add(@last_for_frame[_frame], 'text'=>_label) if _label
+
+      @last_for_frame[_frame] = Arcadia.wf.titlecontextcheckbutton(@panel){
         text  _label if _label
-        image  Arcadia.image_res(_image) if _image
-        padx 0
-        pady 0
+        variable TkVariable.new
+        image Arcadia.image_res(_image) if _image
         if last
           pack('side'=> _side,'anchor'=> 'e', 'after'=>last)
         else
@@ -930,7 +974,7 @@ class TkBaseTitledFrame < TkFrame
         end
         command(_proc) if _proc
       }
-      Tk::BWidget::DynamicHelp::add(@last_for_frame[_frame], 'text'=>_label) if _label
+      @last_for_frame[_frame].hint=_label if _label 
       @last_for_frame[_frame]
     rescue RuntimeError => e
       Arcadia.runtime_error(e)
@@ -980,12 +1024,13 @@ class TkBaseTitledFrame < TkFrame
     return if _frame.nil?
     begin
       last = @last_for_state_frame[_frame]
-      @last_for_state_frame[_frame] = TkButton.new(_frame, Arcadia.style('titletoolbarbutton')){
+      #@last_for_state_frame[_frame] = TkButton.new(_frame, Arcadia.style('titletoolbarbutton')){
+      @last_for_state_frame[_frame] = Arcadia.wf.titletoolbutton(_frame){
         text  _label if _label
         image  Arcadia.image_res(_image) if _image
-        font 'helvetica 8 bold'
-        padx 0
-        pady 0
+       # font 'helvetica 8 bold'
+       # padx 0
+       # pady 0
         if last
           pack('side'=> _side,'anchor'=> 'w', 'after'=>last)
         else
@@ -993,7 +1038,8 @@ class TkBaseTitledFrame < TkFrame
         end
         bind('1',_proc) if _proc
       }
-      Tk::BWidget::DynamicHelp::add(@last_for_state_frame[_frame], 'text'=>_label) if _label
+      @last_for_state_frame[_frame].hint=_label
+      #Tk::BWidget::DynamicHelp::add(@last_for_state_frame[_frame], 'text'=>_label) if _label
       @last_for_state_frame[_frame]
     rescue RuntimeError => e
       Arcadia.runtime_error(e)
@@ -1265,11 +1311,13 @@ class TkLabelTitledFrame < TkTitledFrame
   end
 
   def shift_on
-    @left_label.foreground(Arcadia.conf('titlelabel.foreground'))
+    @left_label.state='normal'
+    #@left_label.foreground(Arcadia.conf('titlelabel.foreground'))
   end
   
   def shift_off
-    @left_label.foreground(Arcadia.conf('titlelabel.disabledforeground'))
+    @left_label.state='disable'
+    #@left_label.foreground(Arcadia.conf('titlelabel.disabledforeground'))
   end
   
   def title(_text=nil)
@@ -1309,15 +1357,17 @@ class TkMenuTitledFrame < TkTitledFrame
 
   def __create_left_menu_button(_frame)
     img=@img
-    @left_menu_button = TkMenuButton.new(_frame, Arcadia.style('titlebutton')){|mb|
-      menu TkMenu.new(mb, Arcadia.style('titlemenu'))
+    #@left_menu_button = TkMenuButton.new(_frame, Arcadia.style('titlebutton')){|mb|
+    @left_menu_button = Arcadia.wf.titlemenubutton(_frame){|mb|
+      menu Arcadia.wf.titlemenu(mb)
+      #menu TkMenu.new(mb, Arcadia.style('titlemenu'))
       if img
-        indicatoron false
+        #indicatoron false
         image Arcadia.image_res(img)
       else
-        indicatoron true
+        #indicatoron true
       end
-      padx 0
+      #padx 0
       textvariable TkVariable.new('')
       pack('side'=> 'left','anchor'=> 'e')
     }
@@ -1325,11 +1375,13 @@ class TkMenuTitledFrame < TkTitledFrame
   end
 
   def shift_on
-    @left_menu_button.foreground(Arcadia.conf('titlelabel.foreground'))
+    @left_menu_button.state='normal'
+    #@left_menu_button.foreground(Arcadia.conf('titlelabel.foreground'))
   end
   
   def shift_off
-    @left_menu_button.foreground(Arcadia.conf('titlelabel.disabledforeground'))
+    @left_menu_button.state='disable'
+    #@left_menu_button.foreground(Arcadia.conf('titlelabel.disabledforeground'))
   end
   
   def title(_text=nil)
@@ -1730,7 +1782,8 @@ class TkProgressframe < TkFloatTitledFrame
 
     @buttons_frame = TkFrame.new(self, Arcadia.style('panel')).pack('fill'=>'x', 'side'=>'bottom')
 
-    @b_cancel = TkButton.new(@buttons_frame, Arcadia.style('button')){|_b_go|
+    #@b_cancel = TkButton.new(@buttons_frame, Arcadia.style('button')){|_b_go|
+    @b_cancel = Arcadia.wf.titletoolbutton(@buttons_frame){|_b_go|
       default  'disabled'
       text  'Cancel'
       overrelief  'raised'
@@ -1770,17 +1823,18 @@ class TkFrameProgress < TkFrame
       :borderwidth=>0,
       :relief=>'flat',
       :maximum=>_max).pack('side'=>'left','padx'=>0, 'pady'=>0)
-    @b_cancel = TkButton.new(self, Arcadia.style('toolbarbutton')){|b|
-      background  Arcadia.conf('titlelabel.background')
-      foreground  Arcadia.conf('titlelabel.background')
-      highlightbackground Arcadia.conf('titlelabel.background')
-      highlightcolor Arcadia.conf('titlelabel.background')
+    #@b_cancel = TkButton.new(self, Arcadia.style('toolbarbutton')){|b|
+    @b_cancel = Arcadia.wf.titletoolbutton(self){|b|
+     # background  Arcadia.conf('titlelabel.background')
+     # foreground  Arcadia.conf('titlelabel.background')
+     # highlightbackground Arcadia.conf('titlelabel.background')
+     # highlightcolor Arcadia.conf('titlelabel.background')
       image Arcadia.image_res(CLOSE_FRAME_GIF)
-      borderwidth 0
-      relief 'flat'
-      padx 0
-      pady 0
-      anchor 'n'
+     # borderwidth 0
+     # relief 'flat'
+     # padx 0
+     # pady 0
+     # anchor 'n'
       pack('side'=>'left','padx'=>0, 'pady'=>0)
     }
   end
@@ -1841,7 +1895,27 @@ class TclTkInfo
   attr_reader :level
   def initialize
     @level = Tk.tk_call( "eval", "info patchlevel")
-    # @level = TclTkIp.new._eval "info patchlevel"
+
+#    info args procname 
+#    info body procname 
+#    info cmdcount 
+#    info commands ?pattern? 
+#    info complete command 
+#    info default procname arg varname 
+#    info exists varName 
+#    info globals ?pattern? 
+#    info hostname 
+#    info level ?number? 
+#    info library 
+#    info loaded ?interp? 
+#    info locals ?pattern? 
+#    info nameofexecutable 
+#    info patchlevel 
+#    info procs ?pattern? 
+#    info script 
+#    info sharedlibextension 
+#    info tclversion 
+#    info vars ?pattern?     
   end
 end
 
@@ -1849,7 +1923,15 @@ end
 #Tk.tk_call "eval","ttk::setTheme clam"
 #Tk::Tile::Style.theme_use('clam')
 
+
 class TkWidgetFactory
+
+  module WidgetEnhancer
+    def hint=(_hint=nil)
+      Tk::BWidget::DynamicHelp::add(self, 'text'=>_hint) if _hint
+    end
+  end
+
   def initialize
     if Arcadia.conf('tile.theme')
       @use_tile = true
@@ -1866,6 +1948,16 @@ class TkWidgetFactory
   end
 
   def initialize_tile_widgets
+  
+    #Widget state flags include:
+    #active,disabled,focus,pressed,selected,background,readonly,alternate,invalid,hover
+  
+  	 # Workaround for #1100117:
+    # Actually, on Aqua we probably shouldn't stipple images in
+    # disabled buttons even if it did work...
+    # don't work with Cocoa
+    Tk.tk_call("eval","ttk::style configure . -stipple {}") if OS.mac?
+  
     #TScrollbar
     Tk::Tile::Style.configure("Arcadia.TScrollbar", Arcadia.style('scrollbar'))
     Tk::Tile::Style.map("Arcadia.TScrollbar",
@@ -1904,25 +1996,409 @@ class TkWidgetFactory
     #Treeview
     #Tk::Tile::Style.configure(Tk::Tile::Treeview, Arcadia.style('treepanel'))
 
-
     #TMenubutton
-    #Tk::Tile::Style.configure(Tk::Tile::TMenubutton, Arcadia.style('menu'))
+    Tk::Tile::Style.element_create('Arcadia.Menubutton.indicator', 
+                                   :image, Arcadia.image_res(DROP_DOWN_ARROW_GIF),
+                                   :sticky=>:w)    
+
+    Tk::Tile::Style.configure("Arcadia.TMenubutton", Arcadia.style('menubutton').update(
+      'padding'=>"0 0 0 0", 
+      'width'=>0
+      )
+    )
+
+    Tk::Tile::Style.map("Arcadia.TMenubutton",
+    :background=>[:pressed, Arcadia.style('menubutton')['activebackground'], :disabled, Arcadia.style('menubutton')['background'], :active, Arcadia.style('menubutton')['activebackground']],
+    :arrowcolor=>[:pressed, Arcadia.style('menubutton')['background'], :disabled, Arcadia.style('menubutton')['highlightbackground'], :active, Arcadia.style('menubutton')['background']],
+    :relief=>[:pressed, :flat])
+    Tk::Tile::Style.layout('Arcadia.TMenubutton', [
+        'Menubutton.border', {:children=>[
+             'Menubutton.padding', {:children=>[
+                  'Arcadia.Menubutton.indicator', {:side=>:right}, 
+                  'Menubutton.focus', {:side=>:left, :children=>['Menubutton.label']}
+             ]}
+        ]}
+    ])
+
+    #Title.TMenubutton
+    # 
+    Tk::Tile::Style.configure("Arcadia.Title.TMenubutton", Arcadia.style('titlelabel').update(
+      'padding'=>"0 0 0 0", 
+      'font'=>Arcadia.conf('titlelabel.font'), 
+      'width'=>0,
+      'foreground' => Arcadia.conf('titlelabel.foreground'),
+      )
+    )
+    Tk::Tile::Style.map("Arcadia.Title.TMenubutton",
+    :background=>[:pressed, Arcadia.style('titlelabel')['activebackground'], :disabled, Arcadia.style('titlelabel')['background'], :active, Arcadia.style('titlelabel')['activebackground']],
+    :arrowcolor=>[:pressed, Arcadia.style('titlelabel')['background'], :disabled, Arcadia.style('titlelabel')['highlightbackground'], :active, Arcadia.style('titlelabel')['background']],
+    :relief=>[:pressed, :flat])
+    Tk::Tile::Style.layout('Arcadia.Title.TMenubutton', [
+        'Menubutton.border', {:children=>[
+             'Menubutton.padding', {:children=>[
+                  'Arcadia.Menubutton.indicator', {:side=>:right}, 
+                  'Menubutton.focus', {:side=>:left, :children=>['Menubutton.label']}
+             ]}
+        ]}
+    ])
+
+    #Title.Context.TMenubutton
+    # 
+    Tk::Tile::Style.configure("Arcadia.Title.Context.TMenubutton", Arcadia.style('titlelabel').update(
+      'padding'=>"0 0 0 0", 
+      'font'=>"#{Arcadia.conf('titlelabel.font')} italic", 
+      'width'=>0,
+      'foreground' => Arcadia.conf('titlecontext.foreground'),
+      )
+    )
+    Tk::Tile::Style.map("Arcadia.Title.Context.TMenubutton",
+    :background=>[:pressed, Arcadia.style('titlelabel')['activebackground'], :disabled, Arcadia.style('titlelabel')['background'], :active, Arcadia.style('titlelabel')['activebackground']],
+    :arrowcolor=>[:pressed, Arcadia.style('titlelabel')['background'], :disabled, Arcadia.style('titlelabel')['highlightbackground'], :active, Arcadia.style('titlelabel')['background']],
+    :relief=>[:pressed, :flat])
+    Tk::Tile::Style.layout('Arcadia.Title.Context.TMenubutton', [
+        'Menubutton.border', {:children=>[
+             'Menubutton.padding', {:children=>[
+                  'Arcadia.Menubutton.indicator', {:side=>:right}, 
+                  'Menubutton.focus', {:side=>:left, :children=>['Menubutton.label']}
+             ]}
+        ]}
+    ])
+    
+    
+    #TCheckbutton, 
+
+    Tk::Tile::Style.element_create('Arcadia.Checkbutton.indicator', 
+                                   :image, Arcadia.image_res(CHECKBOX_0_DARK_GIF),
+                                   :map=>[
+                                     [:pressed, :selected],Arcadia.image_res(CHECKBOX_1_DARK_GIF),
+                                     :pressed,             Arcadia.image_res(CHECKBOX_0_DARK_GIF),
+                                     [:active, :selected], Arcadia.image_res(CHECKBOX_2_DARK_GIF),
+                                     :active,              Arcadia.image_res(CHECKBOX_0_DARK_GIF),
+                                     :selected,            Arcadia.image_res(CHECKBOX_1_DARK_GIF),
+                                   ], :sticky=>:w)  
+
+    Tk::Tile::Style.configure("Arcadia.TCheckbutton", Arcadia.style('checkbox').update(
+        'padding'=>"0 0 0 0", 
+        'width'=>0
+        )
+      )
+    
+    Tk::Tile::Style.layout('Arcadia.TCheckbutton', [
+        'Checkbutton.background', # this is not needed in tile 0.5 or later
+        'Checkbutton.border', {:children=>[
+             'Checkbutton.padding', {:children=>[
+                  'Arcadia.Checkbutton.indicator', {:side=>:left}, 
+                  'Checkbutton.focus', {:side=>:left, :children=>[
+                      'Checkbutton.label'
+                  ]}
+             ]}
+        ]}
+    ])    
+
+                                   
+    Tk::Tile::Style.configure("Arcadia.Title.TCheckbutton", Arcadia.style('titlelabel').update(
+        'padding'=>"0 0 0 0", 
+        'width'=>0
+        )
+      )
+    
+    Tk::Tile::Style.layout('Arcadia.Title.TCheckbutton', [
+        'Checkbutton.background', # this is not needed in tile 0.5 or later
+        'Checkbutton.border', {:children=>[
+             'Checkbutton.padding', {:children=>[
+                  'Arcadia.Checkbutton.indicator', {:side=>:left}, 
+                  'Checkbutton.focus', {:side=>:left, :children=>[
+                      'Checkbutton.label'
+                  ]}
+             ]}
+        ]}
+    ])    
+    
+    #Combobox
+    
+
+    Tk::Tile::Style.element_create('Arcadia.Combobox.indicator', 
+                                   :image, Arcadia.image_res(DROP_DOWN_ARROW_GIF),
+                                   :sticky=>:w)    
+
+    Tk::Tile::Style.configure("Arcadia.TCombobox", Arcadia.style('combobox').update(
+      'padding'=>"0 0 0 0", 
+      'width'=>0
+     # 'borderwidth'=>1,
+     # 'relief'=>'groove'      
+      )
+    )
+
+#    Tk::Tile::Style.map("Arcadia.TCombobox",
+#    :relief=>[:pressed, :flat])
+    
+    Tk::Tile::Style.layout('Arcadia.TCombobox', [
+        'Combobox.border', {:children=>[
+             'Combobox.padding', {:children=>[
+                  'Arcadia.Combobox.indicator', {:side=>:right}, 
+                  'Combobox.focus', {:side=>:left, :children=>['Combobox.label']}
+             ]}
+        ]}
+    ])
+
+
+    #Tk::Tile::Style.configure(Tk::Tile::TLabel, Arcadia.style('label'))
+    #TLabel
+    Tk::Tile::Style.configure("Arcadia.TLabel", Arcadia.style('label'))
+
 
     #TButton
-    #Tk::Tile::Style.configure(Tk::Tile::TButton, Arcadia.style('button'))
+    Tk::Tile::Style.configure("Arcadia.TButton", Arcadia.style('button').update(
+      'padding'=>"0 0 0 0"
+#      ,
+#      'borderwidth'=>1,
+#      'relief'=>'groove' 
+      )
+    )
+    Tk::Tile::Style.map("Arcadia.TButton",
+    :background=>[:pressed, Arcadia.style('button')['activebackground'], :disabled, Arcadia.style('button')['background'], :active, Arcadia.style('button')['activebackground']],
+    :foreground=>[:pressed, Arcadia.style('button')['activeforeground'], :disabled, Arcadia.style('button')['foreground'], :active, Arcadia.style('button')['activeforeground']],
+    :relief=>[:pressed, :sunken])
+
+    #Tool.TButton
+    Tk::Tile::Style.configure("Arcadia.Tool.TButton", Arcadia.style('toolbarbutton').update(
+      'padding'=>"0 0 0 0",
+      'anchor'=>'w' 
+      )
+    )
+    Tk::Tile::Style.map("Arcadia.Tool.TButton",
+    :background=>[:pressed, Arcadia.style('button')['activebackground'], :disabled, Arcadia.style('toolbarbutton')['background'], :active, Arcadia.style('toolbarbutton')['activebackground']],
+    :arrowcolor=>[:pressed, Arcadia.style('button')['background'], :disabled, Arcadia.style('toolbarbutton')['highlightbackground'], :active, Arcadia.style('toolbarbutton')['background']],
+    :relief=>[:pressed, :sunken])
+
+    #Title.Tool.TButton
+    Tk::Tile::Style.configure("Arcadia.Title.Tool.TButton", Arcadia.style('titletoolbarbutton').update(
+      'padding'=>"0 0 0 0" 
+      )
+    )
+    Tk::Tile::Style.map("Arcadia.Title.Tool.TButton",
+    :background=>[:pressed, Arcadia.style('button')['activebackground'], :disabled, Arcadia.style('titletoolbarbutton')['background'], :active, Arcadia.style('toolbarbutton')['activebackground']],
+    :arrowcolor=>[:pressed, Arcadia.style('button')['background'], :disabled, Arcadia.style('titletoolbarbutton')['highlightbackground'], :active, Arcadia.style('toolbarbutton')['background']],
+    :relief=>[:pressed, :sunken])
+    
   end
 
-  def scrollbar(_parent,_args=nil, &b)
+
+
+  def scrollbar(_parent,_args={}, &b)
     begin
       if @use_tile
-        return Tk::Tile::Scrollbar.new(_parent,{:style=>"Arcadia.TScrollbar"}.update(_args), &b)
+        obj = Tk::Tile::Scrollbar.new(_parent,{:style=>"Arcadia.TScrollbar"}.update(_args), &b)
       else
-        return TkScrollbar.new(_parent,Arcadia.style('scrollbar').update(_args), &b)
+        obj = TkScrollbar.new(_parent,Arcadia.style('scrollbar').update(_args), &b)
       end
+      class << obj
+        include WidgetEnhancer
+      end
+      return obj
     rescue RuntimeError => e
       Arcadia.runtime_error(e) 
     end
   end
+
+  def label(_parent,_args={}, &b)
+    begin
+      if @use_tile
+        obj = Tk::Tile::TLabel.new(_parent,{:style=>"Arcadia.TLabel"}.update(_args), &b)
+      else
+        obj = TkLabel.new(_parent,Arcadia.style('label').update(_args), &b)
+      end
+      class << obj
+        include WidgetEnhancer
+      end
+      return obj
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
+      return nil
+    end
+  end
+
+  def button(_parent,_args={}, &b)
+    begin
+      if @use_tile
+        obj = Tk::Tile::Button.new(_parent,{:style=>"Arcadia.TButton"}.update(_args), &b)
+      else
+        obj = TkButton.new(_parent,Arcadia.style('button').update(_args), &b)
+      end
+      class << obj
+        include WidgetEnhancer
+      end
+      return obj
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
+      return nil
+    end
+  end
+
+  def toolbutton(_parent,_args={}, &b)
+    begin
+      if @use_tile
+        obj = Tk::Tile::Button.new(_parent,{:style=>"Arcadia.Tool.TButton"}.update(_args), &b)
+      else
+        obj = TkButton.new(_parent,Arcadia.style('toolbarbutton').update(_args), &b)
+      end
+      class << obj
+        include WidgetEnhancer
+      end
+      return obj
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
+      return nil
+    end
+  end
+
+  def titletoolbutton(_parent,_args={}, &b)
+    begin
+      if @use_tile
+        obj = Tk::Tile::Button.new(_parent,{:style=>"Arcadia.Title.Tool.TButton"}.update(_args), &b)
+      else
+        obj = TkButton.new(_parent,Arcadia.style('toolbarbutton').update(_args), &b)
+      end
+      class << obj
+        include WidgetEnhancer
+      end
+      return obj
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
+      return nil
+    end
+  end
+
+  def menubutton(_parent,_args={}, &b)
+    begin
+      if @use_tile
+        obj = Tk::Tile::Menubutton.new(_parent,{:style=>"Arcadia.TMenubutton"}.update(_args), &b)
+      else
+        obj = TkMenuButton.new(_parent,Arcadia.style('menubutton').update(_args), &b)
+      end
+      class << obj
+        include WidgetEnhancer
+      end
+      return obj
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
+      return nil
+    end
+  end
+  
+  def combobox(_parent,_args={}, &b)
+    begin
+      if @use_tile
+        obj = Tk::Tile::Combobox.new(_parent,{:style=>"Arcadia.TCombobox"}.update(_args), &b)
+      else
+        obj = Tk::BWidget::ComboBox.new(_parent, Arcadia.style('combobox').update(_args), &b)
+      end
+      class << obj
+        include WidgetEnhancer
+      end
+      return obj
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
+      return nil
+    end
+  end
+
+  def titlemenubutton(_parent, _args={}, &b)
+    begin
+      if @use_tile
+        obj = Tk::Tile::Menubutton.new(_parent,{:style=>"Arcadia.Title.TMenubutton"}.update(_args), &b)
+      else
+        obj = TkMenuButton.new(_parent,Arcadia.style('menubutton').update(_args), &b)
+      end
+      class << obj
+        include WidgetEnhancer
+      end
+      return obj
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
+      return nil
+    end
+  end
+
+  def titlecontextmenubutton(_parent, _args={}, &b)
+    begin
+      if @use_tile
+        obj = Tk::Tile::Menubutton.new(_parent,{:style=>"Arcadia.Title.Context.TMenubutton"}.update(_args), &b)
+      else
+        obj = TkMenuButton.new(_parent,Arcadia.style('menubutton').update(_args), &b)
+      end
+      class << obj
+        include WidgetEnhancer
+      end
+      return obj
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
+      return nil
+    end
+  end
+
+  def checkbutton(_parent, _args={}, &b)
+    begin
+      if @use_tile
+        obj = Tk::Tile::Checkbutton.new(_parent,{:style=>"Arcadia.TCheckbutton"}.update(_args), &b)
+      else
+        obj = TkCheckbutton.new(_parent,Arcadia.style('checkbox').update(_args), &b)
+      end
+      class << obj
+        include WidgetEnhancer
+      end
+      return obj
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
+      return nil
+    end
+  end
+
+  def titlecontextcheckbutton(_parent, _args={}, &b)
+    begin
+      if @use_tile
+        obj = Tk::Tile::Checkbutton.new(_parent,{:style=>"Arcadia.Title.TCheckbutton"}.update(_args), &b)
+      else
+        obj = TkCheckbutton.new(_parent,Arcadia.style('checkbox').update(_args), &b)
+      end
+      class << obj
+        include WidgetEnhancer
+      end
+      return obj
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
+      return nil
+    end
+  end
+
+  def menu(_parent,_args={}, &b)
+    begin
+      obj = TkMenu.new(_parent, &b)
+      if !OS.mac?
+        obj.configure(Arcadia.style('menu').update(_args))
+        obj.extend(TkAutoPostMenu)
+      end
+      return obj
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
+      return nil
+    end
+  end
+
+  def titlemenu(_parent,_args={}, &b)
+    begin
+      obj = TkMenu.new(_parent, &b)
+      if !OS.mac?
+        obj.configure(Arcadia.style('titlemenu').update(_args))
+        obj.extend(TkAutoPostMenu)
+      end
+      return obj
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
+      return nil
+    end
+  end
+
 
 end
 
@@ -2525,7 +3001,8 @@ class HinnerFileDialog < HinnerDialog
       end
     }    
 
-    @select_button = Tk::BWidget::Button.new(self, Arcadia.style('toolbarbutton')){
+    #@select_button = Tk::BWidget::Button.new(self, Arcadia.style('toolbarbutton')){
+    @select_button = Arcadia.wf.toolbutton(self){
       command proc{_self.close}
       image Arcadia.image_res(CLOSE_FRAME_GIF)
     }.pack('side' =>'right','padx'=>5, 'pady'=>0)
@@ -2706,8 +3183,29 @@ class HinnerFileDialog < HinnerDialog
                 _key = "#{_doc.strip}"
                 _item = "#{_doc.strip}"
               end
-              if _in.nil? || _in.strip.length == 0 || _item[0.._in.length-1] == _in 
-              #|| _item[0.._in.length-1].downcase == _in
+              array_include = proc{|_a, _str, _asterisk_first_char|
+                ret = true
+                str = _str
+                _a.each_with_index{|x, j|
+                  next if x.length == 0
+                  if j == 0 && !_asterisk_first_char
+                    ret = ret && str[0..x.length-1] == x
+                  else
+                    ret = ret && str.include?(x)
+                  end
+                  if ret 
+                    i = str.index(x)
+                    str = str[i+x.length..-1]
+                  else
+                    break
+                  end
+                }
+                ret
+              }
+              if _in.nil? || _in.strip.length == 0 || _item[0.._in.length-1] == _in || 
+                 (_in.include?('*') &&  array_include.call(_in.split("*"), _item, _in[0..1]=='*'))
+#                 (_in[0..0] == '*' && _item.include?(_in[1..-1]))
+
                 _docs_entries[_item]= _doc
        #         @raised_listbox.insert('end', _item)
                 if last_candidate_is_dir?(_item)
@@ -2757,8 +3255,12 @@ class HinnerFileDialog < HinnerDialog
         @raised_listbox.bind_append('KeyPress'){|e|
           is_list_for_update = false
           case e.keysym
-            when 'a'..'z','A'..'Z'
+            when 'a'..'z','A'..'Z','0'..'9'
               @dir_text.insert('end', e.keysym)
+              @dir_text.see("end")
+              is_list_for_update = true
+            when 'minus'
+              @dir_text.insert('end', e.char)
               @dir_text.see("end")
               is_list_for_update = true
             when 'period'
@@ -2784,6 +3286,24 @@ class HinnerFileDialog < HinnerDialog
           _update_list.call(get_filter.call) if is_list_for_update
           @raised_listbox.focus 
           Tk.callback_break if  !["Next","Prior"].include?(e.keysym)
+        }
+
+        @raised_listbox.bind_append('Shift-KeyPress'){|e|
+          is_list_for_update = false
+          case e.keysym
+            when 'asterisk','underscore'
+              @dir_text.insert('end', e.char)
+              @dir_text.see("end")
+              is_list_for_update = true
+            when 'a'..'z','A'..'Z'
+              @dir_text.insert('end', e.keysym)
+              @dir_text.see("end")
+              is_list_for_update = true
+            
+          end
+          _update_list.call(get_filter.call) if is_list_for_update
+          @raised_listbox.focus 
+          Tk.callback_break
         }
 
         @raised_listbox.bind_append('KeyRelease'){|e|
@@ -2816,6 +3336,7 @@ class HinnerFileDialog < HinnerDialog
           @raised_listbox.bind_append("Double-ButtonPress-1", 
             proc{|x,y| 
               _select_value.call
+              Tk.callback_break
                 }, "%x %y")
   
         end  
