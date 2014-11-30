@@ -34,7 +34,7 @@ can be install ActiveTcl 8.5 and use ruby via rvm.
   - improves crossplatform features
   - changes dialogs metaphor
   - improves start speed
-  - introduces others general improvements  
+  - introduces other general improvements  
   
 [0.13.1]
     This release:
