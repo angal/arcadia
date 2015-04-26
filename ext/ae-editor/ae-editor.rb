@@ -1327,7 +1327,7 @@ class AgEditor
   attr_reader :highlighting
   attr_reader :last_tmp_file
   attr_reader :lang
-  attr_reader :file_info  
+  attr_reader :buffer_info  
   attr_reader :outline
   attr_reader :file_loaded  
   attr_reader :edit_initialized  
@@ -1350,7 +1350,7 @@ class AgEditor
     @spaces_show = false
     @line_numbers_visible = @controller.conf('line-numbers') == 'yes'
     @id = -1
-    @file_info = Hash.new
+    @buffer_info = Hash.new
     @file_loaded = false
     @edit_initialized = false
     @start_index='1.0'
@@ -3157,7 +3157,8 @@ class AgEditor
   def reset_modify(_reset_tab=true)
     @controller.change_tab_reset_modify(@page_frame) if _reset_tab
     @set_mod = false
-    @file_info['mtime'] = File.mtime(@file) if @file
+    @buffer_info['mtime'] = File.mtime(@file) if @file
+    @buffer_info['encoding'] = @text.value.encoding.name if @text
     #@file_last_access_time = File.mtime(@file) if @file
     @controller.refresh_status
     update_toolbar
@@ -3557,10 +3558,10 @@ class AgEditor
 
   def modified_by_others?
     ret = false 
-    if @file_info['mtime'] && @file 
+    if @buffer_info['mtime'] && @file 
       if File.exist?(@file)
         ftime = File.mtime(@file)
-        ret = @file_info['mtime'] != ftime
+        ret = @buffer_info['mtime'] != ftime
       else
         ret = true
       end
@@ -3571,9 +3572,9 @@ class AgEditor
   def reset_file_last_access_time
     if @file
       if File.exist?(@file)
-        @file_info['mtime'] = File.mtime(@file)
+        @buffer_info['mtime'] = File.mtime(@file)
       else
-        @file_info['mtime'] = nil
+        @buffer_info['mtime'] = nil
         @file = nil
       end
     end
@@ -3582,16 +3583,16 @@ class AgEditor
   def check_file_last_access_time
     if @file
       file_exist = File.exist?(@file)
-      if @file_info['mtime'] && file_exist
+      if @buffer_info['mtime'] && file_exist
         ftime = File.mtime(@file)
-        if @file_info['mtime'] != ftime
+        if @buffer_info['mtime'] != ftime
           msg = Arcadia.text('ext.editor.text.d.file_changed.msg', [@file])
           title = Arcadia.text('ext.editor.text.d.file_changed.title')
           ans = Arcadia.hinner_dialog(self, 'type'=>'yes_no', 'msg'=> msg, 'title' => title, 'level' => 'error')
           if ans == 'yes'
             reload
           else
-            @file_info['mtime'] = ftime
+            @buffer_info['mtime'] = ftime
           end
         end
       elsif !file_exist
@@ -5739,6 +5740,7 @@ class AgMultiEditor < ArcadiaExtPlus
       @@statusbar_items = Hash.new
       @@statusbar_items['file_size'] = Arcadia.new_statusbar_item("File size")
       @@statusbar_items['file_mtime'] = Arcadia.new_statusbar_item("File modification time")
+      @@statusbar_items['buffer_encoding'] = Arcadia.new_statusbar_item("Buffer encoding")
       @@statusbar_items['file_name'] = Arcadia.new_statusbar_item("File name")
     end
   end
@@ -5746,11 +5748,12 @@ class AgMultiEditor < ArcadiaExtPlus
   def reset_status
     @@statusbar_items['file_name'].text = '?'
     @@statusbar_items['file_mtime'].text =  '?'
+    @@statusbar_items['buffer_encoding'].text = '?'
     @@statusbar_items['file_size'].text = '?' 
   end
   
   def refresh_status
-    #@statusbar_item.text("#{_title} | #{_e.file_info['mtime'].strftime("%d/%m/%Y %H:%m:%S") if _e}")
+    #@statusbar_item.text("#{_title} | #{_e.buffer_info['mtime'].strftime("%d/%m/%Y %H:%m:%S") if _e}")
     if raised && raised.file
       size = File.size(raised.file)
       if size > 1024
@@ -5759,9 +5762,10 @@ class AgMultiEditor < ArcadiaExtPlus
         size_str = "#{size} b"      
       end
       @@statusbar_items['file_name'].text(File.basename(raised.file))
-      @@statusbar_items['file_mtime'].text =  raised.file_info['mtime'].localtime if raised.file_info['mtime']
+      @@statusbar_items['file_mtime'].text =  raised.buffer_info['mtime'].localtime if raised.buffer_info['mtime']
+      @@statusbar_items['buffer_encoding'].text =  raised.buffer_info['encoding'] if raised.buffer_info['encoding']
       @@statusbar_items['file_size'].text = size_str 
-      #@statusbar_item.text("#{File.basename(raised.file)} | #{raised.file_info['mtime'].localtime} | #{size_str}")
+      #@statusbar_item.text("#{File.basename(raised.file)} | #{raised.buffer_info['mtime'].localtime} | #{size_str}")
     else
       reset_status
     end

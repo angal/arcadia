@@ -134,8 +134,18 @@ class Shell < ArcadiaExt
   @@next_number = 0
   def on_run_cmd(_event)
     if _event.cmd
-      #p "_event.cmd = #{_event.cmd}"
       begin
+        if _event.prompt
+          hd_args = {
+            'type'=>'ok_cancel',
+            'msg'=>_event.title,
+            'title' => _event.title, 
+            'prompt' => _event.prompt, 
+            'level' => 'info'
+          }
+            
+          hd_event = HinnerDialogEvent.new(self, hd_args).go!
+        end
         output_mark = Arcadia.console(self,'msg'=>"Running #{_event.title} as #{_event.lang}...", 'level'=>'info') # info?
         start_time = Time.now
         @arcadia['pers']['run.file.last']=_event.file if _event.persistent

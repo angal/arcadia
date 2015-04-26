@@ -26,7 +26,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '1.0.0',
+        '1.0.1',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -688,11 +688,11 @@ class Arcadia < TkApplication
         image = Arcadia.file_icon(run[:file_exts])
       end
       _run_title = run[:title]
-      run[:title] = nil
+      #run[:title] = nil
       run[:runner_name] = name
       _command = proc{
         _event = Arcadia.process_event(
-        RunCmdEvent.new(self, run)
+          RunCmdEvent.new(self, run)
         )
       }
       if run[:pos]
@@ -786,12 +786,13 @@ class Arcadia < TkApplication
   end
 
   def manage_runners
-    if !@runm
+    if !@runm || @runm.nil? 
       @runm = RunnerManager.new(Arcadia.layout.root)
-      @runm.on_close=proc{@runm.hide}
+      @runm.on_close=proc{@runm = nil}
+      @runm.load_items
     end
-    @runm.show
-    @runm.load_items
+    #@runm.show
+    #@runm.load_items
   end
 
   def register_key_binding(_self_target, k, v)
@@ -1707,19 +1708,25 @@ class ArcadiaMainMenu < ArcadiaUserControl
 
 end
 
-class RunnerManager < TkFloatTitledFrame
+#class RunnerManager < TkFloatTitledFrame
+class RunnerManager < HinnerSplittedDialogTitled
   class RunnerMangerItem  < TkFrame
     def initialize(_parent=nil, _runner_hash=nil, *args)
       super(_parent, Arcadia.style('panel'))
       @runner_hash = _runner_hash
-      Tk::BWidget::Label.new(self,
-      'image'=> Arcadia.file_icon(_runner_hash[:file_exts]),
-      'relief'=>'flat').pack('side' =>'left')
-      Tk::BWidget::Label.new(self,
-      'text'=>_runner_hash[:title],
-      'helptext'=>_runner_hash[:file],
-      'compound'=>:left,
-      'relief'=>'flat').pack('fill'=>'x','side' =>'left')
+      Arcadia.wf.label(self,
+        'image'=> Arcadia.file_icon(_runner_hash[:file_exts]),
+        'relief'=>'flat').pack('side' =>'left')
+      Arcadia.wf.label(self,
+        'text'=>_runner_hash[:title],
+        'compound'=>:left,
+        'padding'=>"5 0",
+        'relief'=>'flat').hint(_runner_hash[:file]).pack('fill'=>'x','side' =>'left')
+      Arcadia.wf.label(self,
+        'text'=>_runner_hash[:cmd],
+        'compound'=>:left,
+        'padding'=>"5 0",
+        'relief'=>'flat').pack('fill'=>'x','side' =>'left')
       _close_command = proc{
         if (Arcadia.hinner_dialog(self, 'type'=>'yes_no',
           'msg'=> Arcadia.text("main.d.confirm_delete_runner.msg", [_runner_hash[:name]]),
@@ -1764,15 +1771,36 @@ class RunnerManager < TkFloatTitledFrame
   end
 
   def initialize(_parent)
-    super(_parent)
-    title("Runners manager")
+    super("Runners manager")
+    @addb = @titled_frame.add_fixed_button('[Add Runner]',proc{do_add})
+
+    #super(_parent)
+    #title("Runners manager")
     @items = Hash.new
-    place('x'=>100,'y'=>100,'height'=> 220,'width'=> 300)
+    #place('x'=>100,'y'=>100,'height'=> 220,'width'=> 300)
+  end
+
+  def do_add
+    input_frame = HinnerSplittedDialogTitled.new("Add runner")
+    load_tips(input_frame.hinner_frame)
+    Arcadia.wf.button(input_frame.hinner_frame){
+      command proc{}
+      text "ADD"
+      pack('side' =>'right','padx'=>5, 'pady'=>5)
+    }
   end
 
   def clear_items
     @items.each_value{|i| i.destroy }
     @items.clear
+  end
+
+  def load_tips(_frame)
+    text = "runners keywords related the current file => <<FILE>>, <<DIR>>, <<FILE_BASENAME>>, <<FILE_BASENAME_WITHOUT_EXT>>, <<INPUT>>"
+    # INPUT is required to user
+    Arcadia.wf.label(_frame,
+      'text'=>text,
+    ).pack('side' =>'top','anchor'=>'nw','fill'=>'x','padx'=>5, 'pady'=>5)
   end
 
   def load_items
@@ -1784,7 +1812,7 @@ class RunnerManager < TkFloatTitledFrame
       if item_hash[:runner] && Arcadia.runner(item_hash[:runner])
         item_hash = Hash.new.update(Arcadia.runner(item_hash[:runner])).update(item_hash)
       end
-      @items[name]=RunnerMangerItem.new(self.frame, item_hash)
+      @items[name]=RunnerMangerItem.new(self.hinner_frame, item_hash)
     }
   end
 end

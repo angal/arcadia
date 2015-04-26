@@ -313,6 +313,7 @@ class RunCmdEvent < ArcadiaEvent
   attr_accessor :persistent
   attr_accessor :runner_name
   attr_accessor :lang
+  attr_accessor :prompt
 end
 
 class InputKeyboardQueryEvent < ArcadiaEvent
@@ -375,7 +376,7 @@ class DialogEvent < ArcadiaEvent
   class Result < Result
     attr_accessor :value
   end
-  attr_accessor :title, :msg, :type, :level, :exception
+  attr_accessor :title, :msg, :type, :level, :exception, :prompt
 end
 
 class SystemDialogEvent < DialogEvent

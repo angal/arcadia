@@ -1927,9 +1927,16 @@ end
 class TkWidgetFactory
 
   module WidgetEnhancer
+
     def hint=(_hint=nil)
-      Tk::BWidget::DynamicHelp::add(self, 'text'=>_hint) if _hint
+      hint(_hint)
     end
+
+    def hint(_hint=nil)
+      Tk::BWidget::DynamicHelp::add(self, 'text'=>_hint) if _hint
+      self
+    end
+
   end
 
   def initialize
@@ -2898,17 +2905,30 @@ class HinnerSplittedDialog < HinnerDialog
 end
 
 class HinnerSplittedDialogTitled < HinnerSplittedDialog
-  attr_accessor :hinner_frame
+  attr_accessor :hinner_frame, :titled_frame
   def initialize(title=nil, side='top', height=100, args=nil)
     super(side, height, args)
-    btf = TkLabelTitledFrameClosable.new(self.frame, title).place('x'=>0, 'y'=>0,'relheight'=>1, 'relwidth'=>1)
+    @titled_frame = TkLabelTitledFrameClosable.new(self.frame, title).place('x'=>0, 'y'=>0,'relheight'=>1, 'relwidth'=>1)
+    @ext_proc = nil
     close = proc{
-      self.destroy
-      Tk.callback_break
+      do_close
+      #self.destroy
+      #Tk.callback_break
     }
-    btf.add_close_action(close)
-    @hinner_frame = btf.frame
-  end  
+    @titled_frame.add_close_action(close)
+    @hinner_frame = @titled_frame.frame
+  end
+
+  def do_close
+    @ext_proc.call if !@ext_proc.nil?
+    self.destroy
+    Tk.callback_break
+  end
+
+  def on_close=(_proc)
+    @ext_proc = _proc
+  end
+ 
 end
 
 class HinnerFileDialog < HinnerDialog
