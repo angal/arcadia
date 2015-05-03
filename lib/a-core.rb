@@ -21,6 +21,7 @@ class Arcadia < TkApplication
   attr_reader :wf
   attr_reader :mf_root
   attr_reader :localization
+  attr_reader :exts
   def initialize
     @initialized=false
     super(
@@ -789,7 +790,10 @@ class Arcadia < TkApplication
     if !@runm || @runm.nil? 
       @runm = RunnerManager.new(Arcadia.layout.root)
       @runm.on_close=proc{@runm = nil}
-      @runm.load_items
+      @runm.clear_items
+      @runm.load_items(:runtime)
+      @runm.load_tips
+      @runm.load_items(:config)
     end
     #@runm.show
     #@runm.load_items
@@ -898,6 +902,8 @@ class Arcadia < TkApplication
     'title' => Arcadia.text("main.d.confirm_exit.title"),
     'level' => 'question')=='yes')
     if q1 && can_exit?
+      @root.geometry('0x0')
+      ArcadiaAboutSplash.new.deiconify
       do_finalize
       @root.destroy
       #      Tk.mainloop_exist?
@@ -1105,6 +1111,10 @@ class Arcadia < TkApplication
 
   def Arcadia.conf_group(_path, _refresh=false)
     Configurable.properties_group(_path, Arcadia.instance['conf'], 'conf', _refresh)
+  end
+
+  def Arcadia.conf_group_without_local(_path, _refresh=false)
+    Configurable.properties_group(_path, Arcadia.instance['conf_without_local'], 'conf_without_local', _refresh)
   end
 
   def Arcadia.conf_group_copy(_path_source, _path_target, _suff = 'conf')
@@ -1358,6 +1368,12 @@ class Arcadia < TkApplication
   def Arcadia.extension(_name=nil)
     if _name && @@instance && @@instance['exts_map']
       return @@instance['exts_map'][_name]
+    end
+  end
+
+  def Arcadia.extensions
+    if @@instance && @@instance.exts
+      return @@instance.exts
     end
   end
 
@@ -1710,24 +1726,55 @@ end
 
 #class RunnerManager < TkFloatTitledFrame
 class RunnerManager < HinnerSplittedDialogTitled
-  class RunnerMangerItem  < TkFrame
-    def initialize(_parent=nil, _runner_hash=nil, *args)
-      super(_parent, Arcadia.style('panel'))
+  class RunnerMangerItem #  < TkFrame
+    attr_reader :etitle, :ecmd, :runner_hash
+    def initialize(_runner_manager, _parent=nil, _runner_hash=nil, _row=0, _state_array=nil, *args)
+      #super(_parent, Arcadia.style('panel'))
       @runner_hash = _runner_hash
-      Arcadia.wf.label(self,
-        'image'=> Arcadia.file_icon(_runner_hash[:file_exts]),
-        'relief'=>'flat').pack('side' =>'left')
-      Arcadia.wf.label(self,
-        'text'=>_runner_hash[:title],
-        'compound'=>:left,
-        'padding'=>"5 0",
-        'relief'=>'flat').hint(_runner_hash[:file]).pack('fill'=>'x','side' =>'left')
-      Arcadia.wf.label(self,
-        'text'=>_runner_hash[:cmd],
-        'compound'=>:left,
-        'padding'=>"5 0",
-        'relief'=>'flat').pack('fill'=>'x','side' =>'left')
-      _close_command = proc{
+      # ICON
+      @ttklicon = Arcadia.wf.label(_parent,
+        'image'=> _runner_hash[:image].nil? ? Arcadia.file_icon(_runner_hash[:file_exts]) : Arcadia.image_res(_runner_hash[:image]) ,
+        'relief'=>'flat').grid(:column => 0, :row => _row, :sticky => "W", :padx=>1, :pady=>1)
+
+      # NAME
+      @ename_old = _runner_hash[:name]  
+      @ename = TkVariable.new(_runner_hash[:name])
+      @ttkename = Arcadia.wf.entry(_parent,
+        'textvariable'=>@ename,
+        'width'=>40).hint(_runner_hash[:file]).grid(:column => 1, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
+
+
+      # TITLE
+      @etitle_old = _runner_hash[:title]  
+      @etitle = TkVariable.new(_runner_hash[:title])
+      @ttketitle = Arcadia.wf.entry(_parent,
+        'textvariable'=>@etitle,
+        'width'=>40).hint(_runner_hash[:file]).grid(:column => 2, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
+
+      # CMD
+      @ecmd_old = _runner_hash[:cmd]
+      @ecmd = _runner_hash[:cmd]
+      @ttkecmd = Arcadia.wf.text(_parent,
+        "height" => 1).grid(:column => 3, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
+      @ttkecmd.insert('end', @ecmd)
+      @ttkecmd.state(:disabled) if _state_array && _state_array.include?(:disabled)
+      
+      # FILE EXTS
+      @eexts_old = _runner_hash[:file_exts]  
+      @eexts = TkVariable.new(_runner_hash[:file_exts])
+      @ttkeexts = Arcadia.wf.entry(_parent,
+        'textvariable'=>@eexts,
+        'width'=>10).hint(_runner_hash[:file]).grid(:column => 4, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
+
+      # COPY BUTTON
+      copy_command = proc{ _runner_manager.do_add(self) }
+      @ttkbcopy = Arcadia.wf.toolbutton(_parent,
+        'command'=> copy_command,
+        'image'=> Arcadia.image_res(COPY_GIF)
+      ).grid(:column => 5, :row => _row, :sticky => "W", :padx=>1, :pady=>1)
+        
+      # DELETE BUTTON
+      close_command = proc{
         if (Arcadia.hinner_dialog(self, 'type'=>'yes_no',
           'msg'=> Arcadia.text("main.d.confirm_delete_runner.msg", [_runner_hash[:name]]),
           'title' => Arcadia.text("main.d.confirm_delete_runner.title"),
@@ -1755,19 +1802,47 @@ class RunnerManager < HinnerSplittedDialogTitled
           self.destroy
         end
       }
-      #Tk::BWidget::Button.new(self,
-      b = Arcadia.wf.toolbutton(self,
-        'command'=>_close_command,
-       # 'helptext'=>@runner_hash[:file],
-       # 'background'=>'white',
-        'image'=> Arcadia.image_res(TRASH_GIF)
-       # 'relief'=>'flat'
-        ).pack('side' =>'right','padx'=>0)
-      b.hint=@runner_hash[:file]
+      @ttkbclose = Arcadia.wf.toolbutton(_parent,
+        'command'=> close_command,
+        'image'=> Arcadia.image_res(CLOSE_FRAME_GIF)
+        ).grid(:column => 6, :row => _row, :sticky => "W", :padx=>1, :pady=>1)
+      @ttkbclose.hint=@runner_hash[:file]
 
-      pack('side' =>'top','anchor'=>'nw','fill'=>'x','padx'=>5, 'pady'=>5)
+    end
+    
+    def destroy
+      @ttklicon.destroy
+      @ttkename.destroy
+      @ttketitle.destroy
+      @ttkecmd.destroy
+      @ttkeexts.destroy
+      @ttkbcopy.destroy
+      @ttkbclose.destroy
     end
 
+    def exts_change?
+      @eexts != @eexts.value
+    end
+    
+    def title_change?
+      @etitle_old != @etitle.value
+    end
+
+    def name_change?
+      @ename_old != @ename.value
+    end
+
+    def cmd_change?
+      @ecmd_old != @ecmd.value
+    end
+
+    def exts_change?
+      @eexts_old != @eexts.value
+    end
+    
+    def change?
+      title_change? || cmd_change? || exts_change? || exts_change? || name_change?
+    end
   end
 
   def initialize(_parent)
@@ -1777,42 +1852,107 @@ class RunnerManager < HinnerSplittedDialogTitled
     #super(_parent)
     #title("Runners manager")
     @items = Hash.new
+#    @items[:runtime] = Hash.new
+#    @items[:config] = Hash.new
+    @content = Hash.new
+#    @content[:runtime] = nil
+#    @content[:config] =  nil
     #place('x'=>100,'y'=>100,'height'=> 220,'width'=> 300)
   end
 
-  def do_add
-    input_frame = HinnerSplittedDialogTitled.new("Add runner")
-    load_tips(input_frame.hinner_frame)
-    Arcadia.wf.button(input_frame.hinner_frame){
-      command proc{}
-      text "ADD"
-      pack('side' =>'right','padx'=>5, 'pady'=>5)
-    }
+  def do_add(_runner_from=nil)
+    if _runner_from
+      runner_hash = _runner_from.runner_hash
+    else
+      runner_hash = {}
+    end
+    @items[:config]["item#{@items[:config].count}"]=RunnerMangerItem.new(self, @content[:config], runner_hash, @items[:config].count)
+   # @content[:config].pack
+    self.height(self.height + 25)
+
+#    input_frame = HinnerSplittedDialogTitled.new("Add runner")
+#    load_tips(input_frame.hinner_frame)
+#    Arcadia.wf.button(input_frame.hinner_frame){
+#      command proc{}
+#      text "ADD"
+#      pack('side' =>'right','padx'=>5, 'pady'=>5)
+#    }
   end
 
   def clear_items
-    @items.each_value{|i| i.destroy }
-    @items.clear
+    @items.each_value{|i| 
+      i.each_value{|j|  j.destroy }
+      i.clear
+    }
+    #@items.clear
   end
 
-  def load_tips(_frame)
-    text = "runners keywords related the current file => <<FILE>>, <<DIR>>, <<FILE_BASENAME>>, <<FILE_BASENAME_WITHOUT_EXT>>, <<INPUT>>"
+  def load_tips
+    # Runners keywords related the current file => <<FILE>>, <<DIR>>, <<FILE_BASENAME>>, <<FILE_BASENAME_WITHOUT_EXT>>, <<INPUT>>, <<INPUT_FILE>>
     # INPUT is required to user
-    Arcadia.wf.label(_frame,
-      'text'=>text,
-    ).pack('side' =>'top','anchor'=>'nw','fill'=>'x','padx'=>5, 'pady'=>5)
+    text = Arcadia.wf.text(self.hinner_frame,
+              "height" => 2     
+           ).pack('side' =>'top','anchor'=>'nw','fill'=>'x','padx'=>5, 'pady'=>5)
+    text.insert("end", "Runners keywords related the current file => <<FILE>>, <<DIR>>, <<FILE_BASENAME>>, <<FILE_BASENAME_WITHOUT_EXT>>, <<INPUT_FILE>>, <<INPUT_DIR>>")
+    self.height(self.height + 25)
   end
 
-  def load_items
-    clear_items
-    runs=Arcadia.pers_group('runners', true)
+  def load_items(_kind = :runtime)
+    items = @items[_kind]
+    if items.nil?
+      items = @items[_kind] = Hash.new
+    end
+    if _kind == :runtime
+      runs=Arcadia.pers_group('runners', true)
+    elsif _kind == :config
+      runs_with_local=Arcadia.conf_group('runners', false)
+      runs_without_local = Arcadia.conf_group_without_local('runners', false)
+      runs = {}
+      runs_with_local.each{|k,v|
+        if runs_without_local.include?(k)
+          runs[k]="#{v}|||main"
+        else
+          runs[k]=v
+        end
+      }
+      
+      # loading extensions runners
+      Arcadia.extensions.each{|ext|
+        ext_runs = Arcadia.conf_group("#{ext}.runners", true)
+        if ext_runs && !ext_runs.empty?
+          ext_runs_enanched = {}
+          ext_runs.each{|k, v|
+            ext_runs_enanched[k]="#{v}|||#{ext}"
+          }
+          runs.update(ext_runs_enanched)
+        end
+      }      
+    end
+    @content[_kind] = Arcadia.wf.frame(self.hinner_frame){padding "3 3 12 12"}
+    #@content[_kind] = TkFrame.new(self.hinner_frame, :background => "red")
+
+    @content[_kind].pack('fill'=>'both')
+    #@content.extend(TkScrollableWidget).show
+    TkGrid.columnconfigure(@content[_kind], 0, :weight => 1 )
+    TkGrid.columnconfigure(@content[_kind], 1, :weight => 1 )
+    TkGrid.columnconfigure(@content[_kind], 2, :weight => 1 )
+    TkGrid.columnconfigure(@content[_kind], 3, :weight => 4 )
+    TkGrid.columnconfigure(@content[_kind], 4, :weight => 1 )
+    TkGrid.columnconfigure(@content[_kind], 5, :weight => 1 )
+    TkGrid.columnconfigure(@content[_kind], 6, :weight => 1 )
+    TkGrid.propagate(@content[_kind], true)
     runs.each{|name, hash_string|
+      hash_string, origin = hash_string.split("|||")
       item_hash = eval hash_string
       item_hash[:name]=name
       if item_hash[:runner] && Arcadia.runner(item_hash[:runner])
         item_hash = Hash.new.update(Arcadia.runner(item_hash[:runner])).update(item_hash)
       end
-      @items[name]=RunnerMangerItem.new(self.hinner_frame, item_hash)
+      if origin
+        item_hash[:origin] = origin
+      end
+      items[name]=RunnerMangerItem.new(self, @content[_kind], item_hash, items.count)
+      self.height(self.height + 25)
     }
   end
 end

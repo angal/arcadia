@@ -2149,9 +2149,32 @@ class TkWidgetFactory
     ])
 
 
+    #TFrame
+    Tk::Tile::Style.configure("Arcadia.TFrame", Arcadia.style('panel'))
+
+
+
     #Tk::Tile::Style.configure(Tk::Tile::TLabel, Arcadia.style('label'))
     #TLabel
     Tk::Tile::Style.configure("Arcadia.TLabel", Arcadia.style('label'))
+
+
+    #TEntry
+    Tk::Tile::Style.layout("Arcadia.TEntry", [
+        'Entry.border', { :sticky => 'nswe', :border => 1, 
+              :children =>  ['Entry.padding',  { :sticky => 'nswe', 
+                      :children => [ 'Entry.textarea',  { :sticky => 'nswe' } ] }] } ])
+    
+    
+    Tk::Tile::Style.configure("Arcadia.TEntry", Arcadia.style('edit').update(
+         'fieldbackground' => Arcadia.style('edit')['background'],
+         'selectbackground' => 'red',
+         'selectforeground' => 'yellow'
+       )
+    )
+  
+    #TText
+    Tk::Tile::Style.configure("Arcadia.TText", Arcadia.style('text'))
 
 
     #TButton
@@ -2208,6 +2231,24 @@ class TkWidgetFactory
     end
   end
 
+  def frame(_parent,_args={}, &b)
+    begin
+      if @use_tile
+        obj = Tk::Tile::TFrame.new(_parent,{:style=>"Arcadia.TFrame"}.update(_args), &b)
+      else
+        obj = TkFrame.new(_parent,Arcadia.style('panel').update(_args), &b)
+      end
+      class << obj
+        include WidgetEnhancer
+      end
+      return obj
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
+      return nil
+    end
+  end
+
+
   def label(_parent,_args={}, &b)
     begin
       if @use_tile
@@ -2215,6 +2256,40 @@ class TkWidgetFactory
       else
         obj = TkLabel.new(_parent,Arcadia.style('label').update(_args), &b)
       end
+      class << obj
+        include WidgetEnhancer
+      end
+      return obj
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
+      return nil
+    end
+  end
+
+  def entry(_parent,_args={}, &b)
+    begin
+      if @use_tile
+        obj = Tk::Tile::TEntry.new(_parent,{:style=>"Arcadia.TEntry"}.update(_args), &b)
+      else
+        obj = TkEntry.new(_parent,Arcadia.style('edit').update(_args), &b)
+      end
+      class << obj
+        include WidgetEnhancer
+      end
+      return obj
+    rescue RuntimeError => e
+      Arcadia.runtime_error(e) 
+      return nil
+    end
+  end
+
+  def text(_parent,_args={}, &b)
+    begin
+#      if @use_tile
+#        obj = Tk::Tile::Text.new(_parent,{:style=>"Arcadia.TText"}.update(_args), &b)
+#      else
+        obj = TkText.new(_parent,Arcadia.style('text').update(_args), &b)
+#      end
       class << obj
         include WidgetEnhancer
       end
@@ -2867,9 +2942,9 @@ class HinnerSplittedDialog < HinnerDialog
   attr_reader :frame, :splitter_frame
   def initialize(side='top', height=100, args=nil)
     super(side, args)
-    y0 = height
+    @y0= height
     fr = TkFrame.new(self){
-      height y0 
+      height height 
       pack('side' =>side,'padx'=>0, 'pady'=>0, 'fill'=>'x', 'expand'=>'1')
     }
     splitter_frame = TkFrame.new(self, Arcadia.style('splitter')){
@@ -2892,15 +2967,24 @@ class HinnerSplittedDialog < HinnerDialog
     splitter_frame.bind_append("ButtonRelease-1", proc{|e|
       splitter_frame.configure('cursor'=> oldcursor)
       if side == 'top'
-        h = (y0+yx).abs
+        h = (@y0+yx).abs
       elsif side == 'bottom'
-        h = (y0-yx).abs
+        h = (@y0-yx).abs
       end
-      y0 = h
+      @y0 = h
       fr.configure('height'=>h)
     })    
     @frame = fr
     @splitter_frame = splitter_frame
+  end
+  
+  def height(_h=nil)
+    if _h.nil?
+      @frame.height
+    else
+      @frame.configure('height'=>_h)
+      @y0 = _h
+    end
   end
 end
 
