@@ -1727,10 +1727,11 @@ end
 #class RunnerManager < TkFloatTitledFrame
 class RunnerManager < HinnerSplittedDialogTitled
   class RunnerMangerItem #  < TkFrame
-    attr_reader :etitle, :ecmd, :runner_hash
+    attr_reader :runner_hash , :readonly
     def initialize(_runner_manager, _parent=nil, _runner_hash=nil, _row=0, _state_array=nil, *args)
       #super(_parent, Arcadia.style('panel'))
       @runner_hash = _runner_hash
+      @readonly = _state_array && _state_array.include?(:disabled)
       # ICON
       @ttklicon = Arcadia.wf.label(_parent,
         'image'=> _runner_hash[:image].nil? ? Arcadia.file_icon(_runner_hash[:file_exts]) : Arcadia.image_res(_runner_hash[:image]) ,
@@ -1738,33 +1739,32 @@ class RunnerManager < HinnerSplittedDialogTitled
 
       # NAME
       @ename_old = _runner_hash[:name]  
-      @ename = TkVariable.new(_runner_hash[:name])
-      @ttkename = Arcadia.wf.entry(_parent,
-        'textvariable'=>@ename,
-        'width'=>40).hint(_runner_hash[:file]).grid(:column => 1, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
+      @ttkename = Arcadia.wf.text(_parent, 'width' => 20,
+        "height" => 1).hint(_runner_hash[:file]).grid(:column => 1, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
+      @ttkename.insert('end', _runner_hash[:name])
+      @ttkename.state(:disabled) if @readonly
 
 
       # TITLE
       @etitle_old = _runner_hash[:title]  
-      @etitle = TkVariable.new(_runner_hash[:title])
-      @ttketitle = Arcadia.wf.entry(_parent,
-        'textvariable'=>@etitle,
-        'width'=>40).hint(_runner_hash[:file]).grid(:column => 2, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
+      @ttketitle = Arcadia.wf.text(_parent,  'width' => 30,
+        "height" => 1).hint(_runner_hash[:file]).grid(:column => 2, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
+      @ttketitle.insert('end', _runner_hash[:title])
+      @ttketitle.state(:disabled) if @readonly
 
       # CMD
       @ecmd_old = _runner_hash[:cmd]
-      @ecmd = _runner_hash[:cmd]
-      @ttkecmd = Arcadia.wf.text(_parent,
+      @ttkecmd = Arcadia.wf.text(_parent,  'width' => 60,
         "height" => 1).grid(:column => 3, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
-      @ttkecmd.insert('end', @ecmd)
-      @ttkecmd.state(:disabled) if _state_array && _state_array.include?(:disabled)
+      @ttkecmd.insert('end', _runner_hash[:cmd])
+      @ttkecmd.state(:disabled) if @readonly
       
       # FILE EXTS
       @eexts_old = _runner_hash[:file_exts]  
-      @eexts = TkVariable.new(_runner_hash[:file_exts])
-      @ttkeexts = Arcadia.wf.entry(_parent,
-        'textvariable'=>@eexts,
-        'width'=>10).hint(_runner_hash[:file]).grid(:column => 4, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
+      @ttkeexts = Arcadia.wf.text(_parent,  'width' => 5,
+        "height" => 1).grid(:column => 4, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
+      @ttkeexts.insert('end', _runner_hash[:file_exts])
+      @ttkeexts.state(:disabled) if @readonly
 
       # COPY BUTTON
       copy_command = proc{ _runner_manager.do_add(self) }
@@ -1780,7 +1780,8 @@ class RunnerManager < HinnerSplittedDialogTitled
           'title' => Arcadia.text("main.d.confirm_delete_runner.title"),
           'level' => 'question')=='yes')
 
-          Arcadia.unpersistent("runners.#{_runner_hash[:name]}")
+          #Arcadia.unpersistent("runners.#{_runner_hash[:name]}")
+          Arcadia.del_conf("runners.#{_runner_hash[:name]}")
           mr = Arcadia.menu_root('runcurr')
           index_to_delete = -1
           i_end = mr.index('end')
@@ -1799,6 +1800,7 @@ class RunnerManager < HinnerSplittedDialogTitled
           if index_to_delete > -1
             mr.delete(index_to_delete)
           end
+          _runner_manager.do_delete_item(self)
           self.destroy
         end
       }
@@ -1807,7 +1809,7 @@ class RunnerManager < HinnerSplittedDialogTitled
         'image'=> Arcadia.image_res(CLOSE_FRAME_GIF)
         ).grid(:column => 6, :row => _row, :sticky => "W", :padx=>1, :pady=>1)
       @ttkbclose.hint=@runner_hash[:file]
-
+      @ttkbclose.state(:disabled) if @readonly
     end
     
     def destroy
@@ -1819,25 +1821,31 @@ class RunnerManager < HinnerSplittedDialogTitled
       @ttkbcopy.destroy
       @ttkbclose.destroy
     end
-
-    def exts_change?
-      @eexts != @eexts.value
+    
+    def hash_value
+      ret = {}
+      ret[:name]=@ttkename.value
+      ret[:title]=@ttketitle.value
+      ret[:cmd]=@ttkecmd.value
+      ret[:file_exts]=@ttkeexts.value
+      ret[:image]=@runner_hash[:image] if @runner_hash[:image] 
+      ret  
     end
     
-    def title_change?
-      @etitle_old != @etitle.value
+    def name_change?
+      @ename_old != @ttkename.value
     end
 
-    def name_change?
-      @ename_old != @ename.value
+    def title_change?
+      @etitle_old != @ttketitle.value
     end
 
     def cmd_change?
-      @ecmd_old != @ecmd.value
+      @ecmd_old != @ttkecmd.value
     end
 
     def exts_change?
-      @eexts_old != @eexts.value
+      @eexts_old != @ttkeexts.value
     end
     
     def change?
@@ -1848,6 +1856,7 @@ class RunnerManager < HinnerSplittedDialogTitled
   def initialize(_parent)
     super("Runners manager")
     @addb = @titled_frame.add_fixed_button('[Add Runner]',proc{do_add})
+    @saveb = @titled_frame.add_fixed_button('[Save]',proc{do_save})
 
     #super(_parent)
     #title("Runners manager")
@@ -1862,23 +1871,48 @@ class RunnerManager < HinnerSplittedDialogTitled
 
   def do_add(_runner_from=nil)
     if _runner_from
-      runner_hash = _runner_from.runner_hash
+      runner_hash = _runner_from.hash_value
+      runner_hash[:name]="copy of #{runner_hash[:name]}"
     else
       runner_hash = {}
     end
-    @items[:config]["item#{@items[:config].count}"]=RunnerMangerItem.new(self, @content[:config], runner_hash, @items[:config].count)
+    @items[:config]["item#{@items[:config].count}"]=RunnerMangerItem.new(self, @content[:config], runner_hash, @items[:config].count+1)
    # @content[:config].pack
     self.height(self.height + 25)
-
-#    input_frame = HinnerSplittedDialogTitled.new("Add runner")
-#    load_tips(input_frame.hinner_frame)
-#    Arcadia.wf.button(input_frame.hinner_frame){
-#      command proc{}
-#      text "ADD"
-#      pack('side' =>'right','padx'=>5, 'pady'=>5)
-#    }
+  end
+  
+  def do_delete_item(_item, _tyme=:config)
+    @items[:config].delete_if{|k,v| v == _item}
   end
 
+  def do_save
+    items_saved = []
+    @items.each_value{|i| 
+      i.each_value{|j| 
+        if !j.readonly && j.change?
+          jhash = j.hash_value 
+          name = jhash[:name].gsub(" ", "_")
+          Arcadia.conf("runners.#{name}", jhash.to_s)
+          items_saved << name
+        end
+      }
+    }
+    
+    if items_saved.count >0
+      Arcadia.dialog(self, 
+        'type'=>'ok', 
+        'title' => "Save info", 
+            'msg'=>"Saved #{items_saved.to_s}!",
+            'level'=>'info')
+    else
+      Arcadia.dialog(self, 
+        'type'=>'ok', 
+        'title' => "Save info", 
+            'msg'=>"Nothing done!",
+            'level'=>'info')
+    end
+  end
+  
   def clear_items
     @items.each_value{|i| 
       i.each_value{|j|  j.destroy }
@@ -1896,6 +1930,34 @@ class RunnerManager < HinnerSplittedDialogTitled
     text.insert("end", "Runners keywords related the current file => <<FILE>>, <<DIR>>, <<FILE_BASENAME>>, <<FILE_BASENAME_WITHOUT_EXT>>, <<INPUT_FILE>>, <<INPUT_DIR>>")
     self.height(self.height + 25)
   end
+
+  def load_titles(_content)
+    # ICON
+    Arcadia.wf.label(_content,
+      'text'=> "" ,
+      'relief'=>'flat').grid(:column => 0, :row => 0, :sticky => "W", :padx=>1, :pady=>1)
+
+    # NAME
+    Arcadia.wf.label(_content,
+      'text'=> "Name" ,
+      'relief'=>'flat').grid(:column => 1, :row => 0, :sticky => "W", :padx=>1, :pady=>1)
+
+
+    # TITLE
+    Arcadia.wf.label(_content,
+      'text'=> "Title" ,
+      'relief'=>'flat').grid(:column => 2, :row => 0, :sticky => "W", :padx=>1, :pady=>1)
+
+    # CMD
+    Arcadia.wf.label(_content,
+      'text'=> "CMD" ,
+      'relief'=>'flat').grid(:column => 3, :row => 0, :sticky => "W", :padx=>1, :pady=>1)
+    
+    # FILE EXTS
+    Arcadia.wf.label(_content,
+      'text'=> "Exts" ,
+      'relief'=>'flat').grid(:column => 4, :row => 0, :sticky => "W", :padx=>1, :pady=>1)
+ end
 
   def load_items(_kind = :runtime)
     items = @items[_kind]
@@ -1933,14 +1995,22 @@ class RunnerManager < HinnerSplittedDialogTitled
 
     @content[_kind].pack('fill'=>'both')
     #@content.extend(TkScrollableWidget).show
-    TkGrid.columnconfigure(@content[_kind], 0, :weight => 1 )
-    TkGrid.columnconfigure(@content[_kind], 1, :weight => 1 )
-    TkGrid.columnconfigure(@content[_kind], 2, :weight => 1 )
-    TkGrid.columnconfigure(@content[_kind], 3, :weight => 4 )
-    TkGrid.columnconfigure(@content[_kind], 4, :weight => 1 )
-    TkGrid.columnconfigure(@content[_kind], 5, :weight => 1 )
-    TkGrid.columnconfigure(@content[_kind], 6, :weight => 1 )
+    # ICON
+    TkGrid.columnconfigure(@content[_kind], 0, :weight => 0 , :uniform => 'a')
+    # NAME
+    TkGrid.columnconfigure(@content[_kind], 1, :weight => 0 )
+    # TITLE
+    TkGrid.columnconfigure(@content[_kind], 2, :weight => 0 )
+    # CMD
+    TkGrid.columnconfigure(@content[_kind], 3, :weight => 0 )
+    # FILE EXTS
+    TkGrid.columnconfigure(@content[_kind], 4, :weight => 0 )
+    # COPY BUTTON
+    TkGrid.columnconfigure(@content[_kind], 5, :weight => 0 )
+    # DELETE BUTTON
+    TkGrid.columnconfigure(@content[_kind], 6, :weight => 0 )
     TkGrid.propagate(@content[_kind], true)
+    load_titles(@content[_kind])
     runs.each{|name, hash_string|
       hash_string, origin = hash_string.split("|||")
       item_hash = eval hash_string
@@ -1950,8 +2020,9 @@ class RunnerManager < HinnerSplittedDialogTitled
       end
       if origin
         item_hash[:origin] = origin
+        state_array = [] << :disabled
       end
-      items[name]=RunnerMangerItem.new(self, @content[_kind], item_hash, items.count)
+      items[name]=RunnerMangerItem.new(self, @content[_kind], item_hash, items.count+1, state_array)
       self.height(self.height + 25)
     }
   end
@@ -2018,7 +2089,7 @@ class ArcadiaAboutSplash < TkToplevel
       place('x' => 100,'y' => 65,'height' => 19)
     }
     @tkLabel21 = TkLabel.new(self){
-      text  Arcadia.text("main.about.by", ['Antonio Galeone - 2004/2014'])
+      text  Arcadia.text("main.about.by", ['Antonio Galeone - 2004/2015'])
       background  _bgcolor
       foreground  '#ffffff'
       font Arcadia.instance['conf']['splash.credits.font']
