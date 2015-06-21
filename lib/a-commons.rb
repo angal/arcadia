@@ -1099,7 +1099,7 @@ module Persistable
         if f
           if _persistent_hash
             _persistent_hash.each{|key,value|
-              f.syswrite(key+'='+value+"\n")
+              f.syswrite(key+'='+value+"\n") if key && value
             }
           end
         end

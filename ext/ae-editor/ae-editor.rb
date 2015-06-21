@@ -4383,7 +4383,8 @@ class AgMultiEditor < ArcadiaExtPlus
   def on_before_run_cmd(_event)
     _filename = _event.file
     _event.persistent = true
-    if _filename.nil? || _filename == "*CURR"
+    #if _filename.nil? || _filename == "*CURR"
+    if _filename == "*CURR"
       current_editor = self.raised
       if current_editor
         if current_editor.file
@@ -4434,7 +4435,7 @@ class AgMultiEditor < ArcadiaExtPlus
       _event.file = Arcadia.persistent('run.file.last')
       _event.cmd = Arcadia.persistent('run.cmd.last')
     else
-      if _event.dir.nil?
+      if _event.dir.nil? && _event.file != nil
         _event.dir = File.dirname(_event.file)
       end
       
@@ -4452,7 +4453,25 @@ class AgMultiEditor < ArcadiaExtPlus
           _event.cmd = _event.file
         end        
       end
-      if _event.file && _event.cmd.include?('<<RUBY>>')
+      if _event.cmd.include?('<<INPUT_FILE>>')
+        input_file = Arcadia.open_file_dialog
+        if !input_file.nil?
+          _event.cmd = _event.cmd.gsub('<<INPUT_FILE>>', input_file)
+        end
+      end
+      if _event.cmd.include?('<<INPUT_DIR>>')
+        input_dir = Arcadia.select_dir_dialog
+        if !input_dir.nil?
+          _event.cmd = _event.cmd.gsub('<<INPUT_DIR>>',input_dir)
+        end
+      end
+      if _event.cmd.include?('<<INPUT_STRING>>')
+        input_string = Arcadia.open_string_dialog
+        if !input_string.nil?
+          _event.cmd = _event.cmd.gsub('<<INPUT_STRING>>', input_string)
+        end
+      end
+      if _event.cmd.include?('<<RUBY>>')
         _event.cmd = _event.cmd.gsub('<<RUBY>>',Arcadia.ruby)
       end
       if _event.file && _event.cmd.include?('<<FILE>>')
