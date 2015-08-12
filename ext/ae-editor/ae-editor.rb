@@ -4383,7 +4383,8 @@ class AgMultiEditor < ArcadiaExtPlus
   def on_before_run_cmd(_event)
     _filename = _event.file
     _event.persistent = true
-    if _filename.nil? || _filename == "*CURR"
+    #if _filename.nil? || _filename == "*CURR"
+    if _filename == "*CURR" || (_filename.nil? && _event.cmd.include?('<<FILE>>'))  
       current_editor = self.raised
       if current_editor
         if current_editor.file
@@ -4434,7 +4435,7 @@ class AgMultiEditor < ArcadiaExtPlus
       _event.file = Arcadia.persistent('run.file.last')
       _event.cmd = Arcadia.persistent('run.cmd.last')
     else
-      if _event.dir.nil?
+      if _event.dir.nil? && _event.file != nil
         _event.dir = File.dirname(_event.file)
       end
       
@@ -4452,7 +4453,25 @@ class AgMultiEditor < ArcadiaExtPlus
           _event.cmd = _event.file
         end        
       end
-      if _event.file && _event.cmd.include?('<<RUBY>>')
+      if _event.cmd.include?('<<INPUT_FILE>>')
+        input_file = Arcadia.open_file_dialog
+        if !input_file.nil?
+          _event.cmd = _event.cmd.gsub('<<INPUT_FILE>>', input_file)
+        end
+      end
+      if _event.cmd.include?('<<INPUT_DIR>>')
+        input_dir = Arcadia.select_dir_dialog
+        if !input_dir.nil?
+          _event.cmd = _event.cmd.gsub('<<INPUT_DIR>>',input_dir)
+        end
+      end
+      if _event.cmd.include?('<<INPUT_STRING>>')
+        input_string = Arcadia.open_string_dialog
+        if !input_string.nil?
+          _event.cmd = _event.cmd.gsub('<<INPUT_STRING>>', input_string)
+        end
+      end
+      if _event.cmd.include?('<<RUBY>>')
         _event.cmd = _event.cmd.gsub('<<RUBY>>',Arcadia.ruby)
       end
       if _event.file && _event.cmd.include?('<<FILE>>')
@@ -5166,6 +5185,7 @@ class AgMultiEditor < ArcadiaExtPlus
               end
               if !editor_exist?(_event.file)
                 @last_transient_file = _event.file
+                open_transient_button(_event.file)
               else
                 @last_transient_file = nil
                 _event.transient = false
@@ -5257,6 +5277,20 @@ class AgMultiEditor < ArcadiaExtPlus
           change_file(_event.old_file, _event.new_file)          
         end
     end
+  end
+  
+  def open_transient_button(_file)
+    alive_check = proc{
+      e = @tabs_editor[tab_name(_file)]
+      @last_transient_file == _file && e && !e.modified_from_opening? 
+    }
+    abort_action = proc{@last_transient_file=nil}
+    Arcadia.process_event(SubProcessEvent.new(self, 
+      'abort_dialog_yes'=>false,
+      'anigif'=>'space-invader.res', 
+      'name'=>File.basename(_file), 
+      'abort_action'=>abort_action, 
+      'alive_check'=>alive_check))
   end
 
   def get_find

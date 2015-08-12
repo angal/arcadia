@@ -3047,6 +3047,7 @@ class HinnerFileDialog < HinnerDialog
     @dir_text.tag_configure(@tag_selected,'borderwidth'=>0, 'relief'=>'flat', 'underline'=>true)
     @dir_text.tag_bind(@tag_selected,"ButtonRelease-1",  proc{ 
        self.release
+       Tk.callback_break
     } )
     @dir_text.tag_bind(@tag_selected,"Enter", proc{@dir_text.configure('cursor'=> 'hand2')})
     @dir_text.tag_bind(@tag_selected,"Leave", proc{@dir_text.configure('cursor'=> @cursor)})
@@ -3470,4 +3471,83 @@ class HinnerFileDialog < HinnerDialog
     return childrens_dir,childrens_file
   end 
 
+end
+
+
+class HinnerStringDialog < HinnerDialog
+  def initialize(side='top',args=nil)
+    super(side, args)
+    build_gui
+    @closed = false
+  end
+  
+  def build_gui
+    @font = Arcadia.conf('edit.font')
+    @font_bold = "#{Arcadia.conf('edit.font')} bold"
+    @font_metrics = TkFont.new(@font).metrics
+    @font_metrics_bold = TkFont.new(@font_bold).metrics
+    @string_text = TkText.new(self, Arcadia.style('text').update({"height"=>'1',"highlightcolor"=>Arcadia.conf('panel.background'), "bg"=>Arcadia.conf('panel.background')})).pack('side' =>'left','padx'=>5, 'pady'=>5, 'fill'=>'x', 'expand'=>'1')
+    #{"bg"=>'white', "height"=>'1', "borderwidth"=>0, 'font'=>@font}
+    @string_text.bind_append("Enter", proc{ @string_text.set_insert("end")})
+
+    
+    @tag_selected = "link_selected"
+    @string_text.tag_configure(@tag_selected,'borderwidth'=>0, 'relief'=>'flat', 'underline'=>true)
+    @string_text.tag_bind(@tag_selected,"ButtonRelease-1",  proc{ 
+       self.release
+    } )
+    @string_text.tag_bind(@tag_selected,"Enter", proc{@string_text.configure('cursor'=> 'hand2')})
+    @string_text.tag_bind(@tag_selected,"Leave", proc{@string_text.configure('cursor'=> @cursor)})
+    _self=self
+    @string_text.bind_append('KeyPress'){|e|
+      case e.keysym
+      when "Return"
+        _self.release
+      end
+    }   
+    @string_text.bind_append('KeyRelease'){|e|
+      case e.keysym
+      when 'Escape','Tab', "Return"
+      else
+        @string_text.tag_remove(@tag_selected,'1.0','end')
+        @string_text.tag_add(@tag_selected ,'1.0','end')
+      end
+    }   
+    
+    @string_text.bind_append("Control-KeyPress"){|e|
+      case e.keysym
+      when 'd'
+        _self.close
+        Tk.callback_break
+      end
+    }    
+
+    @close_button = Arcadia.wf.toolbutton(self){
+      command proc{_self.close}
+      image Arcadia.image_res(CLOSE_FRAME_GIF)
+    }.pack('side' =>'right','padx'=>5, 'pady'=>0)
+  end
+  
+  def string
+    @string_text.focus
+    @string_text.set_insert("end")
+    @string_text.see("end")
+
+    show_modal(false)
+    if @closed == false
+      string_selected = @string_text.get("0.1","end").strip
+      destroy  
+      string_selected
+    end
+  end
+
+  
+  def close
+    @closed=true
+    self.release
+    destroy  
+  end
+  
+
+  
 end

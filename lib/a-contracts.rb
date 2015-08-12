@@ -252,7 +252,7 @@ class MsgEvent < ArcadiaEvent
 end
 
 class SubProcessEvent < ArcadiaEvent
-   attr_accessor :abort_action, :alive_check, :name, :pid, :timeout, :timecheck
+   attr_accessor :abort_action, :alive_check, :name, :pid, :timeout, :timecheck, :abort_dialog_yes, :anigif
 end
 
 class SubProcessProgressEvent < SubProcessEvent

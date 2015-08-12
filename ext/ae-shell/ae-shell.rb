@@ -146,7 +146,13 @@ class Shell < ArcadiaExt
             
           hd_event = HinnerDialogEvent.new(self, hd_args).go!
         end
+        if _event.file
+          process_name = _event.file
+        else
+          process_name = "#{_event.cmd[0..8]} ..."
+        end
         output_mark = Arcadia.console(self,'msg'=>"Running #{_event.title} as #{_event.lang}...", 'level'=>'info') # info?
+        output_mark = Arcadia.console(self,'msg'=>_event.cmd, 'level'=>'info', 'mark'=>output_mark)
         start_time = Time.now
         @arcadia['pers']['run.file.last']=_event.file if _event.persistent
         @arcadia['pers']['run.cmd.last']=_event.cmd if _event.persistent
@@ -164,7 +170,7 @@ class Shell < ArcadiaExt
           alive_check = proc{
             WMI::Win32_Process.find(:first, :conditions => {:ProcessId => child.process_id})
           }
-          Arcadia.process_event(SubProcessEvent.new(self,'pid'=>child.process_id, 'name'=>_event.file,'abort_action'=>abort_action, 'alive_check'=>alive_check))
+          Arcadia.process_event(SubProcessEvent.new(self,'pid'=>child.process_id, 'name'=>process_name,'abort_action'=>abort_action, 'alive_check'=>alive_check))
           #----
           timer=nil
           procy = proc {
@@ -201,8 +207,7 @@ class Shell < ArcadiaExt
                 output_mark = Arcadia.console(self,'msg'=>" [pid #{fi_pid}]", 'level'=>'info', 'mark'=>output_mark, 'append'=>true)
                 alive_check = proc{th.status != false}
                 abort_action = proc{Process.kill(9,fi_pid.to_i)}
-
-    	           Arcadia.process_event(SubProcessEvent.new(self, 'pid'=>fi_pid, 'name'=>_event.file,'abort_action'=>abort_action, 'alive_check'=>alive_check))
+    	           Arcadia.process_event(SubProcessEvent.new(self, 'pid'=>fi_pid, 'name'=>process_name, 'abort_action'=>abort_action, 'alive_check'=>alive_check))
 
                 to = Thread.new(stdout) do |tout|
                   begin
