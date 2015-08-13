@@ -1913,7 +1913,7 @@ class AgEditor
         else
           _dir = MonitorLastUsedDir.get_last_dir
         end
-        _file = Arcadia.open_file_dialog(_dir)
+        _file = Arcadia.select_file_dialog(_dir)
         Arcadia.process_event(OpenBufferEvent.new(self,'file'=>_file)) if _file
         Tk.callback_break
         break
@@ -2661,7 +2661,7 @@ class AgEditor
       :label=>Arcadia.text('ext.editor.text.menu.data_from_file'),
       :hidemargin => false,
       :command=>       proc{
-        file = Arcadia.open_file_dialog
+        file = Arcadia.select_file_dialog
         if file
           require 'base64'
           f = File.open(file,"rb")
@@ -4454,19 +4454,19 @@ class AgMultiEditor < ArcadiaExtPlus
         end        
       end
       if _event.cmd.include?('<<INPUT_FILE>>')
-        input_file = Arcadia.open_file_dialog
+        input_file = Arcadia.select_file_dialog(MonitorLastUsedDir.get_last_dir, "<<INPUT_FILE>> = ")
         if !input_file.nil?
           _event.cmd = _event.cmd.gsub('<<INPUT_FILE>>', input_file)
         end
       end
       if _event.cmd.include?('<<INPUT_DIR>>')
-        input_dir = Arcadia.select_dir_dialog
+        input_dir = Arcadia.select_dir_dialog(MonitorLastUsedDir.get_last_dir, nil, "<<INPUT_DIR>> = ")
         if !input_dir.nil?
           _event.cmd = _event.cmd.gsub('<<INPUT_DIR>>',input_dir)
         end
       end
       if _event.cmd.include?('<<INPUT_STRING>>')
-        input_string = Arcadia.open_string_dialog
+        input_string = Arcadia.open_string_dialog("<<INPUT_STRING>> = ")
         if !input_string.nil?
           _event.cmd = _event.cmd.gsub('<<INPUT_STRING>>', input_string)
         end
@@ -5220,7 +5220,7 @@ class AgMultiEditor < ArcadiaExtPlus
             #add_reverse_item(_e)
           end
         else
-          _event.file = Arcadia.open_file_dialog
+          _event.file = Arcadia.select_file_dialog
           self.open_file(_event.file)
         end
       when CloseBufferEvent
@@ -5287,7 +5287,8 @@ class AgMultiEditor < ArcadiaExtPlus
     abort_action = proc{@last_transient_file=nil}
     Arcadia.process_event(SubProcessEvent.new(self, 
       'abort_dialog_yes'=>false,
-      'anigif'=>'space-invader.res', 
+#      'anigif'=>'space-invader.res', 
+      'anigif'=>'butterfly.res', 
       'name'=>File.basename(_file), 
       'abort_action'=>abort_action, 
       'alive_check'=>alive_check))

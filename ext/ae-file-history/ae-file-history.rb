@@ -181,7 +181,7 @@ class FilesHistrory < ArcadiaExt
         _selected = @htree.selected
         _dir, _file = _selected.sub("%%%",":").split('@@@')
         if _dir && _file.nil? && File.ftype(node2file(_dir)) == 'directory'
-	        _file = Arcadia.open_file_dialog(node2file(_dir))
+	        _file = Arcadia.select_file_dialog(node2file(_dir))
 	        #Tk.getOpenFile('initialdir'=>node2file(_dir))
       	    if _file && _file.strip.length > 0 
       	       Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>_file))

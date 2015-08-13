@@ -27,7 +27,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '1.0.1',
+        '1.1.0',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -1194,12 +1194,12 @@ class Arcadia < TkApplication
     Tk.getOpenFile 'initialdir' => MonitorLastUsedDir.get_last_dir
   end
 
-  def Arcadia.open_file_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir)
-    HinnerFileDialog.new.file(_initial_dir)
+  def Arcadia.select_file_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir, _label=nil)
+    HinnerFileDialog.new(HinnerFileDialog::SELECT_FILE_MODE, nil, _label).file(_initial_dir)
   end
 
-  def Arcadia.select_dir_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir, must_exist = nil)
-    HinnerFileDialog.new(HinnerFileDialog::SELECT_DIR_MODE, must_exist).dir(_initial_dir)
+  def Arcadia.select_dir_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir, must_exist = nil, _label=nil)
+    HinnerFileDialog.new(HinnerFileDialog::SELECT_DIR_MODE, must_exist, _label).dir(_initial_dir)
   end
 
   def Arcadia.save_file_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir)
@@ -1218,8 +1218,8 @@ class Arcadia < TkApplication
     end
   end
 
-  def Arcadia.open_string_dialog
-    HinnerStringDialog.new.string
+  def Arcadia.open_string_dialog(_label=nil)
+    HinnerStringDialog.new(_label).string
   end
 
   def Arcadia.is_windows?
@@ -1753,35 +1753,36 @@ class RunnerManager < HinnerSplittedDialogTitled
       @ttklicon = Arcadia.wf.label(_parent,
         'image'=> _runner_hash[:image].nil? ? Arcadia.file_icon(_runner_hash[:file_exts]) : Arcadia.image_res(_runner_hash[:image]) ,
         'relief'=>'flat').grid(:column => 0, :row => _row, :sticky => "W", :padx=>1, :pady=>1)
+      @ttklicon.state(:disabled) if @readonly
 
       # NAME
       @ename_old = _runner_hash[:name]  
       @ttkename = Arcadia.wf.text(_parent, 'width' => 20,
         "height" => 1).hint(_runner_hash[:file]).grid(:column => 1, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
       @ttkename.insert('end', _runner_hash[:name])
-      @ttkename.state(:disabled) if @readonly
-
+      @ttkename.state(:disabled) && @ttkename.fg('darkgray') if @readonly
+      
 
       # TITLE
       @etitle_old = _runner_hash[:title]  
       @ttketitle = Arcadia.wf.text(_parent,  'width' => 30,
         "height" => 1).hint(_runner_hash[:file]).grid(:column => 2, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
       @ttketitle.insert('end', _runner_hash[:title])
-      @ttketitle.state(:disabled) if @readonly
+      @ttketitle.state(:disabled) && @ttketitle.fg('darkgray') if @readonly
 
       # CMD
       @ecmd_old = _runner_hash[:cmd]
       @ttkecmd = Arcadia.wf.text(_parent,  'width' => 60,
         "height" => 1).grid(:column => 3, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
       @ttkecmd.insert('end', _runner_hash[:cmd])
-      @ttkecmd.state(:disabled) if @readonly
+      @ttkecmd.state(:disabled) && @ttkecmd.fg('darkgray') if @readonly
       
       # FILE EXTS
       @eexts_old = _runner_hash[:file_exts]  
       @ttkeexts = Arcadia.wf.text(_parent,  'width' => 5,
         "height" => 1).grid(:column => 4, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
       @ttkeexts.insert('end', _runner_hash[:file_exts])
-      @ttkeexts.state(:disabled) if @readonly
+      @ttkeexts.state(:disabled) && @ttkeexts.fg('darkgray') if @readonly
 
       # COPY BUTTON
       copy_command = proc{ _runner_manager.do_add(self) }

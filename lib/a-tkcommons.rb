@@ -3019,13 +3019,14 @@ class HinnerFileDialog < HinnerDialog
   SELECT_FILE_MODE=0
   SAVE_FILE_MODE=1
   SELECT_DIR_MODE=2
-  def initialize(mode=SELECT_FILE_MODE , must_exist = nil, side='top',args=nil)
+  def initialize(mode=SELECT_FILE_MODE, must_exist=nil, label=nil, side='top',args=nil)
     super(side, args)
     @mode = mode
     if must_exist.nil?
       must_exist = mode != SAVE_FILE_MODE
     end
     @must_exist = must_exist
+    @label = label
     build_gui
     @closed = false
   end
@@ -3035,6 +3036,9 @@ class HinnerFileDialog < HinnerDialog
     @font_bold = "#{Arcadia.conf('edit.font')} bold"
     @font_metrics = TkFont.new(@font).metrics
     @font_metrics_bold = TkFont.new(@font_bold).metrics
+    if !@label.nil?
+      Arcadia.wf.label(self, 'text' => @label).pack('side' =>'left')
+    end
     @dir_text = TkText.new(self, Arcadia.style('text').update({"height"=>'1',"highlightcolor"=>Arcadia.conf('panel.background'), "bg"=>Arcadia.conf('panel.background')})).pack('side' =>'left','padx'=>5, 'pady'=>5, 'fill'=>'x', 'expand'=>'1')
     #{"bg"=>'white', "height"=>'1', "borderwidth"=>0, 'font'=>@font}
     @dir_text.bind_append("Enter", proc{ @dir_text.set_insert("end")})
@@ -3475,8 +3479,10 @@ end
 
 
 class HinnerStringDialog < HinnerDialog
-  def initialize(side='top',args=nil)
+
+  def initialize(label=nil, side='top',args=nil)
     super(side, args)
+    @label = label
     build_gui
     @closed = false
   end
@@ -3486,6 +3492,9 @@ class HinnerStringDialog < HinnerDialog
     @font_bold = "#{Arcadia.conf('edit.font')} bold"
     @font_metrics = TkFont.new(@font).metrics
     @font_metrics_bold = TkFont.new(@font_bold).metrics
+    if !@label.nil?
+      Arcadia.wf.label(self, 'text' => @label).pack('side' =>'left')
+    end
     @string_text = TkText.new(self, Arcadia.style('text').update({"height"=>'1',"highlightcolor"=>Arcadia.conf('panel.background'), "bg"=>Arcadia.conf('panel.background')})).pack('side' =>'left','padx'=>5, 'pady'=>5, 'fill'=>'x', 'expand'=>'1')
     #{"bg"=>'white', "height"=>'1', "borderwidth"=>0, 'font'=>@font}
     @string_text.bind_append("Enter", proc{ @string_text.set_insert("end")})
