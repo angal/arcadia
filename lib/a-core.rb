@@ -2054,17 +2054,17 @@ class RunnerManager < HinnerSplittedDialogTitled
     # ICON
     TkGrid.columnconfigure(@content[_kind], 0, :weight => 0 , :uniform => 'a')
     # NAME
-    TkGrid.columnconfigure(@content[_kind], 1, :weight => 0 )
+    TkGrid.columnconfigure(@content[_kind], 1, :weight => 1 )
     # TITLE
-    TkGrid.columnconfigure(@content[_kind], 2, :weight => 0 )
+    TkGrid.columnconfigure(@content[_kind], 2, :weight => 2 )
     # CMD
-    TkGrid.columnconfigure(@content[_kind], 3, :weight => 0 )
+    TkGrid.columnconfigure(@content[_kind], 3, :weight => 3 )
     # FILE EXTS
-    TkGrid.columnconfigure(@content[_kind], 4, :weight => 0 )
+    TkGrid.columnconfigure(@content[_kind], 4, :weight => 1 )
     # COPY BUTTON
-    TkGrid.columnconfigure(@content[_kind], 5, :weight => 0 )
+    TkGrid.columnconfigure(@content[_kind], 5, :weight => 0, :uniform => 'a' )
     # DELETE BUTTON
-    TkGrid.columnconfigure(@content[_kind], 6, :weight => 0 )
+    TkGrid.columnconfigure(@content[_kind], 6, :weight => 0, :uniform => 'a' )
     TkGrid.propagate(@content[_kind], true)
     load_titles(@content[_kind])
     runs.keys.reverse.each{|name|
@@ -2186,7 +2186,7 @@ class ArcadiaAboutSplash < TkToplevel
     }
     @progress  = TkVariable.new
     reset
-    _width = 350
+    _width = 345
     _height = 210
     #_width = 0;_height = 0
     _x = TkWinfo.screenwidth(self)/2 -  _width / 2
@@ -2247,7 +2247,7 @@ class ArcadiaAboutSplash < TkToplevel
 
   def set_progress(_max=10)
     @max = _max
-    Tk::BWidget::ProgressBar.new(self, :width=>350, :height=>5,
+    Tk::BWidget::ProgressBar.new(self, :width=>340, :height=>5,
       :background=>'#000000',
       :troughcolor=>'#000000',
       :foreground=>'#990000',
