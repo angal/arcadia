@@ -93,6 +93,7 @@ class FilesHistrory < ArcadiaExt
   def on_build(_event)
     @h_stack = Hash.new
     @h_stack_changed = false
+    #@content_root = Tk::ScrollFrame.new(self.frame.hinner_frame).pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes').baseframe
     @bookmarks_frame = TkFrame.new(self.frame.hinner_frame)    
     @history_frame = TkFrame.new(self.frame.hinner_frame).pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')    
     @panel = self.frame.root.add_panel(self.frame.name, "sync");

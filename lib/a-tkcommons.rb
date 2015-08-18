@@ -289,6 +289,9 @@ class TkFrameAdapter < TkFrame
   end
 
   def attach_frame(_frame, _extension = nil, _frame_index=0)
+    if _frame.kind_of?(Tk::ScrollFrame)
+      _frame = _frame.baseframe
+    end
     @frame = _frame
     refresh_layout_manager
     self.map
@@ -820,8 +823,280 @@ class AGTkOSplittedFrames < AGTkSplittedFrames
 
   def show(_name)
   end
-
+  
 end
+
+
+class Tk::ScrollFrame < TkFrame
+  include TkComposite
+
+#  DEFAULT_WIDTH  = 200
+#  DEFAULT_HEIGHT = 200
+
+  def baseframe
+    #@frame
+    @base
+  end
+  
+  def initialize_composite(keys={})
+    #@frame.configure(:width=>DEFAULT_WIDTH, :height=>DEFAULT_HEIGHT)
+
+    # create scrollbars
+#    @h_scroll = TkScrollbar.new(@frame, 'orient'=>'horizontal')
+#    @v_scroll = TkScrollbar.new(@frame, 'orient'=>'vertical')
+
+    @v_scroll = Arcadia.wf.scrollbar(@frame,{'orient'=>'vertical'})
+    @h_scroll = Arcadia.wf.scrollbar(@frame,{'orient'=>'horizontal'})
+
+
+    # create a canvas widget
+    @canvas = TkCanvas.new(@frame, 
+                           :borderwidth=>0, :selectborderwidth=>0, 
+                           :highlightthickness=>0)
+
+    # allignment
+    TkGrid.rowconfigure(@frame, 0, 'weight'=>1, 'minsize'=>0)
+    TkGrid.columnconfigure(@frame, 0, 'weight'=>1, 'minsize'=>0)
+    @canvas.grid('row'=>0, 'column'=>0, 'sticky'=>'news')
+    @frame.grid_propagate(false)
+
+    # assign scrollbars
+    @canvas.xscrollbar(@h_scroll)
+    @canvas.yscrollbar(@v_scroll)
+
+    # convert hash keys
+    keys = _symbolkey2str(keys)
+
+    # check options for the frame
+    framekeys = {}
+    if keys.key?('classname')
+       keys['class'] = keys.delete('classname')
+    end
+    if @classname = keys.delete('class')
+      framekeys['class'] = @classname
+    end
+    if @colormap  = keys.delete('colormap')
+      framekeys['colormap'] = @colormap
+    end
+    if @container = keys.delete('container')
+      framekeys['container'] = @container
+    end
+    if @visual    = keys.delete('visual')
+      framekeys['visual'] = @visual
+    end
+    if @classname.kind_of? TkBindTag
+      @db_class = @classname
+      @classname = @classname.id
+    elsif @classname
+      @db_class = TkDatabaseClass.new(@classname)
+    else
+      @db_class = self.class
+      @classname = @db_class::WidgetClassName
+    end
+
+    # create base frame
+    @base = TkFrame.new(@canvas, framekeys)
+
+    # embed base frame
+    @cwin = TkcWindow.new(@canvas, [0, 0], :window=>@base, :anchor=>'nw')
+    @canvas.scrollregion(@cwin.bbox)
+
+    # binding to reset scrollregion
+    @base.bind('Configure'){ _reset_scrollregion(nil, nil) }
+
+    # set default receiver of method calls
+    @path = @base.path
+
+    # scrollbars ON
+    vscroll(keys.delete('vscroll'){true})
+    hscroll(keys.delete('hscroll'){true})
+
+    # please check the differences of the following definitions
+#    option_methods(
+#      :scrollbarwidth
+#    )
+
+    # set receiver widgets for configure methods (with alias)
+    delegate_alias('scrollbarrelief', 'relief', @h_scroll, @v_scroll)
+
+    # set receiver widgets for configure methods
+    delegate('DEFAULT', @base)
+    delegate('background', @frame, @base, @canvas, @h_scroll, @v_scroll)
+    delegate('width', @frame)
+    delegate('height', @frame)
+    delegate('activebackground', @h_scroll, @v_scroll)
+    delegate('troughcolor', @h_scroll, @v_scroll)
+    delegate('repeatdelay', @h_scroll, @v_scroll)
+    delegate('repeatinterval', @h_scroll, @v_scroll)
+    delegate('borderwidth', @frame)
+    delegate('relief', @frame)
+
+    # do configure
+    configure keys unless keys.empty?
+
+    @canvas.yscrollcommand(proc{|first,last|
+      do_yscrollcommand(first,last)
+    })
+
+    @canvas.xscrollcommand(proc{|first,last|
+      do_xscrollcommand(first,last)
+    })
+
+  end
+  
+
+  def y_scrolled?
+    TkWinfo.mapped?(@v_scroll)
+  end
+
+  def x_scrolled?
+    TkWinfo.mapped?(@h_scroll)
+  end
+  
+  def yview_moveto(_index)
+    @canvas.yview_moveto(_index) 
+  end
+
+  def xview_moveto(_index)
+    @canvas.xview_moveto(_index) 
+  end
+     
+  def do_yscrollcommand(first,last)
+    if first != nil && last != nil
+      delta = last.to_f - first.to_f
+      if delta != @last_y_delta
+        if delta < 1 && delta > 0 && last != @last_y_last
+          vscroll(true)
+        begin
+          @v_scroll.set(first,last) if TkWinfo.mapped?(@v_scroll)
+        rescue Exception => e
+          Arcadia.runtime_error(e)
+        end
+        elsif delta == 1 || delta == 0
+          vscroll(false)
+        end
+      end
+      @last_y_last = last if last.to_f < 1
+      @last_y_delta = delta
+    end    
+  end
+  
+  def do_xscrollcommand(first,last)
+    if first != nil && last != nil
+      delta = last.to_f - first.to_f
+      if delta != @last_x_delta
+        if delta < 1 && delta > 0.2 && last != @last_x_last
+          hscroll(true)
+        begin
+          @h_scroll.set(first,last) if TkWinfo.mapped?(@h_scroll)
+        rescue Exception => e
+          Arcadia.runtime_error(e)
+        end
+        elsif delta == 1 || delta == 0
+          hscroll(false)
+        end
+      end
+      @last_x_last = last if last.to_f < 1
+      @last_x_delta = delta
+    end    
+  end
+
+  # callback for Configure event
+  def _reset_scrollregion(h_mod=nil, v_mod=nil)
+    cx1, cy1, cx2, cy2 = @canvas.scrollregion
+    x1, y1, x2, y2 = @cwin.bbox
+    @canvas.scrollregion([x1, y1, x2, y2])
+
+    if h_mod.nil? && v_mod.nil?
+      if x2 != cx2 && TkGrid.info(@h_scroll).size == 0
+        @frame.grid_propagate(true)
+        @canvas.width  = x2
+        Tk.update_idletasks
+        @frame.grid_propagate(false)
+      end
+      if y2 != cy2 && TkGrid.info(@v_scroll).size == 0
+        @frame.grid_propagate(true)
+        @canvas.height = y2
+        Tk.update_idletasks
+        @frame.grid_propagate(false)
+      end
+    else
+      @h_scroll.ungrid if h_mod == false
+      @v_scroll.ungrid if v_mod == false
+
+      h_flag = (TkGrid.info(@h_scroll).size == 0)
+      v_flag = (TkGrid.info(@v_scroll).size == 0)
+
+      @frame.grid_propagate(true)
+
+      @canvas.width  = (h_flag)? x2: @canvas.winfo_width
+      @canvas.height = (v_flag)? y2: @canvas.winfo_height
+
+      @h_scroll.grid('row'=>1, 'column'=>0, 'sticky'=>'ew') if h_mod
+      @v_scroll.grid('row'=>0, 'column'=>1, 'sticky'=>'ns') if v_mod
+
+      Tk.update_idletasks
+
+      @frame.grid_propagate(false)
+    end
+  end
+  private :_reset_scrollregion
+
+  # forbid to change binding of @base frame
+  def bind(*args)
+    @frame.bind(*args)
+  end
+  def bind_append(*args)
+    @frame.bind_append(*args)
+  end
+  def bind_remove(*args)
+    @frame.bind_remove(*args)
+  end
+  def bindinfo(*args)
+    @frame.bindinfo(*args)
+  end
+
+  # set width of scrollbar
+#  def scrollbarwidth(width = nil)
+#    if width
+#      @h_scroll.width(width)
+#      @v_scroll.width(width)
+#    else
+#      @h_scroll.width
+#    end
+#  end
+
+  # vertical scrollbar : ON/OFF
+  def vscroll(mode)
+    Tk.update_idletasks
+    st = TkGrid.info(@v_scroll)
+    if mode && st.size == 0 then
+      @v_scroll.grid('row'=>0, 'column'=>1, 'sticky'=>'ns')
+      _reset_scrollregion(nil, true)
+    elsif !mode && st.size != 0 then
+      _reset_scrollregion(nil, false)
+    else
+      _reset_scrollregion(nil, nil)
+    end
+    self
+  end
+
+  # horizontal scrollbar : ON/OFF
+  def hscroll(mode)
+    Tk.update_idletasks
+    st = TkGrid.info(@h_scroll)
+    if mode && st.size == 0 then
+      _reset_scrollregion(true, nil)
+    elsif !mode && st.size != 0 then
+      _reset_scrollregion(false, nil)
+    else
+      _reset_scrollregion(nil, nil)
+    end
+    self
+  end
+end
+
+
 
 class TkBaseTitledFrame < TkFrame
   attr_reader :frame
@@ -856,6 +1131,7 @@ class TkBaseTitledFrame < TkFrame
   end
 
   def create_frame
+#    return Tk::ScrollFrame.new(self).place('x'=>0, 'y'=>@title_height,'height'=>-@title_height,'relheight'=>1, 'relwidth'=>1)
     return TkFrame.new(self,Arcadia.style('panel')).place('x'=>0, 'y'=>@title_height,'height'=>-@title_height,'relheight'=>1, 'relwidth'=>1)
   end
 
@@ -1649,7 +1925,7 @@ end
 class TkTitledScrollFrame < TkTitledFrame
 
   def create_frame
-    return Tk::ScrollFrame.new(self,:scrollbarwidth=>10, :width=>300, :height=>200).place('x'=>0, 'y'=>@title_height,'height'=>-@title_height,'relheight'=>1, 'relwidth'=>1)
+    return Tk::ScrollFrame.new(self).place('x'=>0, 'y'=>@title_height,'height'=>-@title_height,'relheight'=>1, 'relwidth'=>1)
   end
 
 end
@@ -2749,15 +3025,16 @@ module TkScrollableWidget
     _w != nil ? @w=_w : @w=-@x
     _h != nil ? @h=_h : @h=-@y
     @widget.place(
-    'x'=>@x,
-    'y'=>@y,
-    'width' => @w,
-    'height' => @h,
-    'relheight'=>1,
-    'relwidth'=>1,
-    'bordermode'=>_border_mode
+      'x'=>@x,
+      'y'=>@y,
+      'width' => @w,
+      'height' => @h,
+      'relheight'=>1,
+      'relwidth'=>1,
+      'bordermode'=>_border_mode
     )
     @widget.raise
+    @widget_manager = 'place'
     if @v_scroll_on
       show_v_scroll(true)
     end
@@ -2772,9 +3049,13 @@ module TkScrollableWidget
     end
   end
 
+  def widget_manager
+    defined?(@widget_manager)? @widget_manager : nil
+  end
+
   def hide
     disarm_scroll_binding
-    @widget.unplace
+    @widget.unplace if widget_manager == 'place'
     @v_scroll.unpack
     @h_scroll.unpack
   end
@@ -2804,7 +3085,7 @@ module TkScrollableWidget
   def show_v_scroll(_force=false)
     if _force || !@v_scroll_on
       begin
-        @widget.place('width' => -@scroll_width-@x)
+        @widget.place('width' => -@scroll_width-@x) if widget_manager == 'place'
         @v_scroll.pack('side' => 'right', 'fill' => 'y')
         @v_scroll_on = true
         @v_scroll.raise
@@ -2825,7 +3106,7 @@ module TkScrollableWidget
   def show_h_scroll(_force=false)
     if _force || !@h_scroll_on
       begin
-        @widget.place('height' => -@scroll_width-@y)
+        @widget.place('height' => -@scroll_width-@y) if widget_manager == 'place'
         @h_scroll.pack('side' => 'bottom', 'fill' => 'x')
         @h_scroll_on = true
         @h_scroll.raise
@@ -2846,7 +3127,7 @@ module TkScrollableWidget
   def hide_v_scroll
     if @v_scroll_on
       begin
-        @widget.place('width' => 0)
+        @widget.place('width' => 0) if widget_manager == 'place'
         @v_scroll.unpack
         @v_scroll_on = false
       rescue RuntimeError => e
@@ -2860,7 +3141,7 @@ module TkScrollableWidget
   def hide_h_scroll
     if @h_scroll_on
       begin
-        @widget.place('height' => 0)
+        @widget.place('height' => 0) if widget_manager == 'place'
         @h_scroll.unpack
         @h_scroll_on = false
       rescue RuntimeError => e
@@ -2902,6 +3183,7 @@ class HinnerDialog < TkFrame
       newargs.update(args) 
     end
     super(Arcadia.layout.parent_frame, newargs)
+
     case side
       when 'top'
 #        self.pack('side' =>side,'before'=>Arcadia.layout.root, 'anchor'=>'nw','fill'=>'both', 'padx'=>0, 'pady'=>0, 'expand'=>'yes')
@@ -2911,6 +3193,108 @@ class HinnerDialog < TkFrame
     end
     @modal = false
   end
+  
+  def make_scrollable_frame(_frame)
+
+
+    TkGrid.rowconfigure(_frame, 0, 'weight'=>1, 'minsize'=>0)
+    TkGrid.columnconfigure(_frame, 0, 'weight'=>1, 'minsize'=>0)
+    canvas = TkCanvas.new(_frame)
+    canvas.grid('row'=>0, 'column'=>0, 'sticky'=>'news')
+
+
+    v_scroll = Arcadia.wf.scrollbar(_frame,{'orient'=>'vertical'})
+    h_scroll = Arcadia.wf.scrollbar(_frame,{'orient'=>'horizontal'})
+
+
+  
+  
+    p_vscroll = proc{|mode|
+      st = TkGrid.info(v_scroll)
+      if mode && st.size == 0 then
+        v_scroll.grid('row'=>0, 'column'=>1, 'sticky'=>'ns')
+      elsif mode == false
+        v_scroll.ungrid 
+      end
+    }
+
+    p_hscroll = proc{|mode|
+      st = TkGrid.info(h_scroll)
+      if mode && st.size == 0 then
+        h_scroll.grid('row'=>1, 'column'=>0, 'sticky'=>'ew')
+      elsif mode == false
+        h_scroll.ungrid 
+      end
+    }
+
+    p_do_yscrollcommand = proc{|first,last|
+      if first != nil && last != nil
+        delta = last.to_f - first.to_f
+        if delta != @last_y_delta
+          if delta < 1 && delta > 0 && last != @last_y_last
+            p_vscroll.call(true)
+            begin
+              v_scroll.set(first,last)
+            rescue Exception => e
+              Arcadia.runtime_error(e)
+            end
+          elsif delta == 1 || delta == 0
+            p_vscroll.call(false)
+          end
+        end
+        @last_y_last = last if last.to_f < 1
+        @last_y_delta = delta
+      end    
+    }
+
+    p_do_xscrollcommand = proc{|first,last|
+      if first != nil && last != nil
+        delta = last.to_f - first.to_f
+        if delta != @last_x_delta
+          if delta < 1 && delta > 0 && last != @last_x_last
+            p_hscroll.call(true)
+            begin
+              h_scroll.set(first,last)
+            rescue Exception => e
+              Arcadia.runtime_error(e)
+            end
+          elsif delta == 1 || delta == 0
+            p_hscroll.call(false)
+          end
+        end
+        @last_x_last = last if last.to_f < 1
+        @last_x_delta = delta
+      end    
+    }
+
+    canvas.yscrollbar(v_scroll)
+    canvas.xscrollbar(h_scroll)
+
+
+    canvas.yscrollcommand(proc{|first,last|
+      p_do_yscrollcommand.call(first,last)
+    })
+
+    canvas.xscrollcommand(proc{|first,last|
+      p_do_xscrollcommand.call(first,last)
+    })
+
+
+
+    frame = TkFrame.new(canvas) 
+
+
+
+    frame.bind("Configure", proc{canvas.configure(:scrollregion=>canvas.bbox("all"))})
+
+
+    cwin = TkcWindow.new(canvas, 0, 0, :window=>frame)
+
+    canvas.scrollregion(cwin.bbox)
+
+    return frame
+
+  end 
   
   def is_modal?
     @modal
@@ -3001,6 +3385,8 @@ class HinnerSplittedDialogTitled < HinnerSplittedDialog
     }
     @titled_frame.add_close_action(close)
     @hinner_frame = @titled_frame.frame
+    #@hinner_frame = make_scrollable_frame(@titled_frame.frame)
+    #@hinner_frame = Tk::ScrollFrame.new(@titled_frame.frame).place('x'=>0, 'y'=>0, 'relheight'=>1, 'relwidth'=>1).baseframe
   end
 
   def do_close
@@ -3560,3 +3946,35 @@ class HinnerStringDialog < HinnerDialog
 
   
 end
+
+
+
+#class Example(tk.Frame):
+#    def __init__(self, root):
+#
+#        tk.Frame.__init__(self, root)
+#        self.canvas = tk.Canvas(root, borderwidth=0, background="#ffffff")
+#        self.frame = tk.Frame(self.canvas, background="#ffffff")
+#        self.vsb = tk.Scrollbar(root, orient="vertical", command=self.canvas.yview)
+#        self.canvas.configure(yscrollcommand=self.vsb.set)
+#
+#        self.vsb.pack(side="right", fill="y")
+#        self.canvas.pack(side="left", fill="both", expand=True)
+#        self.canvas.create_window((4,4), window=self.frame, anchor="nw", 
+#                                  tags="self.frame")
+#
+#        self.frame.bind("<Configure>", self.onFrameConfigure)
+#
+#        self.populate()
+#
+#    def populate(self):
+#        '''Put in some fake data'''
+#        for row in range(100):
+#            tk.Label(self.frame, text="%s" % row, width=3, borderwidth="1", 
+#                     relief="solid").grid(row=row, column=0)
+#            t="this is the second column for row %s" %row
+#            tk.Label(self.frame, text=t).grid(row=row, column=1)
+#
+#    def onFrameConfigure(self, event):
+#        '''Reset the scroll region to encompass the inner frame'''
+#        self.canvas.configure(scrollregion=self.canvas.bbox("all"))

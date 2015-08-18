@@ -2309,6 +2309,7 @@ class AgEditor
   end
 
   def file_line_to_text_line_num_line(_line)
+    return 0 if @text_line_num.nil?
     rel_line = nil
     line_begin = @text_line_num.get('1.0','1.end').strip.to_i
     line_end = @text_line_num.index('end').split('.')[0].to_i+line_begin
@@ -2366,6 +2367,7 @@ class AgEditor
   end
 
   def remove_tag_bookmark(_line)
+      return if @text_line_num.nil?
       rel_line = file_line_to_text_line_num_line(_line)
       if rel_line
         i1 = "#{rel_line}.0"
@@ -4453,22 +4455,22 @@ class AgMultiEditor < ArcadiaExtPlus
           _event.cmd = _event.file
         end        
       end
-      if _event.cmd.include?('<<INPUT_FILE>>')
+      while _event.cmd.include?('<<INPUT_FILE>>')
         input_file = Arcadia.select_file_dialog(MonitorLastUsedDir.get_last_dir, "<<INPUT_FILE>> = ")
         if !input_file.nil?
-          _event.cmd = _event.cmd.gsub('<<INPUT_FILE>>', input_file)
+          _event.cmd = _event.cmd.sub('<<INPUT_FILE>>', input_file)
         end
       end
-      if _event.cmd.include?('<<INPUT_DIR>>')
+      while _event.cmd.include?('<<INPUT_DIR>>')
         input_dir = Arcadia.select_dir_dialog(MonitorLastUsedDir.get_last_dir, nil, "<<INPUT_DIR>> = ")
         if !input_dir.nil?
-          _event.cmd = _event.cmd.gsub('<<INPUT_DIR>>',input_dir)
+          _event.cmd = _event.cmd.sub('<<INPUT_DIR>>',input_dir)
         end
       end
-      if _event.cmd.include?('<<INPUT_STRING>>')
+      while _event.cmd.include?('<<INPUT_STRING>>')
         input_string = Arcadia.open_string_dialog("<<INPUT_STRING>> = ")
         if !input_string.nil?
-          _event.cmd = _event.cmd.gsub('<<INPUT_STRING>>', input_string)
+          _event.cmd = _event.cmd.sub('<<INPUT_STRING>>', input_string)
         end
       end
       if _event.cmd.include?('<<RUBY>>')

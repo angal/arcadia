@@ -20,7 +20,7 @@ class SubProcessInspector < ArcadiaExt
   def on_exit_query(_event)
     _event.can_exit=true
     @processs.each{|pr|
-      if !pr.nil? 
+      if !pr.nil? && pr.event.abort_dialog_yes != false
         message = Arcadia.text("ext.spi.d.exit_query.msg")
         r=Arcadia.hinner_dialog(self,
             'type'=>'yes_no', 

@@ -444,7 +444,23 @@ class DirProjects < ArcadiaExtPlus
       :menu=>sub_ref_search,
       :hidemargin => false
     )
+
+    #-----------------
+    #----- runners submenu
+    @sub_ref_runners = Arcadia.wf.menu(
+      :parent=>@pop_up_tree,
+      :tearoff=>0,
+      :title => Arcadia.text('ext.dir_projects.menu.runners')
+    )
     
+    @pop_up_tree.insert('end',
+      :cascade,
+      :label=>Arcadia.text('ext.dir_projects.menu.runners'),
+      :menu=>@sub_ref_runners,
+      :hidemargin => false
+    )
+    
+    #-----------------
 
     @pop_up_tree.insert('end',
       :command,
@@ -522,6 +538,19 @@ class DirProjects < ArcadiaExtPlus
         _x = TkWinfo.pointerx(@htree)
         _y = TkWinfo.pointery(@htree)
         @pop_up_tree.popup(_x,_y)
+        
+        selected = @htree.selected
+        if selected && @htree.exist?(selected)
+          if File.ftype(selected) == 'file'
+            file = selected
+            dir = nil
+          else
+            file = nil
+            dir = selected
+          end
+          Arcadia.instance.refresh_runners_on_menu(@sub_ref_runners, file, dir)
+        end
+        
       },
     "%x %y")
   end

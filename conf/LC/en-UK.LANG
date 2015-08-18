@@ -181,6 +181,7 @@ ext.dir_projects.menu.refactor=Refactor
 ext.dir_projects.menu.refactor.rename=Rename
 ext.dir_projects.menu.refactor.move=Move
 ext.dir_projects.menu.search=Search from here
+ext.dir_projects.menu.runners=Runners
 ext.dir_projects.menu.search.find=Find in files...
 ext.dir_projects.menu.search.act=Act in files...
 ext.dir_projects.menu.term=Terminal from here
