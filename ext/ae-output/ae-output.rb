@@ -68,7 +68,7 @@ class OutputView
     'background'=>Arcadia.conf('hightlight.sel.background'),
     'foreground'=>Arcadia.conf('hightlight.sel.foreground')
     )
-    @text.bind_append("KeyPress"){|e| input(e.keysym)}
+    @text.bind_append("KeyPress", "%K"){|_keysym| input(_keysym)}
     @input_buffer = nil
     pop_up_menu        
   end

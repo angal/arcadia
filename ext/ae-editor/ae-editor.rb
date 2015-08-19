@@ -916,8 +916,8 @@ class TkTextListBox < TkText
     tag_configure('class', 'foreground' => Arcadia.conf('hightlight.class_variable.foreground'))
     @count = 0
     @selected = -1
-    self.bind_append('KeyPress'){|e| key_press(e)}
-    self.bind_append('KeyRelease'){|e| key_release(e)}
+    self.bind_append('KeyPress', "%K"){|_keysym| key_press(_keysym)}
+    self.bind_append('KeyRelease', "%K"){|_keysym| key_release(_keysym)}
     self.bind_append("ButtonPress-1", proc{|x,y| button_press(x,y)}, "%x %y")
   end  
   
@@ -953,8 +953,8 @@ class TkTextListBox < TkText
     self.select(_line)
   end
   
-  def key_press(_e)
-      case _e.keysym
+  def key_press(_keysym)
+      case _keysym
         when 'Up'
           if @selected > 0
             select(@selected-1)
@@ -966,8 +966,8 @@ class TkTextListBox < TkText
       end
   end  
 
-  def key_release(_e)
-      case _e.keysym
+  def key_release(_keysym)
+      case _keysym
         when 'Next','Prior'
          index = self.index('@0,0')
          line = index.split('.')[0].to_i
@@ -1765,9 +1765,9 @@ class AgEditor
               @raised_listbox.select(_line)
               _insert_selected_value.call
                 }, "%x %y")
-          @raised_listbox.bind_append('Shift-KeyPress'){|e|
+          @raised_listbox.bind_append('Shift-KeyPress', "%K"){|_keysym|
             # todo
-            case e.keysym
+            case _keysym
               when 'parenleft'
                 @text.insert('insert','(')
                 _buffer = _buffer + '('
@@ -1778,28 +1778,28 @@ class AgEditor
                 end
                 Tk.callback_break
               when 'A'..'Z','equal','greater','underscore'
-                if e.keysym == 'equal'
+                if _keysym == 'equal'
                   ch = '='
-                elsif e.keysym == 'greater'
+                elsif _keysym == 'greater'
                   ch = '>'
-                elsif e.keysym == 'underscore'
+                elsif _keysym == 'underscore'
                   ch = '_'
                 else
-                  ch = e.keysym
+                  ch = _keysym
                 end
                 @text.insert('insert',ch)
                 _buffer = _buffer + ch
                 _update_list.call(_buffer)
                 Tk.callback_break
               else
-                if e.keysym.length > 1 
-                  p ">#{e.keysym}<"
+                if _keysym.length > 1 
+                  p ">#{_keysym}<"
                   Tk.callback_break
                 end
             end
           }
-          @raised_listbox.bind_append('KeyPress'){|e|
-            case e.keysym
+          @raised_listbox.bind_append('KeyPress', "%K"){|_keysym|
+            case _keysym
               when 'Escape'
                 @raised_listbox.grab("release")
                 @raised_listbox_frame.destroy
@@ -1815,12 +1815,12 @@ class AgEditor
                 Arcadia.process_event(DocCodeEvent.new(self, 'doc_entry'=>_docs_entries[_key], 'xdoc'=>_x, 'ydoc'=>_y))
                 #EditorContract.instance.doc_code(self, 'doc_entry'=>_docs_entries[_key], 'xdoc'=>_x, 'ydoc'=>_y)
               when 'a'..'z','less','space'
-                if e.keysym == 'less'
+                if _keysym == 'less'
                   ch = '<'
-                elsif e.keysym == 'space'
+                elsif _keysym == 'space'
                   ch = ''
                 else
-                  ch = e.keysym
+                  ch = _keysym
                 end
                 @text.insert('insert',ch)
                 _buffer = _buffer + ch
@@ -1841,8 +1841,8 @@ class AgEditor
                 Tk.callback_break
             end
           }
-          @raised_listbox.bind_append('KeyRelease'){|e|
-            case e.keysym
+          @raised_listbox.bind_append('KeyRelease', "%K"){|_keysym|
+            case _keysym
               when 'Return'
                 _insert_selected_value.call
             end
@@ -1859,8 +1859,8 @@ class AgEditor
   def activate_complete_code_key_binding
     @n_complete_task = 0
     # key binding for complete code
-    @text.bind_append("Control-KeyPress"){|e|
-      case e.keysym
+    @text.bind_append("Control-KeyPress", "%K"){|_keysym|
+      case _keysym
       when 'space'
         if @n_complete_task == 0
           @do_complete = true
@@ -1869,8 +1869,8 @@ class AgEditor
       end
     }
     
-    @text.bind_append("KeyPress"){|e|
-      if e.keysym == "Escape"
+    @text.bind_append("KeyPress", "%K"){|_keysym|
+      if _keysym == "Escape"
         if @n_complete_task == 0
           @do_complete = true
           complete_code
@@ -1881,8 +1881,8 @@ class AgEditor
     }    
     case @lang 
       when 'ruby'
-        @text.bind_append("KeyRelease"){|e|
-          case e.keysym
+        @text.bind_append("KeyRelease", "%K"){|_keysym|
+          case _keysym
             when 'period'
               _focus_line = @text.get('insert linestart','insert')
               if _focus_line.strip[0..0] != '#'
@@ -1905,8 +1905,8 @@ class AgEditor
   def activate_key_binding
     activate_complete_code_key_binding #if @is_ruby
 
-    @text.bind_append("Control-KeyPress"){|e|
-      case e.keysym
+    @text.bind_append("Control-KeyPress", "%K"){|_keysym|
+      case _keysym
       when 'o'  
         if @file
           _dir = File.dirname(@file)
@@ -1935,8 +1935,8 @@ class AgEditor
       end
     }
 
-    @text.bind_append("Control-Shift-KeyPress"){|e|
-      case e.keysym
+    @text.bind_append("Control-Shift-KeyPress", "%K"){|_keysym|
+      case _keysym
       when 'I'
         _r = @text.tag_ranges('sel')
         _row_begin = _r[0][0].split('.')[0].to_i
@@ -1972,9 +1972,9 @@ class AgEditor
       end
     }
     
-    @text.bind_append("KeyPress"){|e|
-      @last_keypress = e.keysym
-      case e.keysym
+    @text.bind_append("KeyPress", "%K"){|_keysym|
+      @last_keypress = _keysym
+      case _keysym
 #      when 'BackSpace'
 #        _index = @text.index('insert')
 #        _row, _col = _index.split('.')
@@ -2019,10 +2019,10 @@ class AgEditor
       end
     }
 
-    @text.bind_append("KeyRelease"){|e|
-      @last_keyrelease = e.keysym
+    @text.bind_append("KeyRelease", "%K"){|_keysym|
+      @last_keyrelease = _keysym
       #return if @last_keypress != e.keysym
-      case e.keysym
+      case _keysym
 #      when 'Up','Down'
 #          refresh_outline
       when 'Left', 'Right'
@@ -2072,13 +2072,13 @@ class AgEditor
           rehighlightlines(row, row)
         end
       end
-      check_modify if !['Shift_L','Shift_R','Control_L','Control_R','Up','Down','Left', 'Right', 'Prior', 'Next'].include?(e.keysym)      
+      check_modify if !['Shift_L','Shift_R','Control_L','Control_R','Up','Down','Left', 'Right', 'Prior', 'Next'].include?(_keysym)      
     }
 
 
-    @text.bind_append("Shift-KeyPress"){|e|
-      @last_keypress = e.keysym
-      case e.keysym
+    @text.bind_append("Shift-KeyPress", "%K"){|_keysym|
+      @last_keypress = _keysym
+      case _keysym
       when 'Tab','ISO_Left_Tab'
         _r = @text.tag_ranges('sel')
         if _r && _r[0]
@@ -2101,6 +2101,7 @@ class AgEditor
         end
       end
     }
+    
   end
 
   def decrease_indent
@@ -2157,7 +2158,7 @@ class AgEditor
 
     @text.bind_append("Enter", proc{do_enter})
 
-    @text.bind("<Modified>"){|e|
+    @text.bind("<Modified>"){
       check_modify
     }
     activate_key_binding
@@ -2298,7 +2299,7 @@ class AgEditor
 
 
     @text_line_num.bind("Button-3",
-      proc{|*x|
+      proc{
         _x = TkWinfo.pointerx(@text_line_num)
         _y = TkWinfo.pointery(@text_line_num)
         _pop_up.entryconfigure(0,'label'=> Arcadia.text('ext.editor.text_line.menu.title', [@text_line_num_current_line]))
@@ -4965,7 +4966,7 @@ class AgMultiEditor < ArcadiaExtPlus
     )
 
     @main_frame.page_bind("Button-3",
-      proc{|*x|
+      proc{
         _x = TkWinfo.pointerx(@main_frame.root_frame)
         _y = TkWinfo.pointery(@main_frame.root_frame)
         if @usetabs
@@ -6320,8 +6321,8 @@ class Finder < Findview
   	 @b_replace_all.bind('1', proc{hide; do_replace_all})  
 
 #    @e_what_entry.bind_append('KeyRelease'){|e|
-    @e_what.bind_append('KeyRelease'){|e|
-      case e.keysym
+    @e_what.bind_append('KeyRelease', "%K"){|_keysym|
+      case _keysym
       when 'Return'
         @find_action.call
         Tk.callback_break
@@ -6336,8 +6337,8 @@ class Finder < Findview
     @goto_line_dialog.on_close=proc{@goto_line_dialog.hide}
 
     @goto_line_dialog.b_go.bind('1',proc{go_line})
-    @goto_line_dialog.e_line.bind_append('KeyRelease'){|e|
-      case e.keysym
+    @goto_line_dialog.e_line.bind_append('KeyRelease', "%K"){|_keysym|
+      case _keysym
       when 'Return'
         go_line
         Tk.callback_break

@@ -153,7 +153,7 @@ class Breakpoints < ArcadiaExt
 
 
     @tree_break.textbind_append("Button-3",
-      proc{|*x|
+      proc{
         _x = TkWinfo.pointerx(@tree_break)
         _y = TkWinfo.pointery(@tree_break)
         #_selected = @tree_break.selection_get[0]

@@ -882,8 +882,8 @@ class Arcadia < TkApplication
     if key_dits[1]
       key_sym=key_dits[1][0..-2]
     end
-    @root.bind_append(key_event){|e|
-      if key_sym == e.keysym
+    @root.bind_append(key_event, "%K"){|_keysym|
+      if key_sym == _keysym
         Arcadia.process_event(_self_target.instance_eval(value))
       end
     }
@@ -1924,7 +1924,7 @@ class RunnerManager < HinnerSplittedDialogTitled
 
       [@ttkename, @ttketitle, @ttkecmd, @ttkeexts].each{|tktext|
         p_update_height.call(tktext)
-        tktext.bind_append("KeyRelease"){|e| p_update_height.call(tktext)}
+        tktext.bind_append("KeyRelease"){p_update_height.call(tktext)}
       }
 
     end
@@ -2323,7 +2323,6 @@ class ArcadiaAboutSplash < TkToplevel
     _y = TkWinfo.screenheight(self)/2 -  _height / 2
     geometry = _width.to_s+'x'+_height.to_s+'+'+_x.to_s+'+'+_y.to_s
     Tk.tk_call('wm', 'geometry', self, geometry )
-    #bind("ButtonPress-1", proc{self.destroy})
     bind("Double-Button-1", proc{self.destroy})
     info = TkApplication.sys_info
     set_sysinfo(info)
@@ -2728,7 +2727,7 @@ class ArcadiaSh < TkToplevel
     @wait = true
     @result = false
     prompt
-    @text.bind_append("KeyPress"){|e| input(e.keysym)}
+    @text.bind_append("KeyPress","%K"){|_keysym| input(_keysym)}
   end
 
   def exec_buffer

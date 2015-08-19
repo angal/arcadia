@@ -210,8 +210,8 @@ class FilesHistrory < ArcadiaExt
       font @font_italic
       cursor nil
     }
-    @hlist.bind_append('KeyPress'){|e| Tk.callback_break }
-    @hlist.bind_append('KeyRelease'){|e| Tk.callback_break }
+    @hlist.bind_append('KeyPress'){Tk.callback_break }
+    @hlist.bind_append('KeyRelease'){Tk.callback_break }
     @hlist.extend(TkScrollableWidget)
     @hlist.tag_configure("file_selected", 'foreground' => Arcadia.conf('hightlight.link.foreground'))
 	  build_list

@@ -98,7 +98,7 @@ module TkMovable
     @moving_obj_m = _moving_obj
     @moved_obj_m = _moved_obj
     @moving_obj_m.bind_append("B1-Motion", proc{|x, y| moving_do_move_obj(x,y)},"%x %y")
-    @moving_obj_m.bind_append("ButtonPress-1", proc{|e| moving_do_press(e.x, e.y)})
+    @moving_obj_m.bind_append("ButtonPress-1", proc{|x, y| moving_do_press(x, y)},"%x %y")
   end
 
   def stop_moving
@@ -128,7 +128,7 @@ module TkResizable
     @moving_obj_r = _moving_obj
     @moved_obj_r = _moved_obj
     @moving_obj_r.bind_append("B1-Motion", proc{|x, y| resizing_do_move_obj(x,y)},"%x %y")
-    @moving_obj_r.bind_append("ButtonPress-1", proc{|e| resizing_do_press(e.x, e.y)})
+    @moving_obj_r.bind_append("ButtonPress-1", proc{|x, y| resizing_do_press(x, y)},"%x %y")
   end
 
   def stop_resizing
@@ -189,7 +189,7 @@ class AGTkObjPlace
     @cursor = _cursor
     if _bind
       @obj.bind_append("Enter", proc{|x, y| do_enter(x, y)}, "%x %y")
-      @obj.bind_append("ButtonPress-1", proc{|e| do_press(e.x, e.y)})
+      @obj.bind_append("ButtonPress-1", proc{|x, y| do_press(x,y)}, "%x %y")
       @obj.bind_append("B1-Motion", proc{|x, y| do_motion(x,y)},"%x %y")
     end
   end
@@ -3164,8 +3164,8 @@ class KeyTest < TkFloatTitledFrame
       background  Arcadia.conf("background")
       foreground  Arcadia.conf("foreground")
       #place('relwidth' => '1','relx' => 0,'x' => '0','y' => '0','relheight' => '1','rely' => 0,'height' => '0','bordermode' => 'inside','width' => '0')
-    }.bind("KeyPress"){|e|
-      @ttest.insert('end'," "+e.keysym+" ")
+    }.bind("KeyPress", "%K"){|_keysym|
+      @ttest.insert('end'," "+_keysym+" ")
       break
     }
     @ttest.extend(TkScrollableWidget).show
@@ -3348,7 +3348,7 @@ class HinnerSplittedDialog < HinnerDialog
       splitter_frame.raise
     } ,"%x %y")
      
-    splitter_frame.bind_append("ButtonRelease-1", proc{|e|
+    splitter_frame.bind_append("ButtonRelease-1", proc{
       splitter_frame.configure('cursor'=> oldcursor)
       if side == 'top'
         h = (@y0+yx).abs
@@ -3442,8 +3442,8 @@ class HinnerFileDialog < HinnerDialog
     @dir_text.tag_bind(@tag_selected,"Enter", proc{@dir_text.configure('cursor'=> 'hand2')})
     @dir_text.tag_bind(@tag_selected,"Leave", proc{@dir_text.configure('cursor'=> @cursor)})
     _self=self
-    @dir_text.bind_append('KeyPress'){|e|
-      case e.keysym
+    @dir_text.bind_append('KeyPress', "%K"){|_keysym|
+      case _keysym
       when 'Escape','Tab'
         i1 = @dir_text.index("insert")
         raise_candidates(i1, @dir_text.get("#{i1} linestart", i1))
@@ -3465,8 +3465,8 @@ class HinnerFileDialog < HinnerDialog
         end
       end
     }   
-    @dir_text.bind_append('KeyRelease'){|e|
-      case e.keysym
+    @dir_text.bind_append('KeyRelease', "%K"){|_keysym|
+      case _keysym
       when 'Escape','Tab', "Return"
       else
         @dir_text.tag_remove(@tag_selected,'1.0','end')
@@ -3488,8 +3488,8 @@ class HinnerFileDialog < HinnerDialog
       end
     }   
     
-    @dir_text.bind_append("Control-KeyPress"){|e|
-      case e.keysym
+    @dir_text.bind_append("Control-KeyPress", "%K"){|_keysym|
+      case _keysym
       when 'd'
         _self.close
         Tk.callback_break
@@ -3747,15 +3747,15 @@ class HinnerFileDialog < HinnerDialog
         #filter = @dir_text.get("insert -1 chars wordstart", "insert")
 
 
-        @raised_listbox.bind_append('KeyPress'){|e|
+        @raised_listbox.bind_append('KeyPress', "%K %A"){|_keysym, _char|
           is_list_for_update = false
-          case e.keysym
+          case _keysym
             when 'a'..'z','A'..'Z','0'..'9'
-              @dir_text.insert('end', e.keysym)
+              @dir_text.insert('end', _keysym)
               @dir_text.see("end")
               is_list_for_update = true
             when 'minus'
-              @dir_text.insert('end', e.char)
+              @dir_text.insert('end', _char)
               @dir_text.see("end")
               is_list_for_update = true
             when 'period'
@@ -3780,18 +3780,18 @@ class HinnerFileDialog < HinnerDialog
           end
           _update_list.call(get_filter.call) if is_list_for_update
           @raised_listbox.focus 
-          Tk.callback_break if  !["Next","Prior"].include?(e.keysym)
+          Tk.callback_break if  !["Next","Prior"].include?(_keysym)
         }
 
-        @raised_listbox.bind_append('Shift-KeyPress'){|e|
+        @raised_listbox.bind_append('Shift-KeyPress', "%K %A"){|_keysym, _char|
           is_list_for_update = false
-          case e.keysym
+          case _keysym
             when 'asterisk','underscore'
-              @dir_text.insert('end', e.char)
+              @dir_text.insert('end', _char)
               @dir_text.see("end")
               is_list_for_update = true
             when 'a'..'z','A'..'Z'
-              @dir_text.insert('end', e.keysym)
+              @dir_text.insert('end', _keysym)
               @dir_text.see("end")
               is_list_for_update = true
             
@@ -3801,8 +3801,8 @@ class HinnerFileDialog < HinnerDialog
           Tk.callback_break
         }
 
-        @raised_listbox.bind_append('KeyRelease'){|e|
-          case e.keysym
+        @raised_listbox.bind_append('KeyRelease', "%K"){|_keysym|
+          case _keysym
             when 'Return'
               _select_value.call
           end
@@ -3894,14 +3894,14 @@ class HinnerStringDialog < HinnerDialog
     @string_text.tag_bind(@tag_selected,"Enter", proc{@string_text.configure('cursor'=> 'hand2')})
     @string_text.tag_bind(@tag_selected,"Leave", proc{@string_text.configure('cursor'=> @cursor)})
     _self=self
-    @string_text.bind_append('KeyPress'){|e|
-      case e.keysym
+    @string_text.bind_append('KeyPress', "%K"){|_keysym|
+      case _keysym
       when "Return"
         _self.release
       end
     }   
-    @string_text.bind_append('KeyRelease'){|e|
-      case e.keysym
+    @string_text.bind_append('KeyRelease', "%K"){|_keysym|
+      case _keysym
       when 'Escape','Tab', "Return"
       else
         @string_text.tag_remove(@tag_selected,'1.0','end')
@@ -3909,8 +3909,8 @@ class HinnerStringDialog < HinnerDialog
       end
     }   
     
-    @string_text.bind_append("Control-KeyPress"){|e|
-      case e.keysym
+    @string_text.bind_append("Control-KeyPress", "%K"){|_keysym|
+      case _keysym
       when 'd'
         _self.close
         Tk.callback_break

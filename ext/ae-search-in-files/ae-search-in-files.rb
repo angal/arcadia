@@ -33,8 +33,8 @@ class SearchInFiles < ArcadiaExt
     @find.b_go.bind('1', proc{update_all_combo;do_find}) # add trigger to button    
     #@find.b_go.bind('1', proc{Thread.new{update_all_combo;do_find}}) # add trigger to button    
     
-    enter_proc = proc {|e|
-      case e.keysym
+    enter_proc = proc {|_keysym|
+      case _keysym
       when 'Return'
         if @find.visible?
           update_all_combo    
@@ -46,7 +46,7 @@ class SearchInFiles < ArcadiaExt
     
     #for method in [:e_what_entry, :e_filter_entry, :e_dir_entry] do
     for method in [:e_what, :e_filter, :e_dir] do
-      @find.send(method).bind_append('KeyPress') { |*args| enter_proc.call *args } # ltodo why can't we pass it in like &enter_proc?
+      @find.send(method).bind_append('KeyPress', "%K") { |_keysym| enter_proc.call _keysym } # ltodo why can't we pass it in like &enter_proc?
     end
     @find.title(title)
   end
