@@ -182,6 +182,9 @@ end
 class BufferClosedEvent < BufferEvent
 end
 
+class DeleteFileBufferEvent < BufferEvent
+end
+
 #  +---------------------------------------------+
 #         Bookmark event
 #  +---------------------------------------------+

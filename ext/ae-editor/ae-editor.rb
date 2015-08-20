@@ -3527,21 +3527,21 @@ class AgEditor
     if file
       new_file_name(file)
       save
-      #@controller.change_file_name(@page_frame, file)
       @last_tmp_file = nil if @last_tmp_file != nil
+      @file_loaded = true
       Arcadia.process_event(OpenBufferEvent.new(self,'file'=>file))
       @controller.do_buffer_raise(@controller.page_name(@page_frame))
-      #EditorContract.instance.file_created(self, 'file'=>@file)
     end
   end
 
   def new_file_name(_new_file)
+    @controller.change_file_name(@page_frame, _new_file)
     @file =_new_file
-    @controller.change_file_name(@page_frame, file)
     base_name= File.basename(_new_file)
     if base_name.include?('.')
       self.change_highlight(base_name.split('.')[-1])
     end
+
   end
 
   def update_toolbar
@@ -5279,6 +5279,31 @@ class AgMultiEditor < ArcadiaExtPlus
           #close_file(_event.old_file)
           change_file(_event.old_file, _event.new_file)          
         end
+      when DeleteFileBufferEvent
+        if _event.file == nil 
+          er = self.raised
+          _event.file = er.file if er
+        end
+        if _event.file
+          _title = Arcadia.text("ext.editor.file.d.delete.title")
+          _msg = Arcadia.text("ext.editor.file.d.delete.msg", [_event.file])
+          if File.exists?(_event.file) && 
+            File.ftype(_event.file) == 'file' && 
+            Arcadia.dialog(self,'type'=>'yes_no', 'level'=>'warning','title' => _title, 'msg'=>_msg)=='yes'
+            
+            Arcadia.process_event(CloseBufferEvent.new(self,'file'=>_event.file))
+            begin
+              File.delete(_event.file)
+              _event.flag = Event::FLAG_DEFAULT
+            rescue RuntimeError => e
+              _event.flag = Event::FLAG_ERROR
+              Arcadia.runtime_error(e)
+            end
+
+          else
+            _event.flag = Event::FLAG_ERROR
+          end
+        end
     end
   end
   
@@ -5652,11 +5677,10 @@ class AgMultiEditor < ArcadiaExtPlus
   def change_tab_title(_tab, _new_text, _new_file=nil)
     p_name = page_name(_tab)
     old_text = @main_frame.page_title(p_name)
-
     if @tabs_editor[p_name] && @tabs_editor[p_name].file
       mod_buffer_menu_item(@tabs_editor[p_name].file, _new_text, _new_file, self)
     else
-      mod_buffer_menu_item(unname_modified(tab_title_by_tab_name(p_name)), _new_text, nil, self)
+      mod_buffer_menu_item(unname_modified(tab_title_by_tab_name(p_name)), _new_text, _new_file, self)
       @last_fa.refresh_layout_manager if @last_fa
     end
 #    mod_buffer_menu_item(@main_frame.page(p_name)['file'], _new_text)
