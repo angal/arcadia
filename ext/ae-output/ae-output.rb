@@ -308,6 +308,8 @@ class Output < ArcadiaExt
       lines = @main_frame.text.value.to_a[_from_row.._to_row]
     end
     
+  #  p "parso "
+    
     if lines
       lines.each{|l|
         _row = _row+1
@@ -343,36 +345,46 @@ class Output < ArcadiaExt
   end
 
   def file_binding(_file, _line, _ibegin, _iend)
-    if _file == '<<current buffer>>'
-      _file = "*CURR"
+    if defined?(@file_binding)
+      while @file_binding
+        sleep(1)
+      end
     end
-    _line = '0' if _line.nil? || _line.strip.length == 0
-    tag_name = next_tag_name
-    @main_frame.text.tag_configure(tag_name,
-    'foreground' => Arcadia.conf('hightlight.link.foreground'),
-    'borderwidth'=>0,
-    'relief'=>'flat',
-    'underline'=>true
-    )
-    @main_frame.text.tag_add(tag_name,_ibegin,_iend)
-    #@main_frame.text.tag_bind(tag_name,"Double-ButtonPress-1",
-    @main_frame.text.tag_bind(tag_name,"ButtonPress-1",
-    proc{
-      Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>_file, 'row'=>_line))
-    }
-    )
-    @main_frame.text.tag_bind(tag_name,"Enter",
-    proc{@main_frame.text.configure('cursor'=> 'hand2')}
-    )
-    @main_frame.text.tag_bind(tag_name,"Leave",
-    proc{@main_frame.text.configure('cursor'=> @cursor)}
-    )
-
-    if @main_frame.auto_open_file?
-      Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>_file, 'row'=>_line))
-      self.frame.show
-      @main_frame.text.set_focus
-      @main_frame.text.see("end")
+    @file_binding=true
+    begin
+      if _file == '<<current buffer>>'
+        _file = "*CURR"
+      end
+      _line = '0' if _line.nil? || _line.strip.length == 0
+      tag_name = next_tag_name
+      @main_frame.text.tag_configure(tag_name,
+        'foreground' => Arcadia.conf('hightlight.link.foreground'),
+        'borderwidth'=>0,
+        'relief'=>'flat',
+        'underline'=>true
+      )
+      @main_frame.text.tag_add(tag_name,_ibegin,_iend)
+      #@main_frame.text.tag_bind(tag_name,"Double-ButtonPress-1",
+      @main_frame.text.tag_bind(tag_name,"ButtonPress-1",
+        proc{OpenBufferTransientEvent.new(self,'file'=>_file, 'row'=>_line).go!}
+#        proc{OpenBufferEvent.new(self,'file'=>_file, 'row'=>_line).go!}
+      )
+      @main_frame.text.tag_bind(tag_name,"Enter",
+        proc{@main_frame.text.configure('cursor'=> 'hand2')}
+      )
+      @main_frame.text.tag_bind(tag_name,"Leave",
+        proc{@main_frame.text.configure('cursor'=> @cursor)}
+      )
+  
+      if @main_frame.auto_open_file?
+        OpenBufferTransientEvent.new(self,'file'=>_file, 'row'=>_line).go!
+#        OpenBufferEvent.new(self,'file'=>_file, 'row'=>_line).go!
+        self.frame.show
+        @main_frame.text.set_focus
+        @main_frame.text.see("end")
+      end
+    ensure
+      @file_binding = false
     end
   end
 

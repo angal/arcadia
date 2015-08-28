@@ -54,7 +54,7 @@ class Arcadia < TkApplication
     #_title = "Arcadia Ruby ide :: [Platform = #{RUBY_PLATFORM}] [Ruby version = #{RUBY_VERSION}] [TclTk version = #{tcltk_info.level}]"
     _title = "Arcadia"
     @root = TkRoot.new(
-    'background'=> self['conf']['background']
+      'background'=> self['conf']['background']
     ){
       title _title
       withdraw
@@ -70,12 +70,10 @@ class Arcadia < TkApplication
     @mf_root = Tk::BWidget::MainFrame.new(@root,
     'background'=> self['conf']['background'],
     'height'=> 0
-    ){
-      #menu @main_menu_bar
-    }.pack(
-    'anchor'=> 'center',
-    'fill'=> 'both',
-    'expand'=> 1
+    ).pack(
+      'anchor'=> 'center',
+      'fill'=> 'both',
+      'expand'=> 1
     )
     #.place('x'=>0,'y'=>0,'relwidth'=>1,'relheight'=>1)
 

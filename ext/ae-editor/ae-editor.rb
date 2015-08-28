@@ -3684,6 +3684,12 @@ class AgEditor
     @outline = nil
   end
   
+  def destroy_text
+    @text.destroy if @text
+    @text = nil
+  end
+  
+  
   def load_file(_filename = nil)
     #if filename is nil then open a new tab
     @loading=true
@@ -3760,7 +3766,6 @@ class AgMultiEditorView
   def initialize(_parent=nil, _frame=nil, _usetabs=true)
     @parent = _parent
     @frame = _frame
-    
     @usetabs = _usetabs
     if @usetabs
       initialize_tabs
@@ -3962,9 +3967,15 @@ class AgMultiEditorView
     end
     adapter_frame = @pages.delete(_name)['frame']
     if _delete_adapter
-      adapter_frame.frame.destroy if adapter_frame.frame
+      frame = adapter_frame.frame
+      adapter_frame.detach_frame
       adapter_frame.destroy
-    end 
+      frame.destroy
+#      adapter_frame.frame.destroy if adapter_frame.frame
+#      adapter_frame.destroy
+    end
+    @raised_page = nil if @raised_page == _name
+    Tk.update
   end
 
   def add_menu_button(_name, _buffer_string)
@@ -4015,7 +4026,7 @@ class AgMultiEditorView
     }
     res
   end
-  
+
   def raise(_page=nil)
     if @usetabs
       if _page.nil?
@@ -4027,7 +4038,7 @@ class AgMultiEditorView
       end
     else
       if _page.nil?
-        @raised_page
+        @raised_page 
       elsif @raised_page != _page || @raised_page_usetabs != @usetabs 
         if @raised_page
  #         @pages[@raised_page]['frame'].unpack if @pages[@raised_page]
@@ -4338,7 +4349,7 @@ class AgMultiEditor < ArcadiaExtPlus
     @tabs_editor =Hash.new
     @raw_buffer_name = Hash.new 
     @editor_seq=-1
-    @editors =Array.new
+    @editors =Hash.new
     initialize_status
     #@statusbar_item.pack('side'=>'left','anchor'=>'e','expand'=>'yes')
     Arcadia.attach_listener(self, BufferEvent)
@@ -4387,7 +4398,7 @@ class AgMultiEditor < ArcadiaExtPlus
     _filename = _event.file
     _event.persistent = true
     #if _filename.nil? || _filename == "*CURR"
-    if _filename == "*CURR" || (_filename.nil? && _event.cmd.include?('<<FILE>>'))  
+    if _filename == "*CURR" || (_filename.nil? && _event && _event.cmd.include?('<<FILE>>'))  
       current_editor = self.raised
       if current_editor
         if current_editor.file
@@ -4475,7 +4486,7 @@ class AgMultiEditor < ArcadiaExtPlus
         end
       end
       if _event.cmd.include?('<<RUBY>>')
-        _event.cmd = _event.cmd.gsub('<<RUBY>>',Arcadia.ruby)
+        _event.cmd = _event.cmd.gsub('<<RUBY>>',"#{Arcadia.ruby} -r #{Dir.pwd}/lib/iosync")
       end
       if _event.file && _event.cmd.include?('<<FILE>>')
         _event.cmd = _event.cmd.gsub('<<FILE>>',_event.file)
@@ -5835,8 +5846,8 @@ class AgMultiEditor < ArcadiaExtPlus
   
   def editor_of(_filename)
     _ret = nil
-    @editors.each{|e|
-      if e.file == _filename || e.last_tmp_file == _filename
+    @editors.each{|id, e|
+      if !e.nil? && e.file == _filename || e.last_tmp_file == _filename
         _ret = e
         break
       end
@@ -5879,8 +5890,8 @@ class AgMultiEditor < ArcadiaExtPlus
       _index = @main_frame.index(resolve_tab_name(name_read_only(_name)))
     end
     if _index == -1
-      @editors.each{|e|
-        if e.last_tmp_file == _filename
+      @editors.each{|id, e|
+        if !e.nil? && e.last_tmp_file == _filename
           _index = 0
           break
         end
@@ -5902,49 +5913,59 @@ class AgMultiEditor < ArcadiaExtPlus
   
   def open_file(_filename = nil, _text_index='1.0', _mark_selected=true, _load_file=true)
     return if _filename == nil || !File.exist?(_filename) || File.ftype(_filename) != 'file'
-    _basefilename = File.basename(_filename)
-    _tab_name = self.tab_file_name(_filename)
-    #_index = @main_frame.enb.index(_tab_name)
-    #_exist_buffer = _index != -1
-    _exist_buffer = @tabs_file[_tab_name] != nil
-    if _exist_buffer
-      open_buffer(_tab_name)
-      # ??? _text_index = nil 
-      if !@tabs_editor[_tab_name].file_loaded 
+    if defined?(@opening_file)
+      while @opening_file
+        sleep(1)
+      end
+    end
+    @opening_file = true
+    begin
+      _basefilename = File.basename(_filename)
+      _tab_name = self.tab_file_name(_filename)
+      #_index = @main_frame.enb.index(_tab_name)
+      #_exist_buffer = _index != -1
+      _exist_buffer = @tabs_file[_tab_name] != nil
+      if _exist_buffer
+        open_buffer(_tab_name)
+        # ??? _text_index = nil 
+        if !@tabs_editor[_tab_name].file_loaded 
+          @tabs_editor[_tab_name].reset_highlight
+          begin
+            @tabs_editor[_tab_name].load_file_if_not_loaded
+          rescue RuntimeError => e
+            close_editor(@tabs_editor[_tab_name], true)
+            Arcadia.runtime_error(e)
+          end
+        end
+      else
+  #      @tabs_file[_tab_name]= _filename
+        open_buffer(_tab_name, _basefilename, _filename, nil, false)
         @tabs_editor[_tab_name].reset_highlight
         begin
-          @tabs_editor[_tab_name].load_file_if_not_loaded
+          if _load_file
+            @tabs_editor[_tab_name].load_file(_filename)
+          else
+            @tabs_editor[_tab_name].file = _filename
+            @tabs_editor[_tab_name].start_index = _text_index
+          end
         rescue RuntimeError => e
+          #Arcadia.dialog(self,'type'=>'ok', 'level'=>'error','title' => 'RuntimeError', 'msg'=>"RuntimeError : #{e.message}")
+          #p "RuntimeError : #{e.message}"
           close_editor(@tabs_editor[_tab_name], true)
           Arcadia.runtime_error(e)
         end
+        change_outline_frame_caption(File.basename(_filename)) if _filename    
       end
-    else
-#      @tabs_file[_tab_name]= _filename
-      open_buffer(_tab_name, _basefilename, _filename, nil, false)
-      @tabs_editor[_tab_name].reset_highlight
-      begin
-        if _load_file
-          @tabs_editor[_tab_name].load_file(_filename)
-        else
-          @tabs_editor[_tab_name].file = _filename
-          @tabs_editor[_tab_name].start_index = _text_index
+      editor = @tabs_editor[_tab_name]
+      if editor && _load_file
+        if _text_index != nil && _text_index != '1.0' && editor
+          editor.text_see(_text_index)
+          editor.mark_selected(_text_index) if _mark_selected 
         end
-      rescue RuntimeError => e
-        #Arcadia.dialog(self,'type'=>'ok', 'level'=>'error','title' => 'RuntimeError', 'msg'=>"RuntimeError : #{e.message}")
-        #p "RuntimeError : #{e.message}"
-        close_editor(@tabs_editor[_tab_name], true)
-        Arcadia.runtime_error(e)
+        editor.do_line_update if editor && !editor.highlighted?
       end
-      change_outline_frame_caption(File.basename(_filename)) if _filename    
-    end
-    editor = @tabs_editor[_tab_name]
-    if editor && _load_file
-      if _text_index != nil && _text_index != '1.0' && editor
-        editor.text_see(_text_index)
-        editor.mark_selected(_text_index) if _mark_selected 
-      end
-      editor.do_line_update if editor && !editor.highlighted?
+    ensure
+      @opening_file = false
     end
     return editor
   end
@@ -6026,6 +6047,9 @@ class AgMultiEditor < ArcadiaExtPlus
     e = @tabs_editor.delete(_buffer_name)
     @tabs_file.delete(_buffer_name)
     @editors.delete(e.id)
+    if e.file == @last_transient_file
+      @last_transient_file = nil
+    end
     @raw_buffer_name.delete_if {|key, value| value == _buffer_name}
   end
   
@@ -6110,8 +6134,10 @@ class AgMultiEditor < ArcadiaExtPlus
       index = _editor.text.nil?? _editor.start_index : _editor.text.index("@0,0")
       r,c = index.split('.')
       _editor.destroy_outline
+      #_editor.destroy_text
       change_outline_frame_caption('') if raised==_editor      
       close_buffer_frame(_editor.page_frame)
+      Tk.update
       BufferClosedEvent.new(self,'file'=>file,'row'=>r.to_i, 'col'=>c.to_i).shot!
     else
       return
@@ -6138,7 +6164,6 @@ class AgMultiEditor < ArcadiaExtPlus
     @main_frame.delete_page(_name, !_moved)
     if is_raised
       if !@main_frame.pages.empty? # && is_raised
-        #@main_frame.raise(@main_frame.pages[_index-1]) if TkWinfo.mapped?(@main_frame.root_frame)
         len = @main_frame.pages.length
         if _index < len
           ind = _index
@@ -6148,7 +6173,6 @@ class AgMultiEditor < ArcadiaExtPlus
         if TkWinfo.mapped?(@main_frame.root_frame)
           @main_frame.raise(@main_frame.pages[ind]) 
           editor = @tabs_editor[@main_frame.pages[ind]]
-          #editor.load_file_if_not_loaded if editor
         end
       else
         frame.root.top_text_clear if TkWinfo.mapped?(frame.hinner_frame)
