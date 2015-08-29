@@ -27,7 +27,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '1.0.1',
+        '1.1.0',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -54,7 +54,7 @@ class Arcadia < TkApplication
     #_title = "Arcadia Ruby ide :: [Platform = #{RUBY_PLATFORM}] [Ruby version = #{RUBY_VERSION}] [TclTk version = #{tcltk_info.level}]"
     _title = "Arcadia"
     @root = TkRoot.new(
-    'background'=> self['conf']['background']
+      'background'=> self['conf']['background']
     ){
       title _title
       withdraw
@@ -70,12 +70,10 @@ class Arcadia < TkApplication
     @mf_root = Tk::BWidget::MainFrame.new(@root,
     'background'=> self['conf']['background'],
     'height'=> 0
-    ){
-      #menu @main_menu_bar
-    }.pack(
-    'anchor'=> 'center',
-    'fill'=> 'both',
-    'expand'=> 1
+    ).pack(
+      'anchor'=> 'center',
+      'fill'=> 'both',
+      'expand'=> 1
     )
     #.place('x'=>0,'y'=>0,'relwidth'=>1,'relheight'=>1)
 
@@ -178,6 +176,10 @@ class Arcadia < TkApplication
     @@last_input_keyboard_query_event=nil
     @initialized=true
  #   @focus_event_manager = FocusEventManager.new
+  end
+
+  def root_height
+    @root.winfo_height
   end
 
   def initialized?
@@ -663,6 +665,20 @@ class Arcadia < TkApplication
     #@layout.build_invert_menu
   end
 
+  def refresh_runners_on_menu(root_menu=nil, _file=nil, _dir=nil)
+    return if root_menu.nil?
+    if !root_menu.index('end').nil?
+      index_end = root_menu.index('end')-1
+      root_menu.delete('0',index_end)
+    end
+    self['runners'].each{|name, run|
+      newrun = {}.update(run)
+      newrun[:file] = _file if !_file.nil?
+      newrun[:dir] = _dir if !_dir.nil?
+      insert_runner_item(root_menu, name, newrun)
+    }
+  end
+
   def reload_runners
     mr = Arcadia.menu_root('runcurr')
     return if mr.nil?
@@ -674,6 +690,50 @@ class Arcadia < TkApplication
     load_runners
   end
 
+  def insert_runner_item(root_menu=nil, name, run)
+    return if root_menu.nil?
+    if run[:file_exts]
+      run[:file_exts].split(',').each{|ext|
+        self['runners_by_ext'][ext.strip.sub('.','')]=run
+      }
+    end
+    if run[:lang]
+      self['runners_by_lang'][run[:lang]]=run
+    end
+    if run[:runner] && self['runners'][run[:runner]]
+      run = Hash.new.update(self['runners'][run[:runner]]).update(run)
+      #self['runners'][name]=run
+    end
+    if run[:image]
+      image = Arcadia.image_res(run[:image])
+    else
+      image = Arcadia.file_icon(run[:file_exts])
+    end
+    _run_title = run[:title]
+    #run[:title] = nil
+    run[:runner_name] = name
+    _command = proc{
+      _event = Arcadia.process_event(
+        RunCmdEvent.new(self, run)
+      )
+    }
+    if run[:pos]
+      pos = run[:pos]
+    else
+      pos = '0'
+    end
+    args = {
+      :image => image,
+      :label => _run_title,
+      :compound => 'left',
+      :command => _command
+    }
+    args[:font] = Arcadia.conf('menu.font') #if !OS.mac?
+    
+    root_menu.insert(pos, :command , args)
+  end
+  
+
   def load_runners
     self['runners'] = Hash.new if self['runners'].nil?
     self['runners_by_ext'] = Hash.new if self['runners_by_ext'].nil?
@@ -681,47 +741,47 @@ class Arcadia < TkApplication
     mr = Arcadia.menu_root('runcurr')
     return if mr.nil?
 
-    insert_runner_item = proc{|name, run|
-      if run[:file_exts]
-        run[:file_exts].split(',').each{|ext|
-          self['runners_by_ext'][ext.strip.sub('.','')]=run
-        }
-      end
-      if run[:lang]
-        self['runners_by_lang'][run[:lang]]=run
-      end
-      if run[:runner] && self['runners'][run[:runner]]
-        run = Hash.new.update(self['runners'][run[:runner]]).update(run)
-        #self['runners'][name]=run
-      end
-      if run[:image]
-        image = Arcadia.image_res(run[:image])
-      else
-        image = Arcadia.file_icon(run[:file_exts])
-      end
-      _run_title = run[:title]
-      #run[:title] = nil
-      run[:runner_name] = name
-      _command = proc{
-        _event = Arcadia.process_event(
-          RunCmdEvent.new(self, run)
-        )
-      }
-      if run[:pos]
-        pos = run[:pos]
-      else
-        pos = '0'
-      end
-      args = {
-        :image => image,
-        :label => _run_title,
-        :compound => 'left',
-        :command => _command
-      }
-      args[:font] = Arcadia.conf('menu.font') #if !OS.mac?
-      
-      mr.insert(pos, :command , args)
-    }
+#    insert_runner_item = proc{|name, run|
+#      if run[:file_exts]
+#        run[:file_exts].split(',').each{|ext|
+#          self['runners_by_ext'][ext.strip.sub('.','')]=run
+#        }
+#      end
+#      if run[:lang]
+#        self['runners_by_lang'][run[:lang]]=run
+#      end
+#      if run[:runner] && self['runners'][run[:runner]]
+#        run = Hash.new.update(self['runners'][run[:runner]]).update(run)
+#        #self['runners'][name]=run
+#      end
+#      if run[:image]
+#        image = Arcadia.image_res(run[:image])
+#      else
+#        image = Arcadia.file_icon(run[:file_exts])
+#      end
+#      _run_title = run[:title]
+#      #run[:title] = nil
+#      run[:runner_name] = name
+#      _command = proc{
+#        _event = Arcadia.process_event(
+#          RunCmdEvent.new(self, run)
+#        )
+#      }
+#      if run[:pos]
+#        pos = run[:pos]
+#      else
+#        pos = '0'
+#      end
+#      args = {
+#        :image => image,
+#        :label => _run_title,
+#        :compound => 'left',
+#        :command => _command
+#      }
+#      args[:font] = Arcadia.conf('menu.font') #if !OS.mac?
+#      
+#      mr.insert(pos, :command , args)
+#    }
 
     insert_runner_instance_item = proc{|name, run|
       if run[:runner] && self['runners'][run[:runner]]
@@ -761,7 +821,8 @@ class Arcadia < TkApplication
     }
 
     self['runners'].each{|name, run|
-      insert_runner_item.call(name, run)
+      #insert_runner_item.call(name, run)
+      insert_runner_item(mr, name, run)
     }
 
 
@@ -773,7 +834,8 @@ class Arcadia < TkApplication
         ext_runs.each{|name, hash_string|
           self['runners'][name]=eval hash_string
           self['runners'][name][:pos]=self['runners'].count
-          insert_runner_item.call(name, self['runners'][name])
+          #insert_runner_item.call(name, self['runners'][name])
+          insert_runner_item(mr, name, self['runners'][name])
         }
       end
     }
@@ -818,8 +880,8 @@ class Arcadia < TkApplication
     if key_dits[1]
       key_sym=key_dits[1][0..-2]
     end
-    @root.bind_append(key_event){|e|
-      if key_sym == e.keysym
+    @root.bind_append(key_event, "%K"){|_keysym|
+      if key_sym == _keysym
         Arcadia.process_event(_self_target.instance_eval(value))
       end
     }
@@ -913,8 +975,8 @@ class Arcadia < TkApplication
     'title' => Arcadia.text("main.d.confirm_exit.title"),
     'level' => 'question')=='yes')
     if q1 && can_exit?
-      @root.geometry('0x0')
-      ArcadiaAboutSplash.new.deiconify
+      @root.geometry('1x1-1-1')
+      #ArcadiaAboutSplash.new.deiconify
       do_finalize
       @root.destroy
       #      Tk.mainloop_exist?
@@ -1194,12 +1256,12 @@ class Arcadia < TkApplication
     Tk.getOpenFile 'initialdir' => MonitorLastUsedDir.get_last_dir
   end
 
-  def Arcadia.open_file_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir)
-    HinnerFileDialog.new.file(_initial_dir)
+  def Arcadia.select_file_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir, _label=nil)
+    HinnerFileDialog.new(HinnerFileDialog::SELECT_FILE_MODE, nil, _label).file(_initial_dir)
   end
 
-  def Arcadia.select_dir_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir, must_exist = nil)
-    HinnerFileDialog.new(HinnerFileDialog::SELECT_DIR_MODE, must_exist).dir(_initial_dir)
+  def Arcadia.select_dir_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir, must_exist = nil, _label=nil)
+    HinnerFileDialog.new(HinnerFileDialog::SELECT_DIR_MODE, must_exist, _label).dir(_initial_dir)
   end
 
   def Arcadia.save_file_dialog(_initial_dir=MonitorLastUsedDir.get_last_dir)
@@ -1218,8 +1280,8 @@ class Arcadia < TkApplication
     end
   end
 
-  def Arcadia.open_string_dialog
-    HinnerStringDialog.new.string
+  def Arcadia.open_string_dialog(_label=nil)
+    HinnerStringDialog.new(_label).string
   end
 
   def Arcadia.is_windows?
@@ -1749,39 +1811,66 @@ class RunnerManager < HinnerSplittedDialogTitled
       @runner_hash = _runner_hash
       @readonly = _state_array && _state_array.include?(:disabled)
       @enable_close_button = !@readonly || _runner_hash[:origin] == 'runtime'
+      
+      @h_hash = {}
+            
+      p_update_height = proc{|tktext|
+        index = tktext.index('end -1 chars')
+        r,c = index.split('.')
+        if tktext.cget('wrap') != 'none'
+          w = tktext.width
+          h = ((c.to_i-1)/w.to_i).round + 1
+        else
+          h = r.to_i
+        end
+        h_to_set = h
+        @h_hash.each{|k,v|  h_to_set = v if k != tktext && v > h_to_set }
+        @h_hash[tktext] = h
+        if tktext.height != h_to_set
+          tktext.height(h_to_set)
+          @h_hash.each{|k,v|
+            p_update_height.call(k) if k != tktext
+          }
+          
+        end
+      }
+
+
       # ICON
       @ttklicon = Arcadia.wf.label(_parent,
         'image'=> _runner_hash[:image].nil? ? Arcadia.file_icon(_runner_hash[:file_exts]) : Arcadia.image_res(_runner_hash[:image]) ,
         'relief'=>'flat').grid(:column => 0, :row => _row, :sticky => "W", :padx=>1, :pady=>1)
+      @ttklicon.state(:disabled) if @readonly
 
       # NAME
       @ename_old = _runner_hash[:name]  
       @ttkename = Arcadia.wf.text(_parent, 'width' => 20,
         "height" => 1).hint(_runner_hash[:file]).grid(:column => 1, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
       @ttkename.insert('end', _runner_hash[:name])
-      @ttkename.state(:disabled) if @readonly
-
+      @ttkename.state(:disabled) && @ttkename.fg('darkgray') if @readonly
+      
 
       # TITLE
       @etitle_old = _runner_hash[:title]  
-      @ttketitle = Arcadia.wf.text(_parent,  'width' => 30,
+      @ttketitle = Arcadia.wf.text(_parent, 'width' => 28,
         "height" => 1).hint(_runner_hash[:file]).grid(:column => 2, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
       @ttketitle.insert('end', _runner_hash[:title])
-      @ttketitle.state(:disabled) if @readonly
+      @ttketitle.state(:disabled) && @ttketitle.fg('darkgray') if @readonly
+
 
       # CMD
       @ecmd_old = _runner_hash[:cmd]
-      @ttkecmd = Arcadia.wf.text(_parent,  'width' => 60,
+      @ttkecmd = Arcadia.wf.text(_parent,  'width' => 60, 'wrap'=>'word',
         "height" => 1).grid(:column => 3, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
       @ttkecmd.insert('end', _runner_hash[:cmd])
-      @ttkecmd.state(:disabled) if @readonly
+      @ttkecmd.state(:disabled) && @ttkecmd.fg('darkgray') if @readonly
       
       # FILE EXTS
       @eexts_old = _runner_hash[:file_exts]  
       @ttkeexts = Arcadia.wf.text(_parent,  'width' => 5,
         "height" => 1).grid(:column => 4, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
       @ttkeexts.insert('end', _runner_hash[:file_exts])
-      @ttkeexts.state(:disabled) if @readonly
+      @ttkeexts.state(:disabled) && @ttkeexts.fg('darkgray') if @readonly
 
       # COPY BUTTON
       copy_command = proc{ _runner_manager.do_add(self) }
@@ -1830,6 +1919,12 @@ class RunnerManager < HinnerSplittedDialogTitled
         ).grid(:column => 6, :row => _row, :sticky => "W", :padx=>1, :pady=>1)
       @ttkbclose.hint=@runner_hash[:file]
       @ttkbclose.state(:disabled) if !@enable_close_button
+
+      [@ttkename, @ttketitle, @ttkecmd, @ttkeexts].each{|tktext|
+        p_update_height.call(tktext)
+        tktext.bind_append("KeyRelease"){p_update_height.call(tktext)}
+      }
+
     end
     
     def destroy
@@ -1887,6 +1982,9 @@ class RunnerManager < HinnerSplittedDialogTitled
 
     @items = Hash.new
     @content = Hash.new
+    @content_root = Tk::ScrollFrame.new(self.hinner_frame).place('x'=>0, 'y'=>0, 'relheight'=>1, 'relwidth'=>1)
+    @content_root_frame = @content_root.baseframe
+
   end
 
   def do_close
@@ -1911,12 +2009,30 @@ class RunnerManager < HinnerSplittedDialogTitled
     end
     @items[:config]["item#{@items[:config].count}"]=RunnerMangerItem.new(self, @content[:config], runner_hash, @items[:config].count+1)
    # @content[:config].pack
-    self.height(self.height + ROW_GAP)
+#    root_height = Arcadia.instance.root_height
+#    
+#    self.height(self.height + ROW_GAP) if self.height < root_height
+    add_gap
+    @content_root.yview_moveto('1.0')
+  end
+  
+  def add_gap
+    #p @content_root.y_scrolled?
+    root_height = Arcadia.instance.root_height
+    if self.height < root_height/2
+      self.height(self.height + ROW_GAP)
+      @content_root.vscroll(true) if !@content_root.y_scrolled?
+    end
+  end
+  
+  def del_gap
+    self.height(self.height - ROW_GAP)
   end
   
   def do_delete_item(_item, _tyme=:config)
     @items[:config].delete_if{|k,v| v == _item}
-    self.height(self.height - ROW_GAP)
+    del_gap
+    #self.height(self.height - ROW_GAP)
   end
 
   def something_has_changed?
@@ -1972,39 +2088,52 @@ class RunnerManager < HinnerSplittedDialogTitled
   def load_tips
     # Runners keywords related the current file => <<FILE>>, <<DIR>>, <<FILE_BASENAME>>, <<FILE_BASENAME_WITHOUT_EXT>>, <<INPUT>>, <<INPUT_FILE>>
     # INPUT is required to user
-    text = Arcadia.wf.text(self.hinner_frame,
-              "height" => 2     
+    text = Arcadia.wf.text(@content_root_frame,
+              "height" => 2 ,
+              "bg"=>'teal'    
            ).pack('side' =>'top','anchor'=>'nw','fill'=>'x','padx'=>5, 'pady'=>5)
     text.insert("end", "Keywords => <<RUBY>>, <<FILE>>, <<DIR>>, <<FILE_BASENAME>>, <<FILE_BASENAME_WITHOUT_EXT>>, <<INPUT_FILE>>, <<INPUT_DIR>>, <<INPUT_STRING>>")
-    self.height(self.height + 25)
+    add_gap
+    #self.height(self.height + ROW_GAP)
   end
 
   def load_titles(_content)
-    # ICON
-    Arcadia.wf.label(_content,
-      'text'=> "" ,
-      'relief'=>'flat').grid(:column => 0, :row => 0, :sticky => "W", :padx=>1, :pady=>1)
+    bg = Arcadia.conf("titlelabel.background")
+    fg = Arcadia.conf("titlelabel.foreground")
+#    # ICON
+#    Arcadia.wf.label(_content,
+#      'text'=> "" ,
+#      'background'=> bg,
+#      'relief'=>'flat').grid(:column => 0, :row => 0, :sticky => "WE", :padx=>1, :pady=>1)
 
     # NAME
     Arcadia.wf.label(_content,
-      'text'=> "Name" ,
-      'relief'=>'flat').grid(:column => 1, :row => 0, :sticky => "W", :padx=>1, :pady=>1)
+      'text'=> "Name",
+      'background'=> bg,
+      'foreground'=> fg,
+      'relief'=>'flat').grid(:column => 1, :row => 0, :sticky => "WE", :padx=>1, :pady=>1)
 
 
     # TITLE
     Arcadia.wf.label(_content,
       'text'=> "Title" ,
-      'relief'=>'flat').grid(:column => 2, :row => 0, :sticky => "W", :padx=>1, :pady=>1)
+      'background'=> bg,
+      'foreground'=> fg,
+      'relief'=>'flat').grid(:column => 2, :row => 0, :sticky => "WE", :padx=>1, :pady=>1)
 
     # CMD
     Arcadia.wf.label(_content,
       'text'=> "CMD" ,
-      'relief'=>'flat').grid(:column => 3, :row => 0, :sticky => "W", :padx=>1, :pady=>1)
+      'background'=> bg,
+      'foreground'=> fg,
+      'relief'=>'flat').grid(:column => 3, :row => 0, :sticky => "WE", :padx=>1, :pady=>1)
     
     # FILE EXTS
     Arcadia.wf.label(_content,
       'text'=> "Exts" ,
-      'relief'=>'flat').grid(:column => 4, :row => 0, :sticky => "W", :padx=>1, :pady=>1)
+      'background'=> bg,
+      'foreground'=> fg,
+      'relief'=>'flat').grid(:column => 4, :row => 0, :sticky => "WE", :padx=>1, :pady=>1)
   end
 
   def load_items(_kind = :runtime)
@@ -2045,25 +2174,24 @@ class RunnerManager < HinnerSplittedDialogTitled
       }
       
     end
-    @content[_kind] = Arcadia.wf.frame(self.hinner_frame){padding "3 3 12 12"}
-    #@content[_kind] = TkFrame.new(self.hinner_frame, :background => "red")
+    @content[_kind] = Arcadia.wf.frame(@content_root_frame){padding "3 3 12 12"}
 
     @content[_kind].pack('fill'=>'both')
     #@content.extend(TkScrollableWidget).show
     # ICON
     TkGrid.columnconfigure(@content[_kind], 0, :weight => 0 , :uniform => 'a')
     # NAME
-    TkGrid.columnconfigure(@content[_kind], 1, :weight => 0 )
+    TkGrid.columnconfigure(@content[_kind], 1, :weight => 1 )
     # TITLE
-    TkGrid.columnconfigure(@content[_kind], 2, :weight => 0 )
+    TkGrid.columnconfigure(@content[_kind], 2, :weight => 2 )
     # CMD
-    TkGrid.columnconfigure(@content[_kind], 3, :weight => 0 )
+    TkGrid.columnconfigure(@content[_kind], 3, :weight => 3 )
     # FILE EXTS
-    TkGrid.columnconfigure(@content[_kind], 4, :weight => 0 )
+    TkGrid.columnconfigure(@content[_kind], 4, :weight => 1 )
     # COPY BUTTON
-    TkGrid.columnconfigure(@content[_kind], 5, :weight => 0 )
+    TkGrid.columnconfigure(@content[_kind], 5, :weight => 0, :uniform => 'a' )
     # DELETE BUTTON
-    TkGrid.columnconfigure(@content[_kind], 6, :weight => 0 )
+    TkGrid.columnconfigure(@content[_kind], 6, :weight => 0, :uniform => 'a' )
     TkGrid.propagate(@content[_kind], true)
     load_titles(@content[_kind])
     runs.keys.reverse.each{|name|
@@ -2079,8 +2207,9 @@ class RunnerManager < HinnerSplittedDialogTitled
         state_array = [] << :disabled
       end
       items[name]=RunnerMangerItem.new(self, @content[_kind], item_hash, items.count+1, state_array)
-      self.height(self.height + 25)
-    }
+      #self.height(self.height + ROW_GAP)
+      add_gap
+   }
   end
 end
 
@@ -2102,7 +2231,8 @@ class ArcadiaAboutSplash < TkToplevel
     @llogo = TkLabel.new(self){
       image  Arcadia.image_res(A_LOGO_GIF)
       background  _bgcolor
-      place('x'=> 20,'y' => 20)
+      #place('x'=> 20,'y' => 20)
+      place('x'=> 140,'y' => 55)
     }
 
 
@@ -2115,74 +2245,82 @@ class ArcadiaAboutSplash < TkToplevel
     #      place('width' => '190','x' => 110,'y' => 10,'height' => 25)
     #    }
 
+#    @tkLabel1 = TkLabel.new(self){
+#      image  Arcadia.image_res(ARCADIA_JAP_WHITE_GIF)
+#      background  _bgcolor
+#      justify  'left'
+#      place('x' => 90,'y' => 10)
+#    }
+
     @tkLabel1 = TkLabel.new(self){
-      image  Arcadia.image_res(ARCADIA_JAP_WHITE_GIF)
+      image  Arcadia.image_res(ARCADIA_7THE_GIF)
       background  _bgcolor
       justify  'left'
-      place('x' => 90,'y' => 10)
+      place('x' => 26,'y' => 10)
     }
 
-    @tkLabelRuby = TkLabel.new(self){
-      image Arcadia.image_res(RUBY_DOCUMENT_GIF)
-      background  _bgcolor
-      place('x'=> 210,'y' => 12)
-    }
+#    @tkLabelRuby = TkLabel.new(self){
+#      image Arcadia.image_res(RUBY_DOCUMENT_GIF)
+#      background  _bgcolor
+#      place('x'=> 210,'y' => 12)
+#    }
 
-    @tkLabel2 = TkLabel.new(self){
-      text  'Arcadia IDE'
-      background  _bgcolor
-      foreground  '#ffffff'
-      font Arcadia.instance['conf']['splash.subtitle.font']
-      justify  'left'
-      place('x' => 100,'y' => 40,'height' => 19)
-    }
+#    @tkLabel2 = TkLabel.new(self){
+#      text  'Arcadia IDE'
+#      background  _bgcolor
+#      foreground  '#ffffff'
+#      font Arcadia.instance['conf']['splash.subtitle.font']
+#      justify  'left'
+#      place('x' => 100,'y' => 40,'height' => 19)
+#    }
+
     @tkLabelVersion = TkLabel.new(self){
       text Arcadia.text('main.about.version', [$arcadia['applicationParams'].version])
       background  _bgcolor
-      foreground  '#ffffff'
+      foreground  '#009999'
       font Arcadia.instance['conf']['splash.version.font']
       justify  'left'
-      place('x' => 100,'y' => 65,'height' => 19)
+      #place('x' => 100,'y' => 65,'height' => 19)
+      place('x' => 28,'y' => 47,'height' => 19)
     }
     @tkLabel21 = TkLabel.new(self){
       text  Arcadia.text("main.about.by", ['Antonio Galeone - 2004/2015'])
       background  _bgcolor
-      foreground  '#ffffff'
+      foreground  '#009999'
       font Arcadia.instance['conf']['splash.credits.font']
       justify  'left'
       anchor 'w'
-      place('width' => '220','x' => 100,'y' => 95,'height' => 25)
+      place('width' => '220','x' => 28,'y' => 32,'height' => 19)
     }
 
-    @tkLabelCredits = TkLabel.new(self){
-      text  Arcadia.text("main.about.contributors", ['Roger D. Pack'])
-      background  _bgcolor
-      foreground  '#ffffff'
-      font Arcadia.instance['conf']['splash.credits.font']
-      justify  'left'
-      anchor 'w'
-      place('width' => '210','x' => 100,'y' => 115,'height' => 25)
-    }
+#    @tkLabelCredits = TkLabel.new(self){
+#      text  Arcadia.text("main.about.contributors", ['Roger D. Pack'])
+#      background  _bgcolor
+#      foreground  '#ffffff'
+#      font Arcadia.instance['conf']['splash.credits.font']
+#      justify  'left'
+#      anchor 'w'
+#      place('width' => '210','x' => 100,'y' => 115,'height' => 25)
+#    }
 
     @tkLabelStep = TkLabel.new(self){
       text  ''
       background  _bgcolor
-      foreground  '#666666'
+      foreground  '#009999'
       font Arcadia.instance['conf']['splash.banner.font']
       justify  'left'
       anchor  'w'
-      place('width'=>-5,'relwidth' => 1,'x' => 5,'y' => 160,'height' => 45)
+      place('width'=>-28,'relwidth' => 1,'x' => 28,'y' => 160,'height' => 45)
     }
     @progress  = TkVariable.new
     reset
-    _width = 380
+    _width = 345
     _height = 210
     #_width = 0;_height = 0
     _x = TkWinfo.screenwidth(self)/2 -  _width / 2
     _y = TkWinfo.screenheight(self)/2 -  _height / 2
     geometry = _width.to_s+'x'+_height.to_s+'+'+_x.to_s+'+'+_y.to_s
     Tk.tk_call('wm', 'geometry', self, geometry )
-    #bind("ButtonPress-1", proc{self.destroy})
     bind("Double-Button-1", proc{self.destroy})
     info = TkApplication.sys_info
     set_sysinfo(info)
@@ -2213,7 +2351,7 @@ class ArcadiaAboutSplash < TkToplevel
       @tkAlert = TkLabel.new(self){
         image Arcadia.image_res(ALERT_GIF)
         background  'black'
-        place('x'=> 10,'y' => 152)
+        place('x'=> 28,'y' => 152)
       }
 
       @tkLabelProblems = TkLabel.new(self){
@@ -2223,7 +2361,7 @@ class ArcadiaAboutSplash < TkToplevel
         font Arcadia.instance['conf']['splash.problems.font']
         justify  'left'
         anchor 'w'
-        place('width' => '210','x' => 28,'y' => 150,'height' => 25)
+        place('width' => '210','x' => 46,'y' => 150,'height' => 25)
       }
     end
     @problems_nums=@problems_nums+1
@@ -2236,14 +2374,16 @@ class ArcadiaAboutSplash < TkToplevel
 
   def set_progress(_max=10)
     @max = _max
-    Tk::BWidget::ProgressBar.new(self, :width=>150, :height=>10,
+    Tk::BWidget::ProgressBar.new(self, :width=>340, :height=>5,
       :background=>'#000000',
       :troughcolor=>'#000000',
-      :foreground=>'#666666',
+      :foreground=>'#990000',
       :variable=>@progress,
       :borderwidth=>0,
       :relief=>'flat',
-      :maximum=>_max).place('relwidth' => '1','y' => 144,'height' => 6)
+#      :maximum=>_max).place('relwidth' => '1','y' => 145,'height' => 1)
+#      :maximum=>_max).place('width' => '280','x'=>28,'y' => 33,'height' => 1)
+      :maximum=>_max).place('width' => '280','x'=>28,'y' => 189,'height' => 10)
   end
 
   def reset
@@ -2585,7 +2725,7 @@ class ArcadiaSh < TkToplevel
     @wait = true
     @result = false
     prompt
-    @text.bind_append("KeyPress"){|e| input(e.keysym)}
+    @text.bind_append("KeyPress","%K"){|_keysym| input(_keysym)}
   end
 
   def exec_buffer

@@ -20,7 +20,7 @@ class SubProcessInspector < ArcadiaExt
   def on_exit_query(_event)
     _event.can_exit=true
     @processs.each{|pr|
-      if !pr.nil? 
+      if !pr.nil? && pr.event.abort_dialog_yes != false
         message = Arcadia.text("ext.spi.d.exit_query.msg")
         r=Arcadia.hinner_dialog(self,
             'type'=>'yes_no', 
@@ -106,13 +106,19 @@ class SubProcessWidget
   def initialize(_parent=nil, _event=nil, *args)
     @parent = _parent
     @event = _event
+    @anigif = _event.anigif.nil? ? "process.res" : _event.anigif
+    abort_dialog_yes = _event.abort_dialog_yes.nil? || _event.abort_dialog_yes == true
     b_command = proc{
-      message = Arcadia.text('ext.spi.d.kill.msg', [_event.pid, _event.name])
-      r=Arcadia.hinner_dialog(self,
-          'type'=>'yes_no', 
-          'level'=>'warning',
-          'title'=> Arcadia.text('ext.spi.d.kill.title'), 
-          'msg'=>message)
+      if abort_dialog_yes
+        message = Arcadia.text('ext.spi.d.kill.msg', [_event.pid, _event.name])
+        r=Arcadia.hinner_dialog(self,
+            'type'=>'yes_no', 
+            'level'=>'warning',
+            'title'=> Arcadia.text('ext.spi.d.kill.title'), 
+            'msg'=>message)
+      else
+        r="yes"
+      end
       if r=="yes"
         _event.abort_action.call
       end
@@ -131,7 +137,7 @@ class SubProcessWidget
       text l_text
       pack('side' =>'left', :padx=>2, :pady=>0)
     }
-    Tk::Anigif.image(@label, "#{Dir.pwd}/ext/ae-subprocess-inspector/process.res")
+    Tk::Anigif.image(@label, "#{Dir.pwd}/ext/ae-subprocess-inspector/#{@anigif}")
 
     @button = Arcadia.wf.toolbutton(Arcadia['toolbar'].frame){
       command b_command

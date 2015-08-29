@@ -444,7 +444,23 @@ class DirProjects < ArcadiaExtPlus
       :menu=>sub_ref_search,
       :hidemargin => false
     )
+
+    #-----------------
+    #----- runners submenu
+    @sub_ref_runners = Arcadia.wf.menu(
+      :parent=>@pop_up_tree,
+      :tearoff=>0,
+      :title => Arcadia.text('ext.dir_projects.menu.runners')
+    )
     
+    @pop_up_tree.insert('end',
+      :cascade,
+      :label=>Arcadia.text('ext.dir_projects.menu.runners'),
+      :menu=>@sub_ref_runners,
+      :hidemargin => false
+    )
+    
+    #-----------------
 
     @pop_up_tree.insert('end',
       :command,
@@ -522,6 +538,19 @@ class DirProjects < ArcadiaExtPlus
         _x = TkWinfo.pointerx(@htree)
         _y = TkWinfo.pointery(@htree)
         @pop_up_tree.popup(_x,_y)
+        
+        selected = @htree.selected
+        if selected && @htree.exist?(selected)
+          if File.ftype(selected) == 'file'
+            file = selected
+            dir = nil
+          else
+            file = nil
+            dir = selected
+          end
+          Arcadia.instance.refresh_runners_on_menu(@sub_ref_runners, file, dir)
+        end
+        
       },
     "%x %y")
   end
@@ -818,7 +847,7 @@ class DirProjects < ArcadiaExtPlus
       else
         _msg = Arcadia.text("ext.dir_projects.d.delete.msg", [_node, 'file'])
       end
-      if !_interactive || Arcadia.dialog(self,'type'=>'yes_no', 'level'=>'warning','title' => Arcadia.text("ext.dir_projects.d.delete.title"), 'msg'=>_msg)=='yes'
+      if !_interactive || type == 'file' || Arcadia.dialog(self,'type'=>'yes_no', 'level'=>'warning','title' => Arcadia.text("ext.dir_projects.d.delete.title"), 'msg'=>_msg)=='yes'
         delete_node = true
         if type == 'directory'
           entries = Dir.entries(node2file(_node))
@@ -846,8 +875,9 @@ class DirProjects < ArcadiaExtPlus
             del_project(_node)
           end
         else
-          Arcadia.process_event(CloseBufferEvent.new(self,'file'=>node2file(_node)))
-          File.delete(node2file(_node))
+          _event = Arcadia.process_event(DeleteFileBufferEvent.new(self,'file'=>node2file(_node)))
+          delete_node = _event && _event.flag == Event::FLAG_DEFAULT
+          #File.delete(node2file(_node))
         end
         shure_delete_node(_node) if delete_node
       end
@@ -929,6 +959,9 @@ class DirProjects < ArcadiaExtPlus
   end
 
   def add_project(_dir)
+    if _dir && _dir.length > 0 && _dir[-1..-1] == File::SEPARATOR
+      _dir = _dir[0..-2]
+    end
     @projects[_dir] = Project.new(_dir)
     add_node('root', _dir, "project")
     add_project_to_file(_dir) 
@@ -1012,7 +1045,7 @@ class DirProjects < ArcadiaExtPlus
       f = File.new(projects_file, "w")
       begin
         _lines.each{|_line|
-          f.syswrite(_line+"\n")
+          f.syswrite(_line+"\n") if _line.strip[0..0] == '#' || File.exists?(_line)
         }
         f.syswrite(_project+"\n")
       ensure
@@ -1078,7 +1111,7 @@ class DirProjects < ArcadiaExtPlus
         path = File::SEPARATOR
       end
       path = path + steps[j]
-      if @htree.exist?(path) 
+      if @htree.exist?(path)
         @htree.open_tree(path, false)
       end
       j=j+1

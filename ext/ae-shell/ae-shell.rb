@@ -206,7 +206,7 @@ class Shell < ArcadiaExt
                 fi_pid = th.pid if th
                 output_mark = Arcadia.console(self,'msg'=>" [pid #{fi_pid}]", 'level'=>'info', 'mark'=>output_mark, 'append'=>true)
                 alive_check = proc{th.status != false}
-                abort_action = proc{Process.kill(9,fi_pid.to_i)}
+                abort_action = proc{Process.kill(9,fi_pid.to_i); th.exit}
     	           Arcadia.process_event(SubProcessEvent.new(self, 'pid'=>fi_pid, 'name'=>process_name, 'abort_action'=>abort_action, 'alive_check'=>alive_check))
 
                 to = Thread.new(stdout) do |tout|

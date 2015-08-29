@@ -802,6 +802,7 @@ class RubyDebugServer
   def start_session(_debug_event, _host='localhost', _remote_port='8989')
     _filename = _debug_event.file
     commandLine = "#{Arcadia.ruby} #{@rdebug_file} --host #{_host} --port #{_remote_port} -sw '#{_filename}'"
+    #commandLine = "#{Arcadia.ruby} -r debug --host #{_host} --port #{_remote_port} -sw '#{_filename}'"
     #p commandLine
     begin
       @alive = true

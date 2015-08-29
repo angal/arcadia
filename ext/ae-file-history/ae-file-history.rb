@@ -93,6 +93,7 @@ class FilesHistrory < ArcadiaExt
   def on_build(_event)
     @h_stack = Hash.new
     @h_stack_changed = false
+    #@content_root = Tk::ScrollFrame.new(self.frame.hinner_frame).pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes').baseframe
     @bookmarks_frame = TkFrame.new(self.frame.hinner_frame)    
     @history_frame = TkFrame.new(self.frame.hinner_frame).pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')    
     @panel = self.frame.root.add_panel(self.frame.name, "sync");
@@ -181,7 +182,7 @@ class FilesHistrory < ArcadiaExt
         _selected = @htree.selected
         _dir, _file = _selected.sub("%%%",":").split('@@@')
         if _dir && _file.nil? && File.ftype(node2file(_dir)) == 'directory'
-	        _file = Arcadia.open_file_dialog(node2file(_dir))
+	        _file = Arcadia.select_file_dialog(node2file(_dir))
 	        #Tk.getOpenFile('initialdir'=>node2file(_dir))
       	    if _file && _file.strip.length > 0 
       	       Arcadia.process_event(OpenBufferTransientEvent.new(self,'file'=>_file))
@@ -209,8 +210,8 @@ class FilesHistrory < ArcadiaExt
       font @font_italic
       cursor nil
     }
-    @hlist.bind_append('KeyPress'){|e| Tk.callback_break }
-    @hlist.bind_append('KeyRelease'){|e| Tk.callback_break }
+    @hlist.bind_append('KeyPress'){Tk.callback_break }
+    @hlist.bind_append('KeyRelease'){Tk.callback_break }
     @hlist.extend(TkScrollableWidget)
     @hlist.tag_configure("file_selected", 'foreground' => Arcadia.conf('hightlight.link.foreground'))
 	  build_list

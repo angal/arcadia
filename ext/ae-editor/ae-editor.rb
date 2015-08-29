@@ -916,8 +916,8 @@ class TkTextListBox < TkText
     tag_configure('class', 'foreground' => Arcadia.conf('hightlight.class_variable.foreground'))
     @count = 0
     @selected = -1
-    self.bind_append('KeyPress'){|e| key_press(e)}
-    self.bind_append('KeyRelease'){|e| key_release(e)}
+    self.bind_append('KeyPress', "%K"){|_keysym| key_press(_keysym)}
+    self.bind_append('KeyRelease', "%K"){|_keysym| key_release(_keysym)}
     self.bind_append("ButtonPress-1", proc{|x,y| button_press(x,y)}, "%x %y")
   end  
   
@@ -953,8 +953,8 @@ class TkTextListBox < TkText
     self.select(_line)
   end
   
-  def key_press(_e)
-      case _e.keysym
+  def key_press(_keysym)
+      case _keysym
         when 'Up'
           if @selected > 0
             select(@selected-1)
@@ -966,8 +966,8 @@ class TkTextListBox < TkText
       end
   end  
 
-  def key_release(_e)
-      case _e.keysym
+  def key_release(_keysym)
+      case _keysym
         when 'Next','Prior'
          index = self.index('@0,0')
          line = index.split('.')[0].to_i
@@ -1765,9 +1765,9 @@ class AgEditor
               @raised_listbox.select(_line)
               _insert_selected_value.call
                 }, "%x %y")
-          @raised_listbox.bind_append('Shift-KeyPress'){|e|
+          @raised_listbox.bind_append('Shift-KeyPress', "%K"){|_keysym|
             # todo
-            case e.keysym
+            case _keysym
               when 'parenleft'
                 @text.insert('insert','(')
                 _buffer = _buffer + '('
@@ -1778,28 +1778,28 @@ class AgEditor
                 end
                 Tk.callback_break
               when 'A'..'Z','equal','greater','underscore'
-                if e.keysym == 'equal'
+                if _keysym == 'equal'
                   ch = '='
-                elsif e.keysym == 'greater'
+                elsif _keysym == 'greater'
                   ch = '>'
-                elsif e.keysym == 'underscore'
+                elsif _keysym == 'underscore'
                   ch = '_'
                 else
-                  ch = e.keysym
+                  ch = _keysym
                 end
                 @text.insert('insert',ch)
                 _buffer = _buffer + ch
                 _update_list.call(_buffer)
                 Tk.callback_break
               else
-                if e.keysym.length > 1 
-                  p ">#{e.keysym}<"
+                if _keysym.length > 1 
+                  p ">#{_keysym}<"
                   Tk.callback_break
                 end
             end
           }
-          @raised_listbox.bind_append('KeyPress'){|e|
-            case e.keysym
+          @raised_listbox.bind_append('KeyPress', "%K"){|_keysym|
+            case _keysym
               when 'Escape'
                 @raised_listbox.grab("release")
                 @raised_listbox_frame.destroy
@@ -1815,12 +1815,12 @@ class AgEditor
                 Arcadia.process_event(DocCodeEvent.new(self, 'doc_entry'=>_docs_entries[_key], 'xdoc'=>_x, 'ydoc'=>_y))
                 #EditorContract.instance.doc_code(self, 'doc_entry'=>_docs_entries[_key], 'xdoc'=>_x, 'ydoc'=>_y)
               when 'a'..'z','less','space'
-                if e.keysym == 'less'
+                if _keysym == 'less'
                   ch = '<'
-                elsif e.keysym == 'space'
+                elsif _keysym == 'space'
                   ch = ''
                 else
-                  ch = e.keysym
+                  ch = _keysym
                 end
                 @text.insert('insert',ch)
                 _buffer = _buffer + ch
@@ -1841,8 +1841,8 @@ class AgEditor
                 Tk.callback_break
             end
           }
-          @raised_listbox.bind_append('KeyRelease'){|e|
-            case e.keysym
+          @raised_listbox.bind_append('KeyRelease', "%K"){|_keysym|
+            case _keysym
               when 'Return'
                 _insert_selected_value.call
             end
@@ -1859,8 +1859,8 @@ class AgEditor
   def activate_complete_code_key_binding
     @n_complete_task = 0
     # key binding for complete code
-    @text.bind_append("Control-KeyPress"){|e|
-      case e.keysym
+    @text.bind_append("Control-KeyPress", "%K"){|_keysym|
+      case _keysym
       when 'space'
         if @n_complete_task == 0
           @do_complete = true
@@ -1869,8 +1869,8 @@ class AgEditor
       end
     }
     
-    @text.bind_append("KeyPress"){|e|
-      if e.keysym == "Escape"
+    @text.bind_append("KeyPress", "%K"){|_keysym|
+      if _keysym == "Escape"
         if @n_complete_task == 0
           @do_complete = true
           complete_code
@@ -1881,8 +1881,8 @@ class AgEditor
     }    
     case @lang 
       when 'ruby'
-        @text.bind_append("KeyRelease"){|e|
-          case e.keysym
+        @text.bind_append("KeyRelease", "%K"){|_keysym|
+          case _keysym
             when 'period'
               _focus_line = @text.get('insert linestart','insert')
               if _focus_line.strip[0..0] != '#'
@@ -1905,15 +1905,15 @@ class AgEditor
   def activate_key_binding
     activate_complete_code_key_binding #if @is_ruby
 
-    @text.bind_append("Control-KeyPress"){|e|
-      case e.keysym
+    @text.bind_append("Control-KeyPress", "%K"){|_keysym|
+      case _keysym
       when 'o'  
         if @file
           _dir = File.dirname(@file)
         else
           _dir = MonitorLastUsedDir.get_last_dir
         end
-        _file = Arcadia.open_file_dialog(_dir)
+        _file = Arcadia.select_file_dialog(_dir)
         Arcadia.process_event(OpenBufferEvent.new(self,'file'=>_file)) if _file
         Tk.callback_break
         break
@@ -1935,8 +1935,8 @@ class AgEditor
       end
     }
 
-    @text.bind_append("Control-Shift-KeyPress"){|e|
-      case e.keysym
+    @text.bind_append("Control-Shift-KeyPress", "%K"){|_keysym|
+      case _keysym
       when 'I'
         _r = @text.tag_ranges('sel')
         _row_begin = _r[0][0].split('.')[0].to_i
@@ -1972,9 +1972,9 @@ class AgEditor
       end
     }
     
-    @text.bind_append("KeyPress"){|e|
-      @last_keypress = e.keysym
-      case e.keysym
+    @text.bind_append("KeyPress", "%K"){|_keysym|
+      @last_keypress = _keysym
+      case _keysym
 #      when 'BackSpace'
 #        _index = @text.index('insert')
 #        _row, _col = _index.split('.')
@@ -2019,10 +2019,10 @@ class AgEditor
       end
     }
 
-    @text.bind_append("KeyRelease"){|e|
-      @last_keyrelease = e.keysym
+    @text.bind_append("KeyRelease", "%K"){|_keysym|
+      @last_keyrelease = _keysym
       #return if @last_keypress != e.keysym
-      case e.keysym
+      case _keysym
 #      when 'Up','Down'
 #          refresh_outline
       when 'Left', 'Right'
@@ -2072,13 +2072,13 @@ class AgEditor
           rehighlightlines(row, row)
         end
       end
-      check_modify if !['Shift_L','Shift_R','Control_L','Control_R','Up','Down','Left', 'Right', 'Prior', 'Next'].include?(e.keysym)      
+      check_modify if !['Shift_L','Shift_R','Control_L','Control_R','Up','Down','Left', 'Right', 'Prior', 'Next'].include?(_keysym)      
     }
 
 
-    @text.bind_append("Shift-KeyPress"){|e|
-      @last_keypress = e.keysym
-      case e.keysym
+    @text.bind_append("Shift-KeyPress", "%K"){|_keysym|
+      @last_keypress = _keysym
+      case _keysym
       when 'Tab','ISO_Left_Tab'
         _r = @text.tag_ranges('sel')
         if _r && _r[0]
@@ -2101,6 +2101,7 @@ class AgEditor
         end
       end
     }
+    
   end
 
   def decrease_indent
@@ -2157,7 +2158,7 @@ class AgEditor
 
     @text.bind_append("Enter", proc{do_enter})
 
-    @text.bind("<Modified>"){|e|
+    @text.bind("<Modified>"){
       check_modify
     }
     activate_key_binding
@@ -2298,7 +2299,7 @@ class AgEditor
 
 
     @text_line_num.bind("Button-3",
-      proc{|*x|
+      proc{
         _x = TkWinfo.pointerx(@text_line_num)
         _y = TkWinfo.pointery(@text_line_num)
         _pop_up.entryconfigure(0,'label'=> Arcadia.text('ext.editor.text_line.menu.title', [@text_line_num_current_line]))
@@ -2309,6 +2310,7 @@ class AgEditor
   end
 
   def file_line_to_text_line_num_line(_line)
+    return 0 if @text_line_num.nil?
     rel_line = nil
     line_begin = @text_line_num.get('1.0','1.end').strip.to_i
     line_end = @text_line_num.index('end').split('.')[0].to_i+line_begin
@@ -2366,6 +2368,7 @@ class AgEditor
   end
 
   def remove_tag_bookmark(_line)
+      return if @text_line_num.nil?
       rel_line = file_line_to_text_line_num_line(_line)
       if rel_line
         i1 = "#{rel_line}.0"
@@ -2661,7 +2664,7 @@ class AgEditor
       :label=>Arcadia.text('ext.editor.text.menu.data_from_file'),
       :hidemargin => false,
       :command=>       proc{
-        file = Arcadia.open_file_dialog
+        file = Arcadia.select_file_dialog
         if file
           require 'base64'
           f = File.open(file,"rb")
@@ -3524,21 +3527,21 @@ class AgEditor
     if file
       new_file_name(file)
       save
-      #@controller.change_file_name(@page_frame, file)
       @last_tmp_file = nil if @last_tmp_file != nil
+      @file_loaded = true
       Arcadia.process_event(OpenBufferEvent.new(self,'file'=>file))
       @controller.do_buffer_raise(@controller.page_name(@page_frame))
-      #EditorContract.instance.file_created(self, 'file'=>@file)
     end
   end
 
   def new_file_name(_new_file)
+    @controller.change_file_name(@page_frame, _new_file)
     @file =_new_file
-    @controller.change_file_name(@page_frame, file)
     base_name= File.basename(_new_file)
     if base_name.include?('.')
       self.change_highlight(base_name.split('.')[-1])
     end
+
   end
 
   def update_toolbar
@@ -3681,6 +3684,12 @@ class AgEditor
     @outline = nil
   end
   
+  def destroy_text
+    @text.destroy if @text
+    @text = nil
+  end
+  
+  
   def load_file(_filename = nil)
     #if filename is nil then open a new tab
     @loading=true
@@ -3757,7 +3766,6 @@ class AgMultiEditorView
   def initialize(_parent=nil, _frame=nil, _usetabs=true)
     @parent = _parent
     @frame = _frame
-    
     @usetabs = _usetabs
     if @usetabs
       initialize_tabs
@@ -3959,9 +3967,15 @@ class AgMultiEditorView
     end
     adapter_frame = @pages.delete(_name)['frame']
     if _delete_adapter
-      adapter_frame.frame.destroy if adapter_frame.frame
+      frame = adapter_frame.frame
+      adapter_frame.detach_frame
       adapter_frame.destroy
-    end 
+      frame.destroy
+#      adapter_frame.frame.destroy if adapter_frame.frame
+#      adapter_frame.destroy
+    end
+    @raised_page = nil if @raised_page == _name
+    Tk.update
   end
 
   def add_menu_button(_name, _buffer_string)
@@ -4012,7 +4026,7 @@ class AgMultiEditorView
     }
     res
   end
-  
+
   def raise(_page=nil)
     if @usetabs
       if _page.nil?
@@ -4024,7 +4038,7 @@ class AgMultiEditorView
       end
     else
       if _page.nil?
-        @raised_page
+        @raised_page 
       elsif @raised_page != _page || @raised_page_usetabs != @usetabs 
         if @raised_page
  #         @pages[@raised_page]['frame'].unpack if @pages[@raised_page]
@@ -4335,7 +4349,7 @@ class AgMultiEditor < ArcadiaExtPlus
     @tabs_editor =Hash.new
     @raw_buffer_name = Hash.new 
     @editor_seq=-1
-    @editors =Array.new
+    @editors =Hash.new
     initialize_status
     #@statusbar_item.pack('side'=>'left','anchor'=>'e','expand'=>'yes')
     Arcadia.attach_listener(self, BufferEvent)
@@ -4384,7 +4398,7 @@ class AgMultiEditor < ArcadiaExtPlus
     _filename = _event.file
     _event.persistent = true
     #if _filename.nil? || _filename == "*CURR"
-    if _filename == "*CURR"
+    if _filename == "*CURR" || (_filename.nil? && _event && _event.cmd.include?('<<FILE>>'))  
       current_editor = self.raised
       if current_editor
         if current_editor.file
@@ -4453,26 +4467,26 @@ class AgMultiEditor < ArcadiaExtPlus
           _event.cmd = _event.file
         end        
       end
-      if _event.cmd.include?('<<INPUT_FILE>>')
-        input_file = Arcadia.open_file_dialog
+      while _event.cmd.include?('<<INPUT_FILE>>')
+        input_file = Arcadia.select_file_dialog(MonitorLastUsedDir.get_last_dir, "<<INPUT_FILE>> = ")
         if !input_file.nil?
-          _event.cmd = _event.cmd.gsub('<<INPUT_FILE>>', input_file)
+          _event.cmd = _event.cmd.sub('<<INPUT_FILE>>', input_file)
         end
       end
-      if _event.cmd.include?('<<INPUT_DIR>>')
-        input_dir = Arcadia.select_dir_dialog
+      while _event.cmd.include?('<<INPUT_DIR>>')
+        input_dir = Arcadia.select_dir_dialog(MonitorLastUsedDir.get_last_dir, nil, "<<INPUT_DIR>> = ")
         if !input_dir.nil?
-          _event.cmd = _event.cmd.gsub('<<INPUT_DIR>>',input_dir)
+          _event.cmd = _event.cmd.sub('<<INPUT_DIR>>',input_dir)
         end
       end
-      if _event.cmd.include?('<<INPUT_STRING>>')
-        input_string = Arcadia.open_string_dialog
+      while _event.cmd.include?('<<INPUT_STRING>>')
+        input_string = Arcadia.open_string_dialog("<<INPUT_STRING>> = ")
         if !input_string.nil?
-          _event.cmd = _event.cmd.gsub('<<INPUT_STRING>>', input_string)
+          _event.cmd = _event.cmd.sub('<<INPUT_STRING>>', input_string)
         end
       end
       if _event.cmd.include?('<<RUBY>>')
-        _event.cmd = _event.cmd.gsub('<<RUBY>>',Arcadia.ruby)
+        _event.cmd = _event.cmd.gsub('<<RUBY>>',"#{Arcadia.ruby} -r #{Dir.pwd}/lib/iosync")
       end
       if _event.file && _event.cmd.include?('<<FILE>>')
         _event.cmd = _event.cmd.gsub('<<FILE>>',_event.file)
@@ -4963,7 +4977,7 @@ class AgMultiEditor < ArcadiaExtPlus
     )
 
     @main_frame.page_bind("Button-3",
-      proc{|*x|
+      proc{
         _x = TkWinfo.pointerx(@main_frame.root_frame)
         _y = TkWinfo.pointery(@main_frame.root_frame)
         if @usetabs
@@ -5185,6 +5199,7 @@ class AgMultiEditor < ArcadiaExtPlus
               end
               if !editor_exist?(_event.file)
                 @last_transient_file = _event.file
+                open_transient_button(_event.file)
               else
                 @last_transient_file = nil
                 _event.transient = false
@@ -5219,7 +5234,7 @@ class AgMultiEditor < ArcadiaExtPlus
             #add_reverse_item(_e)
           end
         else
-          _event.file = Arcadia.open_file_dialog
+          _event.file = Arcadia.select_file_dialog
           self.open_file(_event.file)
         end
       when CloseBufferEvent
@@ -5275,7 +5290,47 @@ class AgMultiEditor < ArcadiaExtPlus
           #close_file(_event.old_file)
           change_file(_event.old_file, _event.new_file)          
         end
+      when DeleteFileBufferEvent
+        if _event.file == nil 
+          er = self.raised
+          _event.file = er.file if er
+        end
+        if _event.file
+          _title = Arcadia.text("ext.editor.file.d.delete.title")
+          _msg = Arcadia.text("ext.editor.file.d.delete.msg", [_event.file])
+          if File.exists?(_event.file) && 
+            File.ftype(_event.file) == 'file' && 
+            Arcadia.dialog(self,'type'=>'yes_no', 'level'=>'warning','title' => _title, 'msg'=>_msg)=='yes'
+            
+            Arcadia.process_event(CloseBufferEvent.new(self,'file'=>_event.file))
+            begin
+              File.delete(_event.file)
+              _event.flag = Event::FLAG_DEFAULT
+            rescue RuntimeError => e
+              _event.flag = Event::FLAG_ERROR
+              Arcadia.runtime_error(e)
+            end
+
+          else
+            _event.flag = Event::FLAG_ERROR
+          end
+        end
     end
+  end
+  
+  def open_transient_button(_file)
+    alive_check = proc{
+      e = @tabs_editor[tab_name(_file)]
+      @last_transient_file == _file && e && !e.modified_from_opening? 
+    }
+    abort_action = proc{@last_transient_file=nil}
+    Arcadia.process_event(SubProcessEvent.new(self, 
+      'abort_dialog_yes'=>false,
+#      'anigif'=>'space-invader.res', 
+      'anigif'=>'butterfly.res', 
+      'name'=>File.basename(_file), 
+      'abort_action'=>abort_action, 
+      'alive_check'=>alive_check))
   end
 
   def get_find
@@ -5633,11 +5688,10 @@ class AgMultiEditor < ArcadiaExtPlus
   def change_tab_title(_tab, _new_text, _new_file=nil)
     p_name = page_name(_tab)
     old_text = @main_frame.page_title(p_name)
-
     if @tabs_editor[p_name] && @tabs_editor[p_name].file
       mod_buffer_menu_item(@tabs_editor[p_name].file, _new_text, _new_file, self)
     else
-      mod_buffer_menu_item(unname_modified(tab_title_by_tab_name(p_name)), _new_text, nil, self)
+      mod_buffer_menu_item(unname_modified(tab_title_by_tab_name(p_name)), _new_text, _new_file, self)
       @last_fa.refresh_layout_manager if @last_fa
     end
 #    mod_buffer_menu_item(@main_frame.page(p_name)['file'], _new_text)
@@ -5792,8 +5846,8 @@ class AgMultiEditor < ArcadiaExtPlus
   
   def editor_of(_filename)
     _ret = nil
-    @editors.each{|e|
-      if e.file == _filename || e.last_tmp_file == _filename
+    @editors.each{|id, e|
+      if !e.nil? && e.file == _filename || e.last_tmp_file == _filename
         _ret = e
         break
       end
@@ -5836,8 +5890,8 @@ class AgMultiEditor < ArcadiaExtPlus
       _index = @main_frame.index(resolve_tab_name(name_read_only(_name)))
     end
     if _index == -1
-      @editors.each{|e|
-        if e.last_tmp_file == _filename
+      @editors.each{|id, e|
+        if !e.nil? && e.last_tmp_file == _filename
           _index = 0
           break
         end
@@ -5859,49 +5913,59 @@ class AgMultiEditor < ArcadiaExtPlus
   
   def open_file(_filename = nil, _text_index='1.0', _mark_selected=true, _load_file=true)
     return if _filename == nil || !File.exist?(_filename) || File.ftype(_filename) != 'file'
-    _basefilename = File.basename(_filename)
-    _tab_name = self.tab_file_name(_filename)
-    #_index = @main_frame.enb.index(_tab_name)
-    #_exist_buffer = _index != -1
-    _exist_buffer = @tabs_file[_tab_name] != nil
-    if _exist_buffer
-      open_buffer(_tab_name)
-      # ??? _text_index = nil 
-      if !@tabs_editor[_tab_name].file_loaded 
+    if defined?(@opening_file)
+      while @opening_file
+        sleep(1)
+      end
+    end
+    @opening_file = true
+    begin
+      _basefilename = File.basename(_filename)
+      _tab_name = self.tab_file_name(_filename)
+      #_index = @main_frame.enb.index(_tab_name)
+      #_exist_buffer = _index != -1
+      _exist_buffer = @tabs_file[_tab_name] != nil
+      if _exist_buffer
+        open_buffer(_tab_name)
+        # ??? _text_index = nil 
+        if !@tabs_editor[_tab_name].file_loaded 
+          @tabs_editor[_tab_name].reset_highlight
+          begin
+            @tabs_editor[_tab_name].load_file_if_not_loaded
+          rescue RuntimeError => e
+            close_editor(@tabs_editor[_tab_name], true)
+            Arcadia.runtime_error(e)
+          end
+        end
+      else
+  #      @tabs_file[_tab_name]= _filename
+        open_buffer(_tab_name, _basefilename, _filename, nil, false)
         @tabs_editor[_tab_name].reset_highlight
         begin
-          @tabs_editor[_tab_name].load_file_if_not_loaded
+          if _load_file
+            @tabs_editor[_tab_name].load_file(_filename)
+          else
+            @tabs_editor[_tab_name].file = _filename
+            @tabs_editor[_tab_name].start_index = _text_index
+          end
         rescue RuntimeError => e
+          #Arcadia.dialog(self,'type'=>'ok', 'level'=>'error','title' => 'RuntimeError', 'msg'=>"RuntimeError : #{e.message}")
+          #p "RuntimeError : #{e.message}"
           close_editor(@tabs_editor[_tab_name], true)
           Arcadia.runtime_error(e)
         end
+        change_outline_frame_caption(File.basename(_filename)) if _filename    
       end
-    else
-#      @tabs_file[_tab_name]= _filename
-      open_buffer(_tab_name, _basefilename, _filename, nil, false)
-      @tabs_editor[_tab_name].reset_highlight
-      begin
-        if _load_file
-          @tabs_editor[_tab_name].load_file(_filename)
-        else
-          @tabs_editor[_tab_name].file = _filename
-          @tabs_editor[_tab_name].start_index = _text_index
+      editor = @tabs_editor[_tab_name]
+      if editor && _load_file
+        if _text_index != nil && _text_index != '1.0' && editor
+          editor.text_see(_text_index)
+          editor.mark_selected(_text_index) if _mark_selected 
         end
-      rescue RuntimeError => e
-        #Arcadia.dialog(self,'type'=>'ok', 'level'=>'error','title' => 'RuntimeError', 'msg'=>"RuntimeError : #{e.message}")
-        #p "RuntimeError : #{e.message}"
-        close_editor(@tabs_editor[_tab_name], true)
-        Arcadia.runtime_error(e)
+        editor.do_line_update if editor && !editor.highlighted?
       end
-      change_outline_frame_caption(File.basename(_filename)) if _filename    
-    end
-    editor = @tabs_editor[_tab_name]
-    if editor && _load_file
-      if _text_index != nil && _text_index != '1.0' && editor
-        editor.text_see(_text_index)
-        editor.mark_selected(_text_index) if _mark_selected 
-      end
-      editor.do_line_update if editor && !editor.highlighted?
+    ensure
+      @opening_file = false
     end
     return editor
   end
@@ -5983,6 +6047,9 @@ class AgMultiEditor < ArcadiaExtPlus
     e = @tabs_editor.delete(_buffer_name)
     @tabs_file.delete(_buffer_name)
     @editors.delete(e.id)
+    if e.file == @last_transient_file
+      @last_transient_file = nil
+    end
     @raw_buffer_name.delete_if {|key, value| value == _buffer_name}
   end
   
@@ -6067,8 +6134,10 @@ class AgMultiEditor < ArcadiaExtPlus
       index = _editor.text.nil?? _editor.start_index : _editor.text.index("@0,0")
       r,c = index.split('.')
       _editor.destroy_outline
+      #_editor.destroy_text
       change_outline_frame_caption('') if raised==_editor      
       close_buffer_frame(_editor.page_frame)
+      Tk.update
       BufferClosedEvent.new(self,'file'=>file,'row'=>r.to_i, 'col'=>c.to_i).shot!
     else
       return
@@ -6095,7 +6164,6 @@ class AgMultiEditor < ArcadiaExtPlus
     @main_frame.delete_page(_name, !_moved)
     if is_raised
       if !@main_frame.pages.empty? # && is_raised
-        #@main_frame.raise(@main_frame.pages[_index-1]) if TkWinfo.mapped?(@main_frame.root_frame)
         len = @main_frame.pages.length
         if _index < len
           ind = _index
@@ -6105,7 +6173,6 @@ class AgMultiEditor < ArcadiaExtPlus
         if TkWinfo.mapped?(@main_frame.root_frame)
           @main_frame.raise(@main_frame.pages[ind]) 
           editor = @tabs_editor[@main_frame.pages[ind]]
-          #editor.load_file_if_not_loaded if editor
         end
       else
         frame.root.top_text_clear if TkWinfo.mapped?(frame.hinner_frame)
@@ -6302,8 +6369,8 @@ class Finder < Findview
   	 @b_replace_all.bind('1', proc{hide; do_replace_all})  
 
 #    @e_what_entry.bind_append('KeyRelease'){|e|
-    @e_what.bind_append('KeyRelease'){|e|
-      case e.keysym
+    @e_what.bind_append('KeyRelease', "%K"){|_keysym|
+      case _keysym
       when 'Return'
         @find_action.call
         Tk.callback_break
@@ -6318,8 +6385,8 @@ class Finder < Findview
     @goto_line_dialog.on_close=proc{@goto_line_dialog.hide}
 
     @goto_line_dialog.b_go.bind('1',proc{go_line})
-    @goto_line_dialog.e_line.bind_append('KeyRelease'){|e|
-      case e.keysym
+    @goto_line_dialog.e_line.bind_append('KeyRelease', "%K"){|_keysym|
+      case _keysym
       when 'Return'
         go_line
         Tk.callback_break
