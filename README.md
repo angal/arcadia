@@ -9,7 +9,7 @@ on Nov 30, 2014
 Arcadia is a light editor (IDE) for Ruby language 
 written in Ruby using the classic Tcl/Tk GUI toolkit.
 
-Some of Arcadia ide project features include:
+Some of Arcadia IDE project features include:
  * Editor with source browsing, syntax highlighting, code completion
  * Working on any platform where Ruby and Tcl-Tk work.
  * Debugging support
