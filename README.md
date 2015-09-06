@@ -1,13 +1,14 @@
 # Arcadia IDE
-version 1.0.0
+version 1.1.0
 
 by Antonio Galeone
-on Nov 30, 2014
+on Sep 06, 2015
 
 ## About
 
 Arcadia is a light editor (IDE) for Ruby language 
-written in Ruby using the classic Tcl/Tk GUI toolkit.
+written in Ruby using the classic Tcl/Tk GUI toolkit 
+and developed with Arcadia itself.
 
 Some of Arcadia IDE project features include:
  * Editor with source browsing, syntax highlighting, code completion
@@ -18,10 +19,6 @@ Some of Arcadia IDE project features include:
 ## How to install
  * `exec on command line "gem install arcadia"`
 
-NOTE: on some linux distributions like archlinux the default Tcl/Tk runtime at this time is on versions >= 8.6
-on the other hand ruby-tk supports fully only versions <= 8.5.x.y so to make arcadia working a choice 
-can be install ActiveTcl 8.5 and use ruby via rvm. 
-
 ## How to run
  * `exec on command line "arcadia"`
 
@@ -29,20 +26,41 @@ can be install ActiveTcl 8.5 and use ruby via rvm.
 [https://github.com/angal/arcadia/wiki]
 
 ## News
+[1.1.0] This release:
+  - added possibility to define custom runner:
+    go to "run current" menubutton and click on "Manage runner ...". A dialog window will open.
+    You can do actions as: "add new runner", "copy a runner", "delete a personal runner", "save".
+    The list of runners is usable also in "Dir Projects".
+    
+    These are keywords that you can use in cmd definitions (see preconfigured runners):
+    <<RUBY>> ruby interpreter
+    <<FILE>> current file
+    <<DIR>> current dir
+    <<FILE_BASENAME>> basename of current file 
+    <<FILE_BASENAME_WITHOUT_EXT>> basename of current file without extension
+    <<INPUT_FILE>> open select file dialog to get file
+    <<INPUT_DIR>> open select dir dialog to get dir
+    <<INPUT_STRING>> open select string dialog to get a generic string
+    
+  - on ruby >= 2.0 added runner "debug selected as ruby file in console"
+  - on ruby >= 2.0 discontinued dependence from rdebug gem
+  - done changes for ruby >= 2.0 and tck/tk 8.6 compatability
+  - improved "Output", added option to auto open in editor a file, usefull with
+    the runner "debug selected as ruby file in console" 
+  - fixed bugs
+  - introduces other general improvements  
+
 [1.0.0]
-    This release:
   - improves crossplatform features
   - changes dialogs metaphor
   - improves start speed
   - introduces other general improvements  
   
 [0.13.1]
-    This release:
   - added Russian translation (Thanks to Michael)
   - bug fixes and various improvements
 
 [0.13.0]
-    This release:
   - improves file-history introducing bookmarks management
   - improves layout    
   - fixes bugs 
@@ -68,23 +86,23 @@ can be install ActiveTcl 8.5 and use ruby via rvm.
  
 ## Dependencies
 
-  - rubygems
-  - ruby-tk
-  - tcl/tk (ruby-tk supports fully Tcl/Tk runtime <= 8.5 )
-  - tk-tile (if Tcl/Tk < 8.5)
-  - ctags (Linux)
-  - xterm (Linux, optional)
-  - xdotool (Linux, optional)
-  - ack (optional)
-  - gem coderay (> 1.0)
-  - gem debugger (ruby-debug on Ruby < 1.9)
-  - gem win32-process (only on Windows)
-  - gem ruby-wmi (only on Windows)
+ - rubygems
+ - ruby-tk
+ - tcl/tk
+ - tk-tile (if Tcl/Tk < 8.5)
+ - ctags (Linux)
+ - xterm (Linux, optional)
+ - xdotool (Linux, optional)
+ - ack (optional)
+ - gem coderay (> 1.0)
+ - gem debugger (only for Ruby < 2.0)
+ - gem win32-process (only on Windows)
+ - gem ruby-wmi (only on Windows)
   
 
 ## Short User guide
 Application layout is splitted in vertical and horizontal resizable frames. 
-On vertical and horizontal  splitter appear two button for left or right 
+On vertical and horizontal  splitter two button appear for left or right 
 one shot frame closing. 
 Every frame has a title, a button to expand or resizing it and a menu-button 
 for dynamic layout functions (like add row, add column, close or for move a frame).
@@ -94,11 +112,11 @@ The toolbar button are in order:
 - new, open, save, find
   (relatively to edit/find operation)
   after "new" there is a menubutton to choose a type of file
+- new, open Dir Project, search in files, Open terminal from current folder, Toggle bookmark
 - run current, run last 
   (for execute the raised file in the editor or the last runned file)  
   after "run current" there is a menubutton to choose a configurated runner to apply at current file
-- debug current, debug last, quit debug panel
-  (for debug need)
+- (on ruby < 2.0) debug current, debug last, quit debug panel
 - quit (to exit from arcadia)
 
 #### Editor
@@ -134,6 +152,7 @@ These are same editor short-cut:
 It is a navigational tree: 
 - open or create dir as project
 - make commons file system activity (by contextual menu)
+- make custom action (by runners) 
 - open terminal from selected dir 
 
 #### File history
@@ -141,13 +160,56 @@ The last used files are organizing in tree so you can reopen them or their
 directory by clicking on the tree node.
 
 #### Debug
-Require debugger gem.
+Require debugger gem and ruby < 2.0.
 It is created when a debug session init. 
 The debug button are: Step Next, Step Into, Step Over, Resume and quit.
 The debug frame show the local, instance and global variables for each
 step. 
 
-NOTE: at this moment debugger doesn't seem to work with ruby >= 2.0  
+NOTE: at this moment on ruby >= 2.0 you can debug by using "debug selected as ruby file in console" runner
+and optionally on "Output" the flag "auto open file in editor" using standard ruby debug input commands:
+
+Debugger help v.-0.002b
+Commands
+  b[reak] [file:|class:]<line|method>
+  b[reak] [class.]<line|method>
+                             set breakpoint to some position
+  wat[ch] <expression>       set watchpoint to some expression
+  cat[ch] (<exception>|off)  set catchpoint to an exception
+  b[reak]                    list breakpoints
+  cat[ch]                    show catchpoint
+  del[ete][ nnn]             delete some or all breakpoints
+  disp[lay] <expression>     add expression into display expression list
+  undisp[lay][ nnn]          delete one particular or all display expressions
+  c[ont]                     run until program ends or hit breakpoint
+  s[tep][ nnn]               step (into methods) one line or till line nnn
+  n[ext][ nnn]               go over one line or till line nnn
+  w[here]                    display frames
+  f[rame]                    alias for where
+  l[ist][ (-|nn-mm)]         list program, - lists backwards
+                             nn-mm lists given lines
+  up[ nn]                    move to higher frame
+  down[ nn]                  move to lower frame
+  fin[ish]                   return to outer frame
+  tr[ace] (on|off)           set trace mode of current thread
+  tr[ace] (on|off) all       set trace mode of all threads
+  q[uit]                     exit from debugger
+  v[ar] g[lobal]             show global variables
+  v[ar] l[ocal]              show local variables
+  v[ar] i[nstance] <object>  show instance variables of object
+  v[ar] c[onst] <object>     show constants of object
+  m[ethod] i[nstance] <obj>  show methods of object
+  m[ethod] <class|module>    show instance methods of class or module
+  th[read] l[ist]            list all threads
+  th[read] c[ur[rent]]       show current thread
+  th[read] [sw[itch]] <nnn>  switch thread context to nnn
+  th[read] stop <nnn>        stop thread nnn
+  th[read] resume <nnn>      resume thread nnn
+  pp expression              evaluate expression and pretty_print its value
+  p expression               evaluate expression and print its value
+  r[estart]                  restart program
+  h[elp]                     print this help
+  <everything else>          evaluate  
 
 #### Configuration
 Same Arcadia properties are locally configurabled by editing the file arcadia.conf

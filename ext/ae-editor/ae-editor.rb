@@ -4394,6 +4394,16 @@ class AgMultiEditor < ArcadiaExtPlus
     end
   end
 
+  def on_run_cmd(_event)
+    case _event
+      when RunCmdStartedEvent
+        debug_begin
+      when RunCmdEndedEvent
+        debug_reset        
+        debug_end
+    end
+  end
+
   def on_before_run_cmd(_event)
     _filename = _event.file
     _event.persistent = true
@@ -5220,7 +5230,13 @@ class AgMultiEditor < ArcadiaExtPlus
               er.mark_selected(_index) if select_index
             end   
           else
-            _e = self.open_file(_event.file, _index, select_index)
+            if _event.debug == 'yes'
+              debug_reset
+              r,c = _index.split('.')
+              _e = self.open_file_in_debug(_event.file, r)
+            else
+              _e = self.open_file(_event.file, _index, select_index)
+            end
             #_e.do_line_update
           end
         elsif _event.text
@@ -5767,6 +5783,7 @@ class AgMultiEditor < ArcadiaExtPlus
     else
       p "file #{_filename} do not exist !"
     end
+    _editor
   end
   
   def change_outline(_e, _raised=false)

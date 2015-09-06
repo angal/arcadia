@@ -163,6 +163,7 @@ class Shell < ArcadiaExt
           output_file_name = "out_#{@@next_number += 1}_#{Process.pid}.txt"
           output = File.open(output_file_name, 'wb')
           child = Process.create :command_line => _event.cmd,  :startup_info => {:stdout => output, :stderr => output}
+          RunCmdStartedEvent.new(self, 'parent'=>_event).shot!
           #----
           abort_action = proc{
             Process.kill(9,child.process_id)
@@ -176,17 +177,21 @@ class Shell < ArcadiaExt
           procy = proc {
             still_alive = WMI::Win32_Process.find(:first, :conditions => {:ProcessId => child.process_id})
             if !still_alive #&& File.exists?(output_file_name)
-              output.close
-              timer.stop
-              File.open(output_file_name, 'r') do |f|
-                _readed = f.read
-                _readed.strip!
-                
-                _readed += "\n" + Arcadia.text('ext.shell.done', [_event.title, Time.now - start_time])
-                output_mark = Arcadia.console(self,'msg'=>_readed, 'level'=>'debug', 'mark'=>output_mark)
-                _event.add_result(self, 'output'=>_readed)
+              begin
+                output.close
+                timer.stop
+                File.open(output_file_name, 'r') do |f|
+                  _readed = f.read
+                  _readed.strip!
+                  
+                  _readed += "\n" + Arcadia.text('ext.shell.done', [_event.title, Time.now - start_time])
+                  output_mark = Arcadia.console(self,'msg'=>_readed, 'level'=>'debug', 'mark'=>output_mark)
+                  _event.add_result(self, 'output'=>_readed)
+                end
+                File.delete output_file_name
+              ensure
+                RunCmdEndedEvent.new(self, 'parent'=>_event).shot!
               end
-              File.delete output_file_name
             end
           }
 
@@ -205,6 +210,7 @@ class Shell < ArcadiaExt
               Open3.popen3(_cmd_){|stdin, stdout, stderr, th|
                 fi_pid = th.pid if th
                 output_mark = Arcadia.console(self,'msg'=>" [pid #{fi_pid}]", 'level'=>'info', 'mark'=>output_mark, 'append'=>true)
+                RunCmdStartedEvent.new(self, 'parent'=>_event).shot!
                 alive_check = proc{th.status != false}
                 abort_action = proc{Process.kill(9,fi_pid.to_i); th.exit}
     	           Arcadia.process_event(SubProcessEvent.new(self, 'pid'=>fi_pid, 'name'=>process_name, 'abort_action'=>abort_action, 'alive_check'=>alive_check))
@@ -215,6 +221,7 @@ class Shell < ArcadiaExt
                       output_mark = Arcadia.console(self,'msg'=>line, 'level'=>'debug', 'mark'=>output_mark)
                       _event.add_result(self, 'output'=>line)
                     end
+                    RunCmdEndedEvent.new(self, 'parent'=>_event).shot!
                   rescue Exception => e
                     output_mark = Arcadia.console(self,'msg'=>e.to_s, 'level'=>'debug', 'mark'=>output_mark)
                   end

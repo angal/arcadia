@@ -172,7 +172,8 @@ class Output < ArcadiaExt
   attr_reader :main_frame
   attr_reader :prompt
   MARKSUF='mark-'
-  PROMPT_SIMBOL='$'
+#  PROMPT_SIMBOL='$'
+  PROMPT_SIMBOL='>'
   def on_before_build(_event)
     #ArcadiaContractListener.new(self, MsgContract, :do_msg_event)
     @tag_seq = 0
@@ -377,7 +378,7 @@ class Output < ArcadiaExt
       )
   
       if @main_frame.auto_open_file?
-        OpenBufferTransientEvent.new(self,'file'=>_file, 'row'=>_line).go!
+        OpenBufferEvent.new(self,'file'=>_file, 'row'=>_line, 'debug'=>'yes').go!
 #        OpenBufferEvent.new(self,'file'=>_file, 'row'=>_line).go!
         self.frame.show
         @main_frame.text.set_focus

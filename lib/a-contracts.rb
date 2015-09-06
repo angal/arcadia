@@ -116,7 +116,7 @@ class NewBufferEvent < BufferEvent
 end
 
 class OpenBufferEvent < BufferEvent
-  attr_accessor :select_index
+  attr_accessor :select_index, :debug
 end
 
 class OpenBufferTransientEvent < OpenBufferEvent
@@ -317,6 +317,12 @@ class RunCmdEvent < ArcadiaEvent
   attr_accessor :runner_name
   attr_accessor :lang
   attr_accessor :prompt
+end
+
+class RunCmdStartedEvent < RunCmdEvent
+end
+
+class RunCmdEndedEvent < RunCmdEvent
 end
 
 class InputKeyboardQueryEvent < ArcadiaEvent

@@ -1804,6 +1804,7 @@ end
 #class RunnerManager < TkFloatTitledFrame
 class RunnerManager < HinnerSplittedDialogTitled
   ROW_GAP = 25
+  attr_reader  :ext_width, :name_width, :title_width, :cmd_width
   class RunnerMangerItem #  < TkFrame
     attr_reader :runner_hash , :readonly
     def initialize(_runner_manager, _parent=nil, _runner_hash=nil, _row=0, _state_array=nil, *args)
@@ -1834,7 +1835,8 @@ class RunnerManager < HinnerSplittedDialogTitled
           
         end
       }
-
+    
+      row_fill = false
 
       # ICON
       @ttklicon = Arcadia.wf.label(_parent,
@@ -1844,33 +1846,39 @@ class RunnerManager < HinnerSplittedDialogTitled
 
       # NAME
       @ename_old = _runner_hash[:name]  
-      @ttkename = Arcadia.wf.text(_parent, 'width' => 20,
+      @ttkename = Arcadia.wf.text(_parent, 'width' => _runner_manager.name_width,
         "height" => 1).hint(_runner_hash[:file]).grid(:column => 1, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
       @ttkename.insert('end', _runner_hash[:name])
       @ttkename.state(:disabled) && @ttkename.fg('darkgray') if @readonly
       
+      row_fill = row_fill || @ttkename.value.strip.length > 0
 
       # TITLE
       @etitle_old = _runner_hash[:title]  
-      @ttketitle = Arcadia.wf.text(_parent, 'width' => 28,
+      @ttketitle = Arcadia.wf.text(_parent, 'width' => _runner_manager.title_width,
         "height" => 1).hint(_runner_hash[:file]).grid(:column => 2, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
       @ttketitle.insert('end', _runner_hash[:title])
       @ttketitle.state(:disabled) && @ttketitle.fg('darkgray') if @readonly
 
+      row_fill = row_fill || @ttketitle.value.strip.length > 0
 
       # CMD
       @ecmd_old = _runner_hash[:cmd]
-      @ttkecmd = Arcadia.wf.text(_parent,  'width' => 60, 'wrap'=>'word',
+      @ttkecmd = Arcadia.wf.text(_parent,  'width' => _runner_manager.cmd_width, 'wrap'=>'word',
         "height" => 1).grid(:column => 3, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
       @ttkecmd.insert('end', _runner_hash[:cmd])
       @ttkecmd.state(:disabled) && @ttkecmd.fg('darkgray') if @readonly
+
+      row_fill = row_fill || @ttkecmd.value.strip.length > 0
       
       # FILE EXTS
       @eexts_old = _runner_hash[:file_exts]  
-      @ttkeexts = Arcadia.wf.text(_parent,  'width' => 5,
+      @ttkeexts = Arcadia.wf.text(_parent,  'width' => _runner_manager.ext_width,
         "height" => 1).grid(:column => 4, :row => _row, :sticky => "WE", :padx=>1, :pady=>1)
       @ttkeexts.insert('end', _runner_hash[:file_exts])
       @ttkeexts.state(:disabled) && @ttkeexts.fg('darkgray') if @readonly
+
+      row_fill = row_fill || @ttkeexts.value.strip.length > 0
 
       # COPY BUTTON
       copy_command = proc{ _runner_manager.do_add(self) }
@@ -1921,7 +1929,7 @@ class RunnerManager < HinnerSplittedDialogTitled
       @ttkbclose.state(:disabled) if !@enable_close_button
 
       [@ttkename, @ttketitle, @ttkecmd, @ttkeexts].each{|tktext|
-        p_update_height.call(tktext)
+        p_update_height.call(tktext) if row_fill
         tktext.bind_append("KeyRelease"){p_update_height.call(tktext)}
       }
 
@@ -1985,6 +1993,30 @@ class RunnerManager < HinnerSplittedDialogTitled
     @content_root = Tk::ScrollFrame.new(self.hinner_frame).place('x'=>0, 'y'=>0, 'relheight'=>1, 'relwidth'=>1)
     @content_root_frame = @content_root.baseframe
 
+    #screen_width = TkWinfo.vrootwidth(self.hinner_frame) - 140
+    #char_width = 8
+    
+    font_metrics = TkFont.new(Arcadia.conf('edit.font')).metrics
+    screen_width = TkWinfo.vrootwidth(self.hinner_frame) - 140
+    font_metrics_hash = {}
+    font_metrics.each{|a| font_metrics_hash[a[0]] = a[1] }
+    char_width = font_metrics_hash["ascent"] - font_metrics_hash["descent"] - 1
+    
+    screen_width_in_chars = screen_width.to_f/char_width
+     
+    #proporzioni
+    ext_part = 1
+    name_part = 3
+    title_part = 4
+    cmd_part = 8
+    tot_part = ext_part+name_part+title_part+cmd_part
+    one_part = screen_width_in_chars/tot_part
+
+    @ext_width = (one_part*ext_part).round
+    @name_width = (one_part*name_part).round
+    @title_width = (one_part*title_part).round
+    @cmd_width = (one_part*cmd_part).round
+     
   end
 
   def do_close
@@ -2089,9 +2121,10 @@ class RunnerManager < HinnerSplittedDialogTitled
     # Runners keywords related the current file => <<FILE>>, <<DIR>>, <<FILE_BASENAME>>, <<FILE_BASENAME_WITHOUT_EXT>>, <<INPUT>>, <<INPUT_FILE>>
     # INPUT is required to user
     text = Arcadia.wf.text(@content_root_frame,
-              "height" => 2 ,
-              "bg"=>'teal'    
-           ).pack('side' =>'top','anchor'=>'nw','fill'=>'x','padx'=>5, 'pady'=>5)
+              "height" => 2,
+              "bg" => '#009999'  
+           )
+    text.pack('side' =>'top','anchor'=>'nw','fill'=>'x','padx'=>5, 'pady'=>5)
     text.insert("end", "Keywords => <<RUBY>>, <<FILE>>, <<DIR>>, <<FILE_BASENAME>>, <<FILE_BASENAME_WITHOUT_EXT>>, <<INPUT_FILE>>, <<INPUT_DIR>>, <<INPUT_STRING>>")
     add_gap
     #self.height(self.height + ROW_GAP)
@@ -2176,7 +2209,9 @@ class RunnerManager < HinnerSplittedDialogTitled
     end
     @content[_kind] = Arcadia.wf.frame(@content_root_frame){padding "3 3 12 12"}
 
-    @content[_kind].pack('fill'=>'both')
+    @content[_kind].pack('fill'=>'both', :padx=>0, :pady=>0, :expand => 'yes')
+ 
+   
     #@content.extend(TkScrollableWidget).show
     # ICON
     TkGrid.columnconfigure(@content[_kind], 0, :weight => 0 , :uniform => 'a')

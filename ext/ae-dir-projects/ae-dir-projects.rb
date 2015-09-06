@@ -926,6 +926,9 @@ class DirProjects < ArcadiaExtPlus
             _drawcross = 'always'
           end
         rescue  Errno::EACCES
+	  return
+        rescue  Errno::ENOENT
+ 	  return
         end
       end
       @htree.insert('end', _parent ,_node, {

@@ -902,7 +902,7 @@ class Tk::ScrollFrame < TkFrame
     @canvas.scrollregion(@cwin.bbox)
 
     # binding to reset scrollregion
-    @base.bind('Configure'){ _reset_scrollregion(nil, nil) }
+    @base.bind('Configure'){_reset_scrollregion(nil, nil) }
 
     # set default receiver of method calls
     @path = @base.path
@@ -1071,7 +1071,7 @@ class Tk::ScrollFrame < TkFrame
     Tk.update_idletasks
     st = TkGrid.info(@v_scroll)
     if mode && st.size == 0 then
-      @v_scroll.grid('row'=>0, 'column'=>1, 'sticky'=>'ns')
+#      @v_scroll.grid('row'=>0, 'column'=>1, 'sticky'=>'ns')
       _reset_scrollregion(nil, true)
     elsif !mode && st.size != 0 then
       _reset_scrollregion(nil, false)
