@@ -151,8 +151,7 @@ class Shell < ArcadiaExt
         else
           process_name = "#{_event.cmd[0..8]} ..."
         end
-        output_mark = Arcadia.console(self,'msg'=>"Running #{_event.title} as #{_event.lang}...", 'level'=>'info') # info?
-        output_mark = Arcadia.console(self,'msg'=>_event.cmd, 'level'=>'info', 'mark'=>output_mark)
+        output_mark = Arcadia.console(self,'msg'=>"Running #{_event.title} as ... #{_event.lang}", 'level'=>'info') # info?
         start_time = Time.now
         @arcadia['pers']['run.file.last']=_event.file if _event.persistent
         @arcadia['pers']['run.cmd.last']=_event.cmd if _event.persistent

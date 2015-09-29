@@ -1,8 +1,8 @@
 # Arcadia IDE
-version 1.1.0
+version 1.1.1
 
 by Antonio Galeone
-on Sep 06, 2015
+on Sep 29, 2015
 
 ## About
 
@@ -26,6 +26,9 @@ Some of Arcadia IDE project features include:
 [https://github.com/angal/arcadia/wiki]
 
 ## News
+[1.1.1] This release:
+  - bug fixed [issue https://github.com/angal/arcadia/issues/58]
+
 [1.1.0] This release:
   - added possibility to define custom runner:
     go to "run current" menubutton and click on "Manage runner ...". A dialog window will open.

@@ -317,7 +317,7 @@ class Output < ArcadiaExt
         #if _row >= _from_row
         _end = 0
         #m = /([\.\/]*[\/A-Za-z_\-\.]*[\.\/\w\d]*\.rb):(\d*)/.match(l)
-        re = Regexp.new('([\w\:]*[\.\/]*[\/A-Za-z0-9_\-\.]*[\.\/\w\d]*[(<<current buffer>>)]*):(\d*)')
+        re = Regexp.new('([\w\:]*[\.\/]*[\/A-Za-z0-9_\-\.\~]*[\.\/\w\d]*[(<<current buffer>>)]*):(\d*)')
         m = re.match(l)
         #m = /([\.\/]*[\/A-Za-z_\-\.]*[\.\/\w\d]*):(\d*)/.match(l)
         while m

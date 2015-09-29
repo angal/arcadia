@@ -27,7 +27,7 @@ class Arcadia < TkApplication
     super(
       ApplicationParams.new(
         'arcadia',
-        '1.1.0',
+        '1.1.1',
         'conf/arcadia.conf',
         'conf/arcadia.pers'
       )
@@ -694,11 +694,11 @@ class Arcadia < TkApplication
     return if root_menu.nil?
     if run[:file_exts]
       run[:file_exts].split(',').each{|ext|
-        self['runners_by_ext'][ext.strip.sub('.','')]=run
+        self['runners_by_ext'][ext.strip.sub('.','')]=run if run[:default]=='yes' || self['runners_by_ext'][ext.strip.sub('.','')].nil?
       }
     end
     if run[:lang]
-      self['runners_by_lang'][run[:lang]]=run
+      self['runners_by_lang'][run[:lang]]=run if run[:default]=='yes' || self['runners_by_lang'][run[:lang]].nil?
     end
     if run[:runner] && self['runners'][run[:runner]]
       run = Hash.new.update(self['runners'][run[:runner]]).update(run)

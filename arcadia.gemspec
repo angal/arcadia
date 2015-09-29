@@ -4,8 +4,8 @@
 require 'rubygems'
   SPEC = Gem::Specification.new do |s|
   s.name = "arcadia"
-  s.version = "1.1.0"
-  s.date = "2015-09-06"
+  s.version = "1.1.1"
+  s.date = "2015-09-29"
   s.author = "Antonio Galeone"
   s.email = "support@arcadia-ide.org"
   s.homepage = "http://www.arcadia-ide.org"

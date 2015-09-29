@@ -1478,6 +1478,12 @@ class AgEditor
           end
         end
         basename = "~~buffer.java" if basename.nil?        
+      elsif @lang == 'ruby'
+        n=0
+        while File.exist?(File.join(Arcadia.instance.local_dir,"~~buffer#{n}.rb"))
+          n+=1
+        end
+        basename = "~~buffer#{n}.rb"
       else
         n=0
         while File.exist?(File.join(Arcadia.instance.local_dir,"~~buffer#{n}"))
@@ -4408,7 +4414,7 @@ class AgMultiEditor < ArcadiaExtPlus
     _filename = _event.file
     _event.persistent = true
     #if _filename.nil? || _filename == "*CURR"
-    if _filename == "*CURR" || (_filename.nil? && _event && _event.cmd.include?('<<FILE>>'))  
+    if _filename == "*CURR" || (_filename.nil? && _event && _event.cmd.nil?) || (_filename.nil? && _event && !_event.cmd.nil? && _event.cmd.include?('<<FILE>>'))  
       current_editor = self.raised
       if current_editor
         if current_editor.file
@@ -4473,10 +4479,12 @@ class AgMultiEditor < ArcadiaExtPlus
         end
         if runner
           _event.cmd = runner[:cmd]
+          _event.lang = runner[:lang] if _event.lang.nil?
         else
           _event.cmd = _event.file
         end        
       end
+      
       while _event.cmd.include?('<<INPUT_FILE>>')
         input_file = Arcadia.select_file_dialog(MonitorLastUsedDir.get_last_dir, "<<INPUT_FILE>> = ")
         if !input_file.nil?
